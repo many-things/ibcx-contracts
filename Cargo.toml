@@ -1,0 +1,18 @@
+[workspace]
+members = [
+    "contracts/*",
+    "packages/*"
+]
+
+[package]
+name = "ibc-cli"
+version = "0.1.0"
+description = "CLI tool for provide useful commands about ibc"
+authors = ["frostornge <frostornge@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+ibc-interface = { path = "./packages/interface" }
+
+cosmwasm-schema = "1.0.0"
+clap = { version = "3.2.19", features = ["derive"] }
