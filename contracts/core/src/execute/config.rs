@@ -1,9 +1,9 @@
-use cosmwasm_std::{attr, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{attr, DepsMut, Env, MessageInfo, Response, Uint128};
 use ibc_interface::core::{ConfigMsg, SwapRoute};
 
 use crate::{
     error::ContractError,
-    state::{CONFIG, PAUSED, TRADE_ROUTE},
+    state::{TradeStrategy, CONFIG, PAUSED, TRADE_STRATEGIES},
 };
 
 pub fn handle_msg(
@@ -18,7 +18,12 @@ pub fn handle_msg(
         Pause { expires_at } => pause(deps, env, info, expires_at),
         Release {} => release(deps, env, info),
         UpdateReserveDenom { new_denom } => update_reserve_denom(deps, info, new_denom),
-        UpdateTradeRoute { asset, routes } => update_trade_route(deps, info, asset, routes),
+        UpdateTradeStrategy {
+            asset,
+            routes,
+            cool_down,
+            max_trade_amount,
+        } => update_trade_strategy(deps, env, info, asset, routes, cool_down, max_trade_amount),
     }
 }
 
@@ -79,13 +84,27 @@ fn update_reserve_denom(
     Ok(resp)
 }
 
-fn update_trade_route(
+fn update_trade_strategy(
     deps: DepsMut,
+    _env: Env,
     info: MessageInfo,
     asset: String,
     routes: Vec<SwapRoute>,
+    cool_down: Option<u64>,
+    max_trade_amount: Uint128,
 ) -> Result<Response, ContractError> {
-    TRADE_ROUTE.save(deps.storage, &asset, &routes)?;
+    let strategy = TRADE_STRATEGIES.may_load(deps.storage, &asset)?;
+
+    TRADE_STRATEGIES.save(
+        deps.storage,
+        &asset,
+        &TradeStrategy {
+            routes,
+            cool_down,
+            max_trade_amount,
+            last_traded_at: strategy.map(|v| v.last_traded_at).unwrap_or_default(),
+        },
+    )?;
 
     let resp = Response::new().add_attributes(vec![
         attr("method", "update_trade_route"),

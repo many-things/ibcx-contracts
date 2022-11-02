@@ -1,19 +1,12 @@
 use cosmwasm_std::{
-    attr, coin, entry_point, BankMsg, Coin, Deps, DepsMut, Env, MessageInfo, QueryResponse,
-    Response,
+    entry_point, Deps, DepsMut, Env, MessageInfo, QueryResponse, Response, Uint128,
 };
-use ibc_interface::core::{
-    ConfigMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, RebalanceMsg,
-};
-use osmosis_std::types::osmosis::{
-    gamm::v1beta1::{MsgSwapExactAmountIn, MsgSwapExactAmountOut},
-    tokenfactory::v1beta1::{MsgCreateDenom, MsgMint},
-};
+use ibc_interface::core::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use osmosis_std::types::osmosis::tokenfactory::v1beta1::MsgCreateDenom;
 
 use crate::{
     error::ContractError,
-    execute::handle_msg,
-    state::{Config, CONFIG, PAUSED},
+    state::{Config, State, CONFIG, PAUSED, REBALANCE_LATEST_ID, STATE},
     CONTRACT_NAME, CONTRACT_VERSION,
 };
 
@@ -32,11 +25,20 @@ pub fn instantiate(
             gov: deps.api.addr_validate(&msg.gov)?,
             denom: msg.denom.clone(),
             reserve_denom: msg.reserve_denom,
-            assets: msg.assets,
         },
     )?;
 
     PAUSED.save(deps.storage, &Default::default())?;
+
+    STATE.save(
+        deps.storage,
+        &State {
+            assets: msg.initial_assets,
+            total_supply: Uint128::zero(),
+        },
+    )?;
+
+    REBALANCE_LATEST_ID.save(deps.storage, &0)?;
 
     let msg = MsgCreateDenom {
         sender: env.contract.address.into_string(),
@@ -57,7 +59,15 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    crate::execute::handle_msg(deps, env, info, msg)
+    use crate::execute;
+    use ExecuteMsg::*;
+
+    match msg {
+        Mint { amount, receiver } => execute::mint(deps, env, info, amount, receiver),
+        Burn {} => execute::burn(deps, env, info),
+        Config(msg) => execute::config::handle_msg(deps, env, info, msg),
+        Rebalance(msg) => execute::rebalance::handle_msg(deps, env, info, msg),
+    }
 }
 
 #[entry_point]

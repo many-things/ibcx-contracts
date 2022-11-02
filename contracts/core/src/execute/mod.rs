@@ -1,32 +1,15 @@
-mod config;
-mod rebalance;
+pub mod config;
+pub mod rebalance;
 
 use cosmwasm_std::{attr, coin, BankMsg, Coin, DepsMut, Env, MessageInfo, Response, Uint128};
-use ibc_interface::core::ExecuteMsg;
 use osmosis_std::types::osmosis::tokenfactory::v1beta1::MsgMint;
 
 use crate::{
     error::ContractError,
-    state::{CONFIG, PAUSED},
+    state::{CONFIG, PAUSED, STATE},
 };
 
-pub fn handle_msg(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    msg: ExecuteMsg,
-) -> Result<Response, ContractError> {
-    use ExecuteMsg::*;
-
-    match msg {
-        Mint { amount, receiver } => mint(deps, env, info, amount, receiver),
-        Burn {} => burn(deps, env, info),
-        Config(msg) => config::handle_msg(deps, env, info, msg),
-        Rebalance(msg) => rebalance::handle_msg(deps, env, info, msg),
-    }
-}
-
-fn mint(
+pub fn mint(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -42,8 +25,12 @@ fn mint(
     deps.api.addr_validate(&receiver)?;
 
     let config = CONFIG.load(deps.storage)?;
+    let mut state = STATE.load(deps.storage)?;
 
-    config.assert_funds(&info, &amount)?;
+    state.assert_funds(&info, &amount)?;
+    state.total_supply = state.total_supply.checked_add(amount)?;
+
+    STATE.save(deps.storage, &state)?;
 
     let resp = Response::new()
         .add_message(MsgMint {
@@ -59,21 +46,21 @@ fn mint(
     Ok(resp)
 }
 
-fn burn(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+pub fn burn(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     PAUSED
         .load(deps.storage)?
         .refresh(deps.storage, &env)?
         .assert_paused()?;
 
     let config = CONFIG.load(deps.storage)?;
-
     let received = cw_utils::must_pay(&info, &config.denom)?;
 
-    let payback: Vec<Coin> = config
-        .assets
-        .iter()
-        .map(|(denom, unit)| coin((unit * received).u128(), denom.clone()))
-        .collect();
+    let mut state = STATE.load(deps.storage)?;
+
+    let payback: Vec<Coin> = state.calc_redeem_amount(received);
+    state.total_supply = state.total_supply.checked_sub(received)?;
+
+    STATE.save(deps.storage, &state)?;
 
     let resp = Response::new()
         .add_message(BankMsg::Send {

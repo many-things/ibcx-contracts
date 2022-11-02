@@ -8,7 +8,7 @@ pub struct InstantiateMsg {
     pub gov: String,
     pub denom: String,
     pub reserve_denom: String,
-    pub assets: BTreeMap<String, Uint128>,
+    pub initial_assets: BTreeMap<String, Uint128>,
 }
 
 #[cw_serde]
@@ -29,6 +29,7 @@ pub enum ConfigMsg {
     UpdateTradeStrategy {
         asset: String,
         routes: Vec<SwapRoute>,
+        cool_down: Option<u64>,
         max_trade_amount: Uint128, // in reserve denom
     },
 }
@@ -40,10 +41,15 @@ pub enum RebalanceMsg {
         deflation: BTreeMap<String, Uint128>,    // in unit
         amortization: BTreeMap<String, Uint128>, // in ratio
     },
-    Trade {
+    Deflate {
         asset: String,
-        amount: Uint128,
-        reserve_token_amount: Uint128,
+        amount_token_in: Uint128,
+        amount_reserve_min: Uint128,
+    },
+    Amortize {
+        asset: String,
+        amount_reserve_in: Uint128,
+        amount_token_min: Uint128,
     },
     Finish {},
 }
@@ -52,6 +58,7 @@ pub enum RebalanceMsg {
 pub enum ExecuteMsg {
     Mint { amount: Uint128, receiver: String }, // put some input tokens to tx payload
     Burn {},                                    // pub some ibc tokens to tx payload
+
     Config(ConfigMsg),
     Rebalance(RebalanceMsg),
 }
