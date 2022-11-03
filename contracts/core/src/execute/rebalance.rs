@@ -1,7 +1,8 @@
 use std::{collections::BTreeMap, str::FromStr};
 
 use cosmwasm_std::{
-    attr, Addr, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Response, Storage, SubMsg, Uint128,
+    attr, Addr, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Response, StdResult, Storage,
+    SubMsg, Uint128,
 };
 use ibc_interface::core::RebalanceMsg;
 use osmosis_std::types::{
@@ -161,7 +162,7 @@ fn deflate(
     let rebalance = check_and_get_rebalance_info(deps.storage)?;
 
     // fetch actual / expected unit
-    let state = STATE.load(deps.storage)?;
+    let mut state = STATE.load(deps.storage)?;
     let start_unit = rebalance.from.get(&asset).unwrap();
     let actual_unit = state.assets.get(&asset).unwrap();
     let expected_unit = start_unit.checked_sub(*rebalance.deflation.get(&asset).unwrap())?;
@@ -185,6 +186,28 @@ fn deflate(
         &out_min,
     )?;
 
+    // update assets
+    let config = CONFIG.load(deps.storage)?;
+    let token_unit_after_swap = deps
+        .querier
+        .query_balance(&env.contract.address, &asset)?
+        .amount
+        .checked_sub(token_in)?
+        .checked_div(state.total_supply)?;
+    let reserve_unit_after_swap = deps
+        .querier
+        .query_balance(&env.contract.address, &config.reserve_denom)?
+        .amount
+        .checked_add(token_out_amount)?
+        .checked_div(state.total_supply)?;
+
+    state.assets.insert(asset.clone(), token_unit_after_swap);
+    state
+        .assets
+        .insert(config.reserve_denom, reserve_unit_after_swap);
+
+    STATE.save(deps.storage, &state)?;
+
     // update reserve token allocation for amortization
     let total_weight = rebalance
         .amortization
@@ -199,9 +222,6 @@ fn deflate(
             )
         })?;
     }
-
-    // TODO: update assets
-    let mut state = STATE.load(deps.storage)?;
 
     // setup swap message
     let msg = MsgSwapExactAmountIn {
@@ -243,8 +263,6 @@ fn amortize(
 
     TRADE_ALLOCATIONS.save(deps.storage, &asset, &allocation.checked_sub(reserve_in)?)?;
 
-    let config = CONFIG.load(deps.storage)?;
-
     // simulate it!
     let token_out_amount = check_and_simulate_trade(
         &deps.querier,
@@ -254,14 +272,59 @@ fn amortize(
         &out_min,
     )?;
 
+    // update assets
+    let mut state = STATE.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
+
+    // calc token_unit
+    let token_balance = deps
+        .querier
+        .query_balance(&env.contract.address, &asset)?
+        .amount;
+    let token_unit_after_swap = token_balance
+        .checked_add(token_out_amount)?
+        .checked_div(state.total_supply)?;
+
+    // calc reserve_unit
+    let reserve_balance = deps
+        .querier
+        .query_balance(&env.contract.address, &config.reserve_denom)?
+        .amount;
+    let reserve_unit_after_swap = reserve_balance
+        .checked_sub(reserve_in)?
+        .checked_div(state.total_supply)?;
+
+    state.assets.insert(asset.clone(), token_unit_after_swap);
+    state
+        .assets
+        .insert(config.reserve_denom.clone(), reserve_unit_after_swap);
+
+    STATE.save(deps.storage, &state)?;
+
     // update reserve token allocation for amortization
+    let total_allocation = check_and_get_rebalance_info(deps.storage)?
+        .amortization
+        .into_iter()
+        .map(|(denom, _)| TRADE_ALLOCATIONS.load(deps.storage, &denom))
+        .collect::<StdResult<Vec<Uint128>>>()?
+        .into_iter()
+        .fold(Uint128::zero(), |i, v| i + v);
+    let allocation_sub = reserve_in.checked_multiply_ratio(
+        total_allocation,
+        // TODO
+        reserve_balance.checked_sub(
+            state
+                .assets
+                .get(&config.reserve_denom)
+                .unwrap()
+                .checked_mul(state.total_supply)?,
+        )?,
+    )?;
+
     TRADE_ALLOCATIONS.update(deps.storage, &asset, |v| match v {
-        Some(v) => Ok(v.checked_sub(reserve_in)?),
+        Some(v) => Ok(v.checked_sub(allocation_sub)?),
         None => Err(ContractError::TradeNoAllocation {}),
     })?;
-
-    // TODO: update assets
-    let mut state = STATE.load(deps.storage)?;
 
     let msg = MsgSwapExactAmountIn {
         sender: env.contract.address.to_string(),
@@ -283,17 +346,71 @@ fn amortize(
     Ok(resp)
 }
 
-fn finish(deps: DepsMut, _env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+fn finish(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     let rebalance_id = REBALANCE_LATEST_ID.load(deps.storage)?;
     let rebalance = REBALANCES.may_load(deps.storage, rebalance_id)?;
     if rebalance.is_none() {
         return Err(ContractError::RebalanceInfoNotFound {});
     }
 
+    // query all balances
+    let balances_resp = deps.querier.query_all_balances(&env.contract.address)?;
+    let balances: BTreeMap<_, _> = balances_resp
+        .into_iter()
+        .map(|data| (data.denom, data.amount))
+        .collect();
+
     let mut rebalance = rebalance.unwrap();
+    let state = STATE.load(deps.storage)?;
+
+    // check rebalance has already finished
     if rebalance.finished {
         return Err(ContractError::RebalanceAlreadyFinished {});
     }
+
+    // check simulated / actual unit
+    let after_deflation = rebalance
+        .from
+        .iter()
+        .map(|(asset, unit)| {
+            let deflation = rebalance.deflation.get(asset).unwrap();
+            Ok((asset.clone(), unit.checked_sub(*deflation)?))
+        })
+        .collect::<Result<BTreeMap<_, _>, ContractError>>()?;
+    for (asset, unit) in state.assets.iter() {
+        if after_deflation.get(asset).unwrap() != unit {
+            return Err(ContractError::RebalanceValidationFailed {
+                reason: "simulated unit does not match".to_string(),
+            });
+        }
+        if balances
+            .get(asset)
+            .unwrap()
+            .checked_div(state.total_supply)?
+            != unit
+        {
+            return Err(ContractError::RebalanceValidationFailed {
+                reason: "actual unit does not match".to_string(),
+            });
+        }
+    }
+
+    // check balance of reserve token
+    let config = CONFIG.load(deps.storage)?;
+    let reserve_balance = balances.get(&config.reserve_denom).unwrap();
+    if state.assets.contains_key(&config.reserve_denom) {
+        let unit = state.assets.get(&config.reserve_denom).unwrap();
+        if reserve_balance != unit.checked_mul(state.total_supply)? {
+            return Err(ContractError::RebalanceValidationFailed {
+                reason: "actual balance does not match".to_string(),
+            });
+        }
+    } else if !reserve_balance.is_zero() {
+        return Err(ContractError::RebalanceValidationFailed {
+            reason: "actual balance should be zero".to_string(),
+        });
+    }
+
     rebalance.finished = true;
 
     REBALANCES.save(deps.storage, rebalance_id, &rebalance)?;

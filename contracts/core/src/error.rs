@@ -54,6 +54,9 @@ pub enum ContractError {
     #[error("Rebalance ran out of allocation")]
     RebalanceRanOutOfAllocation {},
 
+    #[error("Rebalance validation failed. reason: {reason:?}")]
+    RebalanceValidationFailed { reason: String },
+
     #[error("Received funds mismatched (denom: {denom:?} => required: {required:?}, received: {received:?})")]
     MismatchedFunds {
         denom: String,
