@@ -556,6 +556,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "ibc-periphery"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw-utils",
+ "cw2",
+ "ibc-interface",
+ "osmosis-std",
+ "thiserror",
+]
+
+[[package]]
 name = "indexmap"
 version = "1.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
