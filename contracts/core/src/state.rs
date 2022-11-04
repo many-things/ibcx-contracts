@@ -1,10 +1,10 @@
 use std::collections::BTreeMap;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{coin, Addr, Coin, Env, MessageInfo, StdResult, Storage, Uint128};
+use cosmwasm_std::{coin, Addr, Coin, Env, StdError, StdResult, Storage, Uint128};
 use cw_storage_plus::{Item, Map};
 use ibc_interface::core::SwapRoute;
-use osmosis_std::types::osmosis::gamm::v1beta1::{SwapAmountInRoute, SwapAmountOutRoute};
+use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
 
 use crate::error::ContractError;
 
@@ -63,19 +63,57 @@ impl PauseInfo {
 #[cw_serde]
 pub struct State {
     pub assets: BTreeMap<String, Uint128>, // denom -> unit
+    pub total_reserve: Uint128,
     pub total_supply: Uint128,
 }
 
 impl State {
-    pub fn assert_funds(&self, info: &MessageInfo, desired: &Uint128) -> Result<(), ContractError> {
+    pub fn new(asset_vec: Vec<(String, Uint128)>) -> StdResult<Self> {
+        let mut assets = BTreeMap::new();
+        for (denom, unit) in asset_vec {
+            let res = assets.insert(denom, unit);
+            if res.is_some() {
+                return Err(StdError::generic_err("duplicate denom"));
+            }
+        }
+
+        Ok(Self {
+            assets,
+            total_reserve: Uint128::zero(),
+            total_supply: Uint128::zero(),
+        })
+    }
+
+    pub fn assert_funds(
+        &self,
+        funds: BTreeMap<String, Uint128>,
+        reserve: &str,
+        desired: &Uint128,
+    ) -> Result<(), ContractError> {
+        let mut assets = self.assets.clone();
+
+        let reserve_unit = self.total_reserve.checked_div(self.total_supply)?;
+        assets
+            .entry(reserve.to_string())
+            .and_modify(|v| *v += reserve_unit)
+            .or_insert(reserve_unit);
+
         for (denom, unit) in &self.assets {
             let required = unit * desired;
-            let received = cw_utils::must_pay(&info, &denom)?;
+            let received = match funds.get(denom) {
+                Some(r) => r,
+                None => {
+                    return Err(ContractError::PaymentError(
+                        cw_utils::PaymentError::NoFunds {},
+                    ))
+                }
+            };
+
             if required != received {
                 return Err(ContractError::MismatchedFunds {
                     denom: denom.clone(),
                     required,
-                    received,
+                    received: received.clone(),
                 });
             }
         }
@@ -83,11 +121,19 @@ impl State {
         Ok(())
     }
 
-    pub fn calc_redeem_amount(&self, desired: Uint128) -> Vec<Coin> {
-        self.assets
+    pub fn calc_redeem_amount(&self, reserve: &str, desired: Uint128) -> StdResult<Vec<Coin>> {
+        let mut assets = self.assets.clone();
+
+        let reserve_unit = self.total_reserve.checked_div(self.total_supply)?;
+        assets
+            .entry(reserve.to_string())
+            .and_modify(|v| *v += reserve_unit)
+            .or_insert(reserve_unit);
+
+        Ok(assets
             .iter()
             .map(|(denom, unit)| coin((unit * desired).u128(), denom.clone()))
-            .collect()
+            .collect())
     }
 }
 
@@ -100,6 +146,39 @@ pub struct RebalanceInfo {
     pub finished: bool,
 }
 
+impl RebalanceInfo {
+    pub fn new(
+        manager: Addr,
+        from: BTreeMap<String, Uint128>,
+        deflation_vec: Vec<(String, Uint128)>,
+        amortization_vec: Vec<(String, Uint128)>,
+    ) -> StdResult<Self> {
+        let mut deflation = BTreeMap::new();
+        for (denom, unit) in deflation_vec {
+            let res = deflation.insert(denom, unit);
+            if res.is_some() {
+                return Err(StdError::generic_err("duplicate denom"));
+            }
+        }
+
+        let mut amortization = BTreeMap::new();
+        for (denom, unit) in amortization_vec {
+            let res = amortization.insert(denom, unit);
+            if res.is_some() {
+                return Err(StdError::generic_err("duplicate denom"));
+            }
+        }
+
+        Ok(Self {
+            manager,
+            from,
+            deflation,
+            amortization,
+            finished: false,
+        })
+    }
+}
+
 #[cw_serde]
 pub struct TradeStrategy {
     pub routes: Vec<SwapRoute>, // token > ... routes ... > reserve token
@@ -109,6 +188,20 @@ pub struct TradeStrategy {
 }
 
 impl TradeStrategy {
+    pub fn validate(&self, reserve_denom: &str) -> StdResult<()> {
+        if self.routes.is_empty() {
+            return Err(StdError::generic_err("route is empty"));
+        }
+
+        if self.routes.last().unwrap().token_denom != reserve_denom {
+            return Err(StdError::generic_err(
+                "swap dest should same as reserve denom",
+            ));
+        }
+
+        Ok(())
+    }
+
     // token -> reserve
     pub fn route_sell(&self) -> Vec<SwapAmountInRoute> {
         self.routes
@@ -143,5 +236,6 @@ pub const STATE: Item<State> = Item::new("portfolio");
 pub const REBALANCE_LATEST_ID: Item<u64> = Item::new("rebalance:latest");
 pub const REBALANCES: Map<u64, RebalanceInfo> = Map::new("rebalances");
 
+pub const TRADE_TOTAL_ALLOCATION: Item<Uint128> = Item::new("trade:total_allocation");
 pub const TRADE_ALLOCATIONS: Map<&str, Uint128> = Map::new("trade:allocation");
 pub const TRADE_STRATEGIES: Map<&str, TradeStrategy> = Map::new("trade:strategy");

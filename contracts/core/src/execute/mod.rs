@@ -1,7 +1,9 @@
 pub mod config;
 pub mod rebalance;
 
-use cosmwasm_std::{attr, coin, BankMsg, Coin, DepsMut, Env, MessageInfo, Response, Uint128};
+use std::collections::BTreeMap;
+
+use cosmwasm_std::{attr, coin, BankMsg, DepsMut, Env, MessageInfo, Response, Uint128};
 use osmosis_std::types::osmosis::tokenfactory::v1beta1::MsgMint;
 
 use crate::{
@@ -27,7 +29,13 @@ pub fn mint(
     let config = CONFIG.load(deps.storage)?;
     let mut state = STATE.load(deps.storage)?;
 
-    state.assert_funds(&info, &amount)?;
+    let funds: BTreeMap<_, _> = info
+        .funds
+        .into_iter()
+        .map(|v| (v.denom, v.amount))
+        .collect();
+
+    state.assert_funds(funds, &config.reserve_denom, &amount)?;
     state.total_supply = state.total_supply.checked_add(amount)?;
 
     STATE.save(deps.storage, &state)?;
@@ -57,7 +65,8 @@ pub fn burn(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, Cont
 
     let mut state = STATE.load(deps.storage)?;
 
-    let payback: Vec<Coin> = state.calc_redeem_amount(received);
+    // calculate redeem amount
+    let payback = state.calc_redeem_amount(&config.reserve_denom, received)?;
     state.total_supply = state.total_supply.checked_sub(received)?;
 
     STATE.save(deps.storage, &state)?;

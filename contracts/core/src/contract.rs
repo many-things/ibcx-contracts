@@ -1,6 +1,4 @@
-use cosmwasm_std::{
-    entry_point, Deps, DepsMut, Env, MessageInfo, QueryResponse, Response, Uint128,
-};
+use cosmwasm_std::{entry_point, Deps, DepsMut, Env, MessageInfo, QueryResponse, Response};
 use ibc_interface::core::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use osmosis_std::types::osmosis::tokenfactory::v1beta1::MsgCreateDenom;
 
@@ -30,13 +28,7 @@ pub fn instantiate(
 
     PAUSED.save(deps.storage, &Default::default())?;
 
-    STATE.save(
-        deps.storage,
-        &State {
-            assets: msg.initial_assets,
-            total_supply: Uint128::zero(),
-        },
-    )?;
+    STATE.save(deps.storage, &State::new(msg.initial_assets)?)?;
 
     REBALANCE_LATEST_ID.save(deps.storage, &0)?;
 

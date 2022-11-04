@@ -93,18 +93,18 @@ fn update_trade_strategy(
     cool_down: Option<u64>,
     max_trade_amount: Uint128,
 ) -> Result<Response, ContractError> {
-    let strategy = TRADE_STRATEGIES.may_load(deps.storage, &asset)?;
+    let strategy = TradeStrategy {
+        routes,
+        cool_down,
+        max_trade_amount,
+        last_traded_at: TRADE_STRATEGIES
+            .may_load(deps.storage, &asset)?
+            .map(|v| v.last_traded_at)
+            .unwrap_or_default(),
+    };
+    strategy.validate(&CONFIG.load(deps.storage)?.reserve_denom)?;
 
-    TRADE_STRATEGIES.save(
-        deps.storage,
-        &asset,
-        &TradeStrategy {
-            routes,
-            cool_down,
-            max_trade_amount,
-            last_traded_at: strategy.map(|v| v.last_traded_at).unwrap_or_default(),
-        },
-    )?;
+    TRADE_STRATEGIES.save(deps.storage, &asset, &strategy)?;
 
     let resp = Response::new().add_attributes(vec![
         attr("method", "update_trade_route"),
