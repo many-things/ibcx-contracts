@@ -8,7 +8,7 @@ pub struct InstantiateMsg {
     pub gov: String,
     pub denom: String,
     pub reserve_denom: String,
-    pub initial_assets: BTreeMap<String, Uint128>,
+    pub initial_assets: Vec<(String, Uint128)>,
 }
 
 #[cw_serde]
@@ -38,8 +38,8 @@ pub enum ConfigMsg {
 pub enum RebalanceMsg {
     Init {
         manager: String,
-        deflation: BTreeMap<String, Uint128>,    // in unit
-        amortization: BTreeMap<String, Uint128>, // in ratio
+        deflation: Vec<(String, Uint128)>,    // in unit
+        amortization: Vec<(String, Uint128)>, // in ratio
     },
     Deflate {
         asset: String,
