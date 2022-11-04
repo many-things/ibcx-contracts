@@ -1,26 +1,21 @@
-use std::{collections::BTreeMap, str::FromStr};
+use std::collections::BTreeMap;
 
-use cosmwasm_std::{
-    attr, Addr, DepsMut, Env, MessageInfo, QuerierWrapper, Response, StdResult, Storage, SubMsg,
-    Uint128,
-};
+use cosmwasm_std::{attr, DepsMut, Env, MessageInfo, Response, StdResult, SubMsg, Uint128};
 use ibc_interface::core::RebalanceMsg;
 use osmosis_std::types::{
-    cosmos::base::v1beta1::Coin,
-    osmosis::gamm::v1beta1::{
-        MsgSwapExactAmountIn, QuerySwapExactAmountInRequest, QuerySwapExactAmountInResponse,
-        SwapAmountInRoute,
-    },
+    cosmos::base::v1beta1::Coin, osmosis::gamm::v1beta1::MsgSwapExactAmountIn,
 };
 
 use crate::{
     error::ContractError,
     state::{
-        RebalanceInfo, TradeStrategy, CONFIG, REBALANCES, REBALANCE_LATEST_ID, STATE,
-        TRADE_ALLOCATIONS, TRADE_STRATEGIES,
+        RebalanceInfo, CONFIG, REBALANCES, REBALANCE_LATEST_ID, STATE, TRADE_ALLOCATIONS,
+        TRADE_STRATEGIES,
     },
     REPLY_ID_REBALANCE,
 };
+
+use super::{check_and_get_rebalance_info, check_and_get_strategy, check_and_simulate_trade};
 
 pub fn handle_msg(
     deps: DepsMut,
@@ -88,64 +83,6 @@ fn init(
     ]);
 
     Ok(resp)
-}
-
-fn check_and_get_strategy(
-    storage: &dyn Storage,
-    now: u64,
-    asset: &str,
-    trade_amount: &Uint128,
-) -> Result<TradeStrategy, ContractError> {
-    match TRADE_STRATEGIES.may_load(storage, asset)? {
-        Some(strategy) => {
-            if &strategy.max_trade_amount < trade_amount {
-                return Err(ContractError::TradeAmountExceeded {});
-            }
-            if strategy.last_traded_at + strategy.cool_down.unwrap_or_default() > now {
-                return Err(ContractError::TradeCooldownNotFinished {});
-            }
-
-            Ok(strategy)
-        }
-        None => {
-            return Err(ContractError::TradeStrategyNotSet {});
-        }
-    }
-}
-
-fn check_and_get_rebalance_info(storage: &dyn Storage) -> Result<RebalanceInfo, ContractError> {
-    let rebalance_id = REBALANCE_LATEST_ID.load(storage)?;
-    let rebalance = REBALANCES.load(storage, rebalance_id)?;
-    if rebalance.finished {
-        return Err(ContractError::RebalanceAlreadyFinished {});
-    }
-
-    Ok(rebalance)
-}
-
-fn check_and_simulate_trade(
-    querier: &QuerierWrapper,
-    contract: &Addr,
-    token_in: &Uint128,
-    routes: Vec<SwapAmountInRoute>,
-    out_min: &Uint128,
-) -> Result<Uint128, ContractError> {
-    let resp: QuerySwapExactAmountInResponse = querier.query(
-        &QuerySwapExactAmountInRequest {
-            sender: contract.to_string(),
-            pool_id: 0, // not used
-            token_in: token_in.to_string(),
-            routes,
-        }
-        .into(),
-    )?;
-
-    let token_out_amount = Uint128::from_str(&resp.token_out_amount)?;
-    if out_min > &token_out_amount {
-        return Err(ContractError::TradeSimulationFailed {});
-    }
-
-    Ok(token_out_amount)
 }
 
 fn deflate(

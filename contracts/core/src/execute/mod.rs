@@ -1,14 +1,25 @@
-pub mod config;
+pub mod gov;
 pub mod rebalance;
 
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, str::FromStr};
 
-use cosmwasm_std::{attr, coin, BankMsg, DepsMut, Env, MessageInfo, Response, Uint128};
-use osmosis_std::types::osmosis::tokenfactory::v1beta1::MsgMint;
+use cosmwasm_std::{
+    attr, coin, Addr, BankMsg, DepsMut, Env, MessageInfo, QuerierWrapper, Response, Storage,
+    Uint128,
+};
+use osmosis_std::types::osmosis::{
+    gamm::v1beta1::{
+        QuerySwapExactAmountInRequest, QuerySwapExactAmountInResponse, SwapAmountInRoute,
+    },
+    tokenfactory::v1beta1::MsgMint,
+};
 
 use crate::{
     error::ContractError,
-    state::{CONFIG, PAUSED, STATE},
+    state::{
+        RebalanceInfo, TradeStrategy, CONFIG, PAUSED, REBALANCES, REBALANCE_LATEST_ID, STATE,
+        TRADE_STRATEGIES,
+    },
 };
 
 pub fn mint(
@@ -83,4 +94,62 @@ pub fn burn(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, Cont
         ]);
 
     Ok(resp)
+}
+
+fn check_and_get_strategy(
+    storage: &dyn Storage,
+    now: u64,
+    asset: &str,
+    trade_amount: &Uint128,
+) -> Result<TradeStrategy, ContractError> {
+    match TRADE_STRATEGIES.may_load(storage, asset)? {
+        Some(strategy) => {
+            if &strategy.max_trade_amount < trade_amount {
+                return Err(ContractError::TradeAmountExceeded {});
+            }
+            if strategy.last_traded_at + strategy.cool_down.unwrap_or_default() > now {
+                return Err(ContractError::TradeCooldownNotFinished {});
+            }
+
+            Ok(strategy)
+        }
+        None => {
+            return Err(ContractError::TradeStrategyNotSet {});
+        }
+    }
+}
+
+fn check_and_get_rebalance_info(storage: &dyn Storage) -> Result<RebalanceInfo, ContractError> {
+    let rebalance_id = REBALANCE_LATEST_ID.load(storage)?;
+    let rebalance = REBALANCES.load(storage, rebalance_id)?;
+    if rebalance.finished {
+        return Err(ContractError::RebalanceAlreadyFinished {});
+    }
+
+    Ok(rebalance)
+}
+
+fn check_and_simulate_trade(
+    querier: &QuerierWrapper,
+    contract: &Addr,
+    token_in: &Uint128,
+    routes: Vec<SwapAmountInRoute>,
+    out_min: &Uint128,
+) -> Result<Uint128, ContractError> {
+    let resp: QuerySwapExactAmountInResponse = querier.query(
+        &QuerySwapExactAmountInRequest {
+            sender: contract.to_string(),
+            pool_id: 0, // not used
+            token_in: token_in.to_string(),
+            routes,
+        }
+        .into(),
+    )?;
+
+    let token_out_amount = Uint128::from_str(&resp.token_out_amount)?;
+    if out_min > &token_out_amount {
+        return Err(ContractError::TradeSimulationFailed {});
+    }
+
+    Ok(token_out_amount)
 }

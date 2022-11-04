@@ -18,11 +18,16 @@ pub struct SwapRoute {
 }
 
 #[cw_serde]
-pub enum ConfigMsg {
+pub enum GovMsg {
+    // pause mint / burn
     Pause {
         expires_at: u64,
     },
     Release {},
+
+    // sweep all untracked assets to reserve
+    Sweep {},
+
     UpdateReserveDenom {
         new_denom: String,
     },
@@ -59,7 +64,7 @@ pub enum ExecuteMsg {
     Mint { amount: Uint128, receiver: String }, // put some input tokens to tx payload
     Burn {},                                    // pub some ibc tokens to tx payload
 
-    Config(ConfigMsg),
+    Gov(GovMsg),
     Rebalance(RebalanceMsg),
 }
 
