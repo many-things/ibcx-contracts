@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 
-use cosmwasm_std::{attr, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdResult, Uint128};
+use cosmwasm_std::{
+    attr, coins, BankMsg, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdResult, Uint128,
+};
 use ibc_interface::core::{GovMsg, SwapRoute};
 use osmosis_std::types::{
     cosmos::base::v1beta1::Coin, osmosis::gamm::v1beta1::MsgSwapExactAmountIn,
@@ -80,14 +82,14 @@ fn release(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, Contr
 }
 
 fn sweep(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
-    // calculate expected amount that contract should hold
     let config = CONFIG.load(deps.storage)?;
     let state = STATE.load(deps.storage)?;
 
+    // calculate expected amount that contract should hold
     let reserve_unit = state.total_reserve.checked_div(state.total_supply)?;
     let mut assets = state.assets.clone();
     assets
-        .entry(config.reserve_denom)
+        .entry(config.reserve_denom.clone())
         .and_modify(|v| *v += reserve_unit)
         .or_insert(reserve_unit);
     let expected: BTreeMap<_, _> = assets
@@ -95,6 +97,7 @@ fn sweep(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, Contrac
         .map(|(denom, unit)| (denom, unit * state.total_supply))
         .collect();
 
+    // calculate diff between actual and expected
     let diff = expected
         .into_iter()
         .map(|(denom, amount)| {
@@ -108,6 +111,7 @@ fn sweep(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, Contrac
         })
         .collect::<StdResult<BTreeMap<_, _>>>()?;
 
+    // run simulation & accumulate them
     let conversion = diff
         .iter()
         .map(|(denom, token_in)| {
@@ -127,7 +131,8 @@ fn sweep(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, Contrac
         .iter()
         .fold(Uint128::zero(), |i, v| i + v);
 
-    let msgs: Vec<CosmosMsg> = diff
+    // build messages
+    let trade_msg: Vec<CosmosMsg> = diff
         .into_iter()
         .map(|(denom, token_in)| {
             Ok(MsgSwapExactAmountIn {
@@ -143,11 +148,23 @@ fn sweep(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, Contrac
         })
         .collect::<StdResult<_>>()?;
 
-    let resp = Response::new().add_messages(msgs).add_attributes(vec![
-        attr("method", "gov::sweep"),
-        attr("executor", info.sender),
-        attr("conversion", conversion),
-    ]);
+    // ========= TODO: define actions after trade
+    // ex)
+    let accumulate_msg = BankMsg::Send {
+        to_address: config.gov.to_string(),
+        amount: coins(conversion.u128(), &config.reserve_denom),
+    };
+
+    let resp = Response::new()
+        // trade first
+        .add_messages(trade_msg)
+        // send accumulated tokens after trade
+        .add_message(accumulate_msg)
+        .add_attributes(vec![
+            attr("method", "gov::sweep"),
+            attr("executor", info.sender),
+            attr("conversion", conversion),
+        ]);
 
     Ok(resp)
 }
