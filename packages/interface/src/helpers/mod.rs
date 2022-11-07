@@ -1,3 +1,3 @@
 mod core;
 
-pub use crate::helpers::core::NoiCore;
+pub use crate::helpers::core::IbcCore;
