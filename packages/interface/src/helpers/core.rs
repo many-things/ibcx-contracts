@@ -3,12 +3,12 @@ use cosmwasm_std::{to_binary, Addr, Coin, CosmosMsg, StdResult, WasmMsg};
 
 use crate::core::ExecuteMsg;
 
-/// NoiCore is a wrapper around Addr that provides a lot of helpers
+/// IbcCore is a wrapper around Addr that provides a lot of helpers
 /// for working with this.
 #[cw_serde]
-pub struct NoiCore(pub Addr);
+pub struct IbcCore(pub Addr);
 
-impl NoiCore {
+impl IbcCore {
     pub fn addr(&self) -> Addr {
         self.0.clone()
     }
