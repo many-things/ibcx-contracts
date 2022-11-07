@@ -10,7 +10,7 @@ use crate::{
     error::ContractError,
     state::{
         RebalanceInfo, CONFIG, REBALANCES, REBALANCE_LATEST_ID, STATE, TRADE_ALLOCATIONS,
-        TRADE_STRATEGIES,
+        TRADE_STRATEGIES, TRADE_TOTAL_ALLOCATION,
     },
     REPLY_ID_REBALANCE,
 };
@@ -142,6 +142,12 @@ fn deflate(
         .amortization
         .iter()
         .fold(Uint128::zero(), |v, (_, weight)| v + weight);
+    let total_allocation = TRADE_TOTAL_ALLOCATION.load(deps.storage)?;
+
+    TRADE_TOTAL_ALLOCATION.save(
+        deps.storage,
+        &total_allocation.checked_add(token_out_amount)?,
+    )?;
 
     for (denom, weight) in rebalance.amortization {
         TRADE_ALLOCATIONS.update(deps.storage, &denom, |v| {
@@ -192,8 +198,6 @@ fn amortize(
         return Err(ContractError::RebalanceRanOutOfAllocation {});
     }
 
-    TRADE_ALLOCATIONS.save(deps.storage, &asset, &allocation.checked_sub(reserve_in)?)?;
-
     // simulate it!
     let token_out_amount = check_and_simulate_trade(
         &deps.querier,
@@ -221,16 +225,11 @@ fn amortize(
     STATE.save(deps.storage, &state)?;
 
     // update reserve token allocation for amortization
-    let amortization = check_and_get_rebalance_info(deps.storage)?.amortization;
-    let total_allocation = amortization
-        .into_iter()
-        .map(|(denom, _)| TRADE_ALLOCATIONS.load(deps.storage, &denom))
-        .collect::<StdResult<Vec<Uint128>>>()?
-        .into_iter()
-        .fold(Uint128::zero(), |i, v| i + v);
+    let total_allocation = TRADE_TOTAL_ALLOCATION.load(deps.storage)?;
     let allocation_sub =
         reserve_in.checked_multiply_ratio(total_allocation, state.total_reserve)?;
 
+    TRADE_TOTAL_ALLOCATION.save(deps.storage, &total_allocation.checked_sub(allocation_sub)?)?;
     TRADE_ALLOCATIONS.update(deps.storage, &asset, |v| match v {
         Some(v) => Ok(v.checked_sub(allocation_sub)?),
         None => Err(ContractError::TradeNoAllocation {}),

@@ -64,10 +64,35 @@ pub fn execute(
 
 #[entry_point]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, ContractError> {
-    Ok(Default::default())
+    use crate::query;
+    use QueryMsg::*;
+
+    match msg {
+        Config {} => query::config(deps, env),
+        PauseInfo {} => query::pause_info(deps, env),
+        Portfolio {} => query::portfolio(deps, env),
+        RebalanceInfo { id } => query::rebalance_info(deps, env, id),
+        ListRebalanceInfo {
+            start_after,
+            limit,
+            order,
+        } => query::list_rebalance_info(deps, env, start_after, limit, order),
+        Strategy { asset } => query::strategy(deps, env, asset),
+        ListStrategy {
+            start_after,
+            limit,
+            order,
+        } => query::list_strategy(deps, env, start_after, limit, order),
+        Allocation { asset } => query::allocation(deps, env, asset),
+        ListAllocation {
+            start_after,
+            limit,
+            order,
+        } => query::list_allocation(deps, env, start_after, limit, order),
+    }
 }
 
 #[entry_point]
-pub fn migrate(deps: Deps, env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(_deps: Deps, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     Ok(Default::default())
 }
