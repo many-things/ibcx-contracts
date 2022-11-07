@@ -1,6 +1,8 @@
 pub mod helpers;
 
 pub mod core;
+pub mod periphery;
+pub mod types;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Order, StdError, StdResult};
@@ -22,29 +24,5 @@ pub fn get_and_check_limit(limit: Option<u32>, max: u32, default: u32) -> StdRes
             }
         }
         None => Ok(default),
-    }
-}
-
-#[cw_serde]
-pub enum RangeOrder {
-    Asc,
-    Desc,
-}
-
-impl From<Order> for RangeOrder {
-    fn from(order: Order) -> Self {
-        match order {
-            Order::Ascending => Self::Asc,
-            Order::Descending => Self::Desc,
-        }
-    }
-}
-
-impl From<RangeOrder> for Order {
-    fn from(order: RangeOrder) -> Self {
-        match order {
-            RangeOrder::Asc => Order::Ascending,
-            RangeOrder::Desc => Order::Descending,
-        }
     }
 }

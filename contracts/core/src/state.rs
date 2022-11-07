@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{coin, Addr, Coin, Env, StdError, StdResult, Storage, Uint128};
 use cw_storage_plus::{Item, Map};
-use ibc_interface::core::SwapRoute;
+use ibc_interface::types::SwapRoute;
 use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
 
 use crate::error::ContractError;

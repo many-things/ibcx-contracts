@@ -3,7 +3,8 @@ use std::collections::BTreeMap;
 use cosmwasm_std::{
     attr, coins, BankMsg, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdResult, Uint128,
 };
-use ibc_interface::core::{GovMsg, SwapRoute};
+use ibc_interface::core::GovMsg;
+use ibc_interface::types::SwapRoute;
 use osmosis_std::types::{
     cosmos::base::v1beta1::Coin, osmosis::gamm::v1beta1::MsgSwapExactAmountIn,
 };

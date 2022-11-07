@@ -8,7 +8,9 @@ use ibc_interface::{
         ListStrategyResponse, PauseInfoResponse, PortfolioResponse, RebalanceInfoResponse,
         StrategyResponse,
     },
-    get_and_check_limit, RangeOrder, DEFAULT_LIMIT, MAX_LIMIT,
+    get_and_check_limit,
+    types::RangeOrder,
+    DEFAULT_LIMIT, MAX_LIMIT,
 };
 
 use crate::{

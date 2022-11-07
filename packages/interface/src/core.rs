@@ -1,7 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Decimal, Uint128};
 
-use crate::RangeOrder;
+use crate::types::{RangeOrder, SwapRoute};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -9,12 +9,6 @@ pub struct InstantiateMsg {
     pub denom: String,
     pub reserve_denom: String,
     pub initial_assets: Vec<(String, Uint128)>,
-}
-
-#[cw_serde]
-pub struct SwapRoute {
-    pub pool_id: u64,
-    pub token_denom: String,
 }
 
 #[cw_serde]

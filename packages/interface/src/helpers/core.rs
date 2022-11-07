@@ -9,7 +9,7 @@ use crate::{
         ListRebalanceInfoResponse, ListStrategyResponse, PauseInfoResponse, PortfolioResponse,
         QueryMsg, RebalanceInfoResponse, StrategyResponse,
     },
-    RangeOrder,
+    types::RangeOrder,
 };
 
 /// IbcCore is a wrapper around Addr that provides a lot of helpers
