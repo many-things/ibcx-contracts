@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use cosmwasm_std::{attr, DepsMut, Env, MessageInfo, Response, StdResult, SubMsg, Uint128};
+use cosmwasm_std::{attr, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128};
 use ibc_interface::core::RebalanceMsg;
 use osmosis_std::types::{
     cosmos::base::v1beta1::Coin, osmosis::gamm::v1beta1::MsgSwapExactAmountIn,

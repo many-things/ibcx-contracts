@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Decimal, Uint128};
 
