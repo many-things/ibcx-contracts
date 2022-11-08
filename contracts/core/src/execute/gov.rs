@@ -212,7 +212,7 @@ fn update_trade_strategy(
     TRADE_STRATEGIES.save(deps.storage, &asset, &strategy)?;
 
     let resp = Response::new().add_attributes(vec![
-        attr("method", "gov::update_trade_route"),
+        attr("method", "gov::update_trade_strategy"),
         attr("exector", info.sender),
         attr("asset", asset),
     ]);

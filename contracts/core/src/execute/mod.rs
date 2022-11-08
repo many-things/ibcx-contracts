@@ -53,12 +53,13 @@ pub fn mint(
 
     let resp = Response::new()
         .add_message(MsgMint {
-            sender: receiver,
+            sender: receiver.clone(),
             amount: Some(coin(amount.u128(), config.denom).into()),
         })
         .add_attributes(vec![
             attr("method", "mint"),
-            attr("minter", info.sender),
+            attr("executor", info.sender),
+            attr("receiver", receiver),
             attr("amount", amount),
         ]);
 
@@ -89,7 +90,7 @@ pub fn burn(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, Cont
         })
         .add_attributes(vec![
             attr("method", "burn"),
-            attr("burner", info.sender),
+            attr("executor", info.sender),
             attr("amount", received),
         ]);
 
