@@ -140,7 +140,7 @@ impl SwapInfo {
 pub enum ExecuteMsg {
     MintExactAmountOut {
         core_addr: String,
-        amount: Uint128,
+        output_amount: Uint128,
         input_asset: String,
         swap_info: Vec<(String, SwapInfo)>,
     },

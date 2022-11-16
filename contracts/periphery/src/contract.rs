@@ -1,13 +1,13 @@
 use std::collections::BTreeMap;
 
 use cosmwasm_std::{
-    attr, coin, coins, entry_point, BankMsg, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
-    QueryResponse, Reply, Response, SubMsg, Uint128,
+    attr, coin, coins, entry_point, Addr, BankMsg, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
+    QuerierWrapper, QueryResponse, Reply, Response, StdResult, Storage, SubMsg, Uint128,
 };
 use ibc_interface::{
     core,
     helpers::IbcCore,
-    periphery::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
+    periphery::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SwapInfo},
 };
 
 use crate::{
@@ -41,6 +41,104 @@ pub fn instantiate(
     Ok(resp)
 }
 
+fn make_mint_swap_msgs(
+    querier: &QuerierWrapper,
+    contract: &Addr,
+    reserve_denom: String,
+    swap_info: BTreeMap<String, SwapInfo>,
+    desired: BTreeMap<String, Uint128>,
+    max_input_amount: Uint128,
+) -> Result<Vec<CosmosMsg>, ContractError> {
+    let mut swap_msgs: Vec<CosmosMsg> = Vec::new();
+    let mut simulated_total_spend_amount = Uint128::zero();
+
+    for (denom, want) in desired {
+        if denom == reserve_denom {
+            simulated_total_spend_amount += want
+        }
+
+        let swap_info = swap_info.get(&denom).unwrap();
+
+        let simulated_token_in = swap_info.simulate_swap_exact_out(
+            querier,
+            contract.to_string(),
+            denom.clone(),
+            want,
+        )?;
+
+        simulated_total_spend_amount += simulated_token_in;
+
+        swap_msgs.push(swap_info.msg_swap_exact_out(
+            contract.to_string(),
+            simulated_token_in,
+            denom,
+            want,
+        ));
+    }
+
+    if max_input_amount < simulated_total_spend_amount {
+        return Err(ContractError::TradeAmountExceeded {});
+    }
+
+    Ok(swap_msgs)
+}
+
+fn make_burn_swap_msgs(
+    querier: &QuerierWrapper,
+    contract: &Addr,
+    swap_info: BTreeMap<String, SwapInfo>,
+    expected: BTreeMap<String, Uint128>,
+    min_output_amount: Uint128,
+) -> Result<Vec<CosmosMsg>, ContractError> {
+    let mut swap_msgs: Vec<CosmosMsg> = Vec::new();
+    let mut simulated_total_receive_amount = Uint128::zero();
+
+    for (denom, expected) in expected {
+        let swap_info = swap_info.get(&denom).unwrap();
+
+        let simulated_token_out = swap_info.simulate_swap_exact_in(
+            querier,
+            contract.to_string(),
+            denom.clone(),
+            expected,
+        )?;
+
+        simulated_total_receive_amount += simulated_token_out;
+
+        swap_msgs.push(swap_info.msg_swap_exact_in(
+            contract.to_string(),
+            simulated_token_out,
+            denom,
+            expected,
+        ));
+    }
+
+    if min_output_amount > simulated_total_receive_amount {
+        return Err(ContractError::TradeAmountExceeded {});
+    }
+
+    Ok(swap_msgs)
+}
+
+fn save_context(
+    storage: &mut dyn Storage,
+    executor: Addr,
+    asset_to_check: String,
+) -> StdResult<()> {
+    let current_context_id = CURRENT_CONTEXT_ID.load(storage)?;
+
+    CONTEXTS.save(
+        storage,
+        current_context_id,
+        &Context {
+            executor,
+            asset_to_check,
+        },
+    )?;
+
+    Ok(())
+}
+
 #[entry_point]
 pub fn execute(
     deps: DepsMut,
@@ -53,86 +151,61 @@ pub fn execute(
     match msg {
         MintExactAmountOut {
             core_addr,
-            amount,
+            output_amount,
             input_asset,
             swap_info,
         } => {
+            // pre-transform swap_info
             let swap_info = swap_info.into_iter().collect::<BTreeMap<_, _>>();
 
+            // query to core contract
             let core = IbcCore(deps.api.addr_validate(&core_addr)?);
             let core_config = core.get_config(&deps.querier)?;
             let core_portfolio = core.get_portfolio(&deps.querier)?;
 
+            // input & output
             let max_input_amount = cw_utils::must_pay(&info, &input_asset)?;
+            let max_input = coin(max_input_amount.u128(), &input_asset);
+            let output = coin(output_amount.u128(), &core_config.denom);
 
-            let portfolio: BTreeMap<_, _> = core_portfolio.assets.into_iter().collect();
-
-            let desired = portfolio
+            let desired = core_portfolio
+                .assets
                 .into_iter()
-                .map(|(denom, unit)| (denom, unit * amount))
+                .map(|(denom, unit)| (denom, unit * output.amount))
                 .collect::<BTreeMap<_, _>>();
 
             let funds = desired
                 .iter()
                 .map(|(denom, want)| coin(want.u128(), denom))
                 .collect();
-            let mut swap_msgs: Vec<CosmosMsg> = Vec::new();
-            let mut simulated_total_spend_amount = Uint128::zero();
 
-            for (denom, want) in desired {
-                if denom == core_config.reserve_denom {
-                    simulated_total_spend_amount += want
-                }
-
-                let swap_info = swap_info.get(&denom).unwrap();
-
-                let simulated_token_in = swap_info.simulate_swap_exact_out(
-                    &deps.querier,
-                    env.contract.address.to_string(),
-                    denom.clone(),
-                    want,
-                )?;
-
-                simulated_total_spend_amount += simulated_token_in;
-
-                swap_msgs.push(swap_info.msg_swap_exact_out(
-                    env.contract.address.to_string(),
-                    simulated_token_in,
-                    denom,
-                    want,
-                ));
-            }
-
-            if max_input_amount < simulated_total_spend_amount {
-                return Err(ContractError::TradeAmountExceeded {});
-            }
+            let swap_msgs = make_mint_swap_msgs(
+                &deps.querier,
+                &env.contract.address,
+                core_config.reserve_denom,
+                swap_info,
+                desired,
+                max_input.amount,
+            )?;
 
             let mint_msg = core.call_with_funds(
                 core::ExecuteMsg::Mint {
-                    amount,
+                    amount: output.amount,
                     receiver: info.sender.to_string(),
                 },
                 funds,
             )?;
 
-            let current_context_id = CURRENT_CONTEXT_ID.load(deps.storage)?;
-
-            CONTEXTS.save(
-                deps.storage,
-                current_context_id,
-                &Context {
-                    executor: info.sender,
-                    asset_to_check: input_asset.clone(),
-                },
-            )?;
+            save_context(deps.storage, info.sender.clone(), max_input.denom.clone())?;
 
             let resp = Response::new()
                 .add_messages(swap_msgs)
                 .add_submessage(SubMsg::reply_on_success(mint_msg, REPLY_ID_MINT))
                 .add_attributes(vec![
                     attr("method", "mint_exact_amount_out"),
-                    attr("input_asset", input_asset),
-                    attr("max_input_amount", max_input_amount),
+                    attr("executor", info.sender),
+                    attr("max_input", max_input.to_string()),
+                    attr("output", output.to_string()),
                 ]);
 
             Ok(resp)
@@ -144,74 +217,56 @@ pub fn execute(
             min_output_amount,
             swap_info,
         } => {
+            // pre-transform swap_info
             let swap_info = swap_info.into_iter().collect::<BTreeMap<_, _>>();
 
+            // query to core contract
             let core = IbcCore(deps.api.addr_validate(&core_addr)?);
             let core_config = core.get_config(&deps.querier)?;
             let core_portfolio = core.get_portfolio(&deps.querier)?;
 
-            let burn_amount = cw_utils::must_pay(&info, &core_config.denom)?;
+            // input & output
+            let input_amount = cw_utils::must_pay(&info, &core_config.denom)?;
+            let input = coin(input_amount.u128(), &core_config.denom);
+            let min_output = coin(min_output_amount.u128(), output_asset);
 
-            let portfolio: BTreeMap<_, _> = core_portfolio.assets.into_iter().collect();
-
-            let expected = portfolio
+            let expected = core_portfolio
+                .assets
                 .into_iter()
-                .map(|(denom, unit)| (denom, unit * burn_amount))
+                .map(|(denom, unit)| (denom, unit * input.amount))
                 .collect::<BTreeMap<_, _>>();
 
             let burn_msg = core.call_with_funds(
                 core::ExecuteMsg::Burn {},
-                coins(burn_amount.u128(), core_config.reserve_denom),
+                coins(input.amount.u128(), core_config.reserve_denom),
             )?;
 
-            let mut swap_msgs: Vec<CosmosMsg> = Vec::new();
-            let mut simulated_total_receive_amount = Uint128::zero();
+            let mut swap_msgs = make_burn_swap_msgs(
+                &deps.querier,
+                &env.contract.address,
+                swap_info,
+                expected,
+                min_output.amount,
+            )?
+            .into_iter()
+            .map(SubMsg::new)
+            .collect::<Vec<SubMsg>>();
 
-            for (denom, expected) in expected {
-                let swap_info = swap_info.get(&denom).unwrap();
+            // add reply setting to last message
+            swap_msgs
+                .last_mut()
+                .map(|v| SubMsg::reply_on_success(v.msg.clone(), REPLY_ID_BURN));
 
-                let simulated_token_out = swap_info.simulate_swap_exact_in(
-                    &deps.querier,
-                    env.contract.address.to_string(),
-                    denom.clone(),
-                    expected,
-                )?;
-
-                simulated_total_receive_amount += simulated_token_out;
-
-                swap_msgs.push(swap_info.msg_swap_exact_in(
-                    env.contract.address.to_string(),
-                    simulated_token_out,
-                    denom,
-                    expected,
-                ));
-            }
-
-            if min_output_amount > simulated_total_receive_amount {
-                return Err(ContractError::TradeAmountExceeded {});
-            }
-
-            let last_swap_msg = swap_msgs.pop().unwrap();
-
-            let current_context_id = CURRENT_CONTEXT_ID.load(deps.storage)?;
-
-            CONTEXTS.save(
-                deps.storage,
-                current_context_id,
-                &Context {
-                    executor: info.sender,
-                    asset_to_check: output_asset.clone(),
-                },
-            )?;
+            save_context(deps.storage, info.sender.clone(), min_output.denom.clone())?;
 
             let resp = Response::new()
                 .add_message(burn_msg)
-                .add_messages(swap_msgs)
-                .add_submessage(SubMsg::reply_on_success(last_swap_msg, REPLY_ID_BURN))
+                .add_submessages(swap_msgs)
                 .add_attributes(vec![
                     attr("method", "burn_exact_amount_in"),
-                    attr("output_asset", output_asset),
-                    attr("min_output_amount", min_output_amount),
+                    attr("executor", info.sender),
+                    attr("input_amount", input.to_string()),
+                    attr("min_output_amount", min_output.to_string()),
                 ]);
 
             Ok(resp)
