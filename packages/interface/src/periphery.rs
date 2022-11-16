@@ -5,9 +5,9 @@ use cosmwasm_std::{coin, CosmosMsg, QuerierWrapper, StdResult, Uint128};
 use osmosis_std::types::{
     cosmos::base::v1beta1::Coin,
     osmosis::gamm::v1beta1::{
-        MsgSwapExactAmountOut, QuerySwapExactAmountInRequest, QuerySwapExactAmountInResponse,
-        QuerySwapExactAmountOutRequest, QuerySwapExactAmountOutResponse, SwapAmountInRoute,
-        SwapAmountOutRoute,
+        MsgSwapExactAmountIn, MsgSwapExactAmountOut, QuerySwapExactAmountInRequest,
+        QuerySwapExactAmountInResponse, QuerySwapExactAmountOutRequest,
+        QuerySwapExactAmountOutResponse, SwapAmountInRoute, SwapAmountOutRoute,
     },
 };
 
@@ -26,6 +26,32 @@ pub struct SwapInfo {
 }
 
 impl SwapInfo {
+    pub fn msg_swap_exact_in(
+        &self,
+        sender: String,
+        min_token_out_amount: Uint128,
+        token_in: String,
+        token_in_amount: Uint128,
+    ) -> CosmosMsg {
+        MsgSwapExactAmountIn {
+            sender,
+            routes: self
+                .routes
+                .iter()
+                .map(|v| SwapAmountInRoute {
+                    pool_id: v.pool_id,
+                    token_out_denom: v.token_denom.clone(),
+                })
+                .collect(),
+            token_in: Some(Coin {
+                denom: token_in,
+                amount: token_in_amount.to_string(),
+            }),
+            token_out_min_amount: min_token_out_amount.to_string(),
+        }
+        .into()
+    }
+
     pub fn msg_swap_exact_out(
         &self,
         sender: String,
@@ -114,15 +140,14 @@ impl SwapInfo {
 #[cw_serde]
 pub enum ExecuteMsg {
     MintExactAmountOut {
-        asset: String,
+        core_addr: String,
         amount: Uint128,
         input_asset: String,
         max_input_amount: Uint128,
         swap_info: Vec<SwapInfo>,
     },
     BurnExactAmountIn {
-        asset: String,
-        amount: Uint128,
+        core_addr: String,
         output_asset: String,
         min_output_amount: Uint128,
         swap_info: Vec<SwapInfo>,

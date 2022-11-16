@@ -10,7 +10,7 @@ pub struct Config {
 #[cw_serde]
 pub struct Context {
     pub executor: Addr,
-    pub input_asset: String,
+    pub asset_to_check: String,
 }
 
 pub const CONFIG: Item<Config> = Item::new("config");
