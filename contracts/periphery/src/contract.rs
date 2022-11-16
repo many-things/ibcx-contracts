@@ -1,18 +1,13 @@
 use std::collections::BTreeMap;
 
 use cosmwasm_std::{
-    attr, coin, coins, entry_point, Addr, BankMsg, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
+    attr, coin, coins, entry_point, BankMsg, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
     QueryResponse, Reply, Response, SubMsg, Uint128,
 };
 use ibc_interface::{
     core,
     helpers::IbcCore,
     periphery::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
-    types::SwapRoute,
-};
-use osmosis_std::types::{
-    cosmos::base::v1beta1::Coin,
-    osmosis::gamm::v1beta1::{MsgSwapExactAmountIn, SwapAmountInRoute},
 };
 
 use crate::{
@@ -106,7 +101,7 @@ pub fn execute(
                     &deps.querier,
                     env.contract.address.to_string(),
                     denom.clone(),
-                    want.clone(),
+                    want,
                 )?;
 
                 simulated_total_spend_amount += simulated_token_in;
@@ -202,7 +197,7 @@ pub fn execute(
                     &deps.querier,
                     env.contract.address.to_string(),
                     denom.clone(),
-                    expected.clone(),
+                    expected,
                 )?;
 
                 simulated_total_receive_amount += simulated_token_out;

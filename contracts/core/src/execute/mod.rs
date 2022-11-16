@@ -114,9 +114,7 @@ fn check_and_get_strategy(
 
             Ok(strategy)
         }
-        None => {
-            return Err(ContractError::TradeStrategyNotSet {});
-        }
+        None => Err(ContractError::TradeStrategyNotSet {}),
     }
 }
 

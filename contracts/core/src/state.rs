@@ -16,18 +16,10 @@ pub struct Config {
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct PauseInfo {
     pub paused: bool,
     pub expires_at: Option<u64>,
-}
-
-impl Default for PauseInfo {
-    fn default() -> Self {
-        Self {
-            paused: false,
-            expires_at: None,
-        }
-    }
 }
 
 impl PauseInfo {
@@ -107,13 +99,14 @@ impl State {
                         cw_utils::PaymentError::NoFunds {},
                     ))
                 }
-            };
+            }
+            .to_owned();
 
             if required != received {
                 return Err(ContractError::MismatchedFunds {
                     denom: denom.clone(),
                     required,
-                    received: received.clone(),
+                    received,
                 });
             }
         }

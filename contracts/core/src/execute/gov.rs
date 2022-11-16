@@ -121,7 +121,7 @@ fn sweep(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, Contrac
             let token_out_amount = check_and_simulate_trade(
                 &deps.querier,
                 &env.contract.address,
-                &token_in,
+                token_in,
                 strategy.route_sell(),
                 &Uint128::zero(), // TODO: pass slippage setting
             )?;

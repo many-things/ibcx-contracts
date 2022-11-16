@@ -4,8 +4,7 @@ pub mod core;
 pub mod periphery;
 pub mod types;
 
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Order, StdError, StdResult};
+use cosmwasm_std::{StdError, StdResult};
 
 // Settings for pagination
 pub const MAX_LIMIT: u32 = 30;
