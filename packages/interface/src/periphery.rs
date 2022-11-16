@@ -20,7 +20,6 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub struct SwapInfo {
-    pub asset: String,
     pub pool_id: u64,
     pub routes: Vec<SwapRoute>,
 }
@@ -144,13 +143,13 @@ pub enum ExecuteMsg {
         amount: Uint128,
         input_asset: String,
         max_input_amount: Uint128,
-        swap_info: Vec<SwapInfo>,
+        swap_info: Vec<(String, SwapInfo)>,
     },
     BurnExactAmountIn {
         core_addr: String,
         output_asset: String,
         min_output_amount: Uint128,
-        swap_info: Vec<SwapInfo>,
+        swap_info: Vec<(String, SwapInfo)>,
     },
 }
 

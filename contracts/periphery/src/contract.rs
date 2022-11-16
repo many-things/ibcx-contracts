@@ -78,10 +78,7 @@ pub fn execute(
                 .map(|(denom, unit)| (denom, unit * amount))
                 .collect::<BTreeMap<_, _>>();
 
-            let swap_info = swap_info
-                .into_iter()
-                .map(|v| (v.asset.clone(), v))
-                .collect::<BTreeMap<_, _>>();
+            let swap_info = swap_info.into_iter().collect::<BTreeMap<_, _>>();
 
             let funds = desired
                 .iter()
@@ -177,10 +174,7 @@ pub fn execute(
                 .map(|(denom, unit)| (denom, unit * received))
                 .collect::<BTreeMap<_, _>>();
 
-            let swap_info = swap_info
-                .into_iter()
-                .map(|v| (v.asset.clone(), v))
-                .collect::<BTreeMap<_, _>>();
+            let swap_info = swap_info.into_iter().collect::<BTreeMap<_, _>>();
 
             let burn_msg = core.call_with_funds(
                 core::ExecuteMsg::Burn {},
