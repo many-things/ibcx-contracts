@@ -1,0 +1,18 @@
+use cosmwasm_schema::cw_serde;
+use cosmwasm_std::Addr;
+use cw_storage_plus::{Item, Map};
+
+#[cw_serde]
+pub struct Config {
+    pub core: Addr,
+}
+
+#[cw_serde]
+pub struct Context {
+    pub executor: Addr,
+    pub input_asset: String,
+}
+
+pub const CONFIG: Item<Config> = Item::new("config");
+pub const CURRENT_CONTEXT_ID: Item<u64> = Item::new("current_context_id");
+pub const CONTEXTS: Map<u64, Context> = Map::new("contexts");

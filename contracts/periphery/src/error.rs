@@ -18,11 +18,20 @@ pub enum ContractError {
     #[error("{0}")]
     CheckedMultiplyRatioError(#[from] cosmwasm_std::CheckedMultiplyRatioError),
 
+    #[error("{0}")]
+    ParseReplyError(#[from] cw_utils::ParseReplyError),
+
     #[error("Paused")]
     Paused {},
 
     #[error("Not paused")]
     NotPaused {},
+
+    #[error("Invalid reply id")]
+    InvalidReplyId {},
+
+    #[error("Invalid trade route")]
+    InvalidTradeRoute {},
 
     #[error("Trade amount exceeded")]
     TradeAmountExceeded {},
