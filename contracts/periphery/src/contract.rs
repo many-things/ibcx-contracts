@@ -55,30 +55,22 @@ pub fn execute(
             core_addr,
             amount,
             input_asset,
-            max_input_amount,
             swap_info,
         } => {
+            let swap_info = swap_info.into_iter().collect::<BTreeMap<_, _>>();
+
             let core = IbcCore(deps.api.addr_validate(&core_addr)?);
             let core_config = core.get_config(&deps.querier)?;
             let core_portfolio = core.get_portfolio(&deps.querier)?;
 
-            let reserve_unit = core_portfolio
-                .reserve
-                .checked_div(core_portfolio.total_supply)?;
+            let max_input_amount = cw_utils::must_pay(&info, &input_asset)?;
 
-            let mut portfolio: BTreeMap<_, _> = core_portfolio.assets.into_iter().collect();
-
-            portfolio
-                .entry(core_config.reserve_denom.clone())
-                .and_modify(|v| *v += reserve_unit)
-                .or_insert(reserve_unit);
+            let portfolio: BTreeMap<_, _> = core_portfolio.assets.into_iter().collect();
 
             let desired = portfolio
                 .into_iter()
                 .map(|(denom, unit)| (denom, unit * amount))
                 .collect::<BTreeMap<_, _>>();
-
-            let swap_info = swap_info.into_iter().collect::<BTreeMap<_, _>>();
 
             let funds = desired
                 .iter()
@@ -152,33 +144,24 @@ pub fn execute(
             min_output_amount,
             swap_info,
         } => {
+            let swap_info = swap_info.into_iter().collect::<BTreeMap<_, _>>();
+
             let core = IbcCore(deps.api.addr_validate(&core_addr)?);
             let core_config = core.get_config(&deps.querier)?;
             let core_portfolio = core.get_portfolio(&deps.querier)?;
 
-            let received = cw_utils::must_pay(&info, &core_config.denom)?;
+            let burn_amount = cw_utils::must_pay(&info, &core_config.denom)?;
 
-            let reserve_unit = core_portfolio
-                .reserve
-                .checked_div(core_portfolio.total_supply)?;
-
-            let mut portfolio: BTreeMap<_, _> = core_portfolio.assets.into_iter().collect();
-
-            portfolio
-                .entry(core_config.reserve_denom.clone())
-                .and_modify(|v| *v += reserve_unit)
-                .or_insert(reserve_unit);
+            let portfolio: BTreeMap<_, _> = core_portfolio.assets.into_iter().collect();
 
             let expected = portfolio
                 .into_iter()
-                .map(|(denom, unit)| (denom, unit * received))
+                .map(|(denom, unit)| (denom, unit * burn_amount))
                 .collect::<BTreeMap<_, _>>();
-
-            let swap_info = swap_info.into_iter().collect::<BTreeMap<_, _>>();
 
             let burn_msg = core.call_with_funds(
                 core::ExecuteMsg::Burn {},
-                coins(received.u128(), core_config.reserve_denom),
+                coins(burn_amount.u128(), core_config.reserve_denom),
             )?;
 
             let mut swap_msgs: Vec<CosmosMsg> = Vec::new();

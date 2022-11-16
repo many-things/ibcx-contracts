@@ -121,7 +121,6 @@ pub struct PauseInfoResponse {
 #[cw_serde]
 pub struct PortfolioResponse {
     pub total_supply: Uint128,
-    pub reserve: Uint128,
     pub assets: Vec<(String, Uint128)>,
 }
 

@@ -142,7 +142,6 @@ pub enum ExecuteMsg {
         core_addr: String,
         amount: Uint128,
         input_asset: String,
-        max_input_amount: Uint128,
         swap_info: Vec<(String, SwapInfo)>,
     },
     BurnExactAmountIn {

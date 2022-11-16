@@ -45,11 +45,19 @@ pub fn pause_info(deps: Deps, _env: Env) -> Result<Binary, ContractError> {
 }
 
 pub fn portfolio(deps: Deps, _env: Env) -> Result<Binary, ContractError> {
-    let state = STATE.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
+    let mut state = STATE.load(deps.storage)?;
+
+    let reserve_unit = state.total_reserve.checked_div(state.total_supply)?;
+
+    state
+        .assets
+        .entry(config.reserve_denom)
+        .and_modify(|v| *v += reserve_unit)
+        .or_insert(reserve_unit);
 
     Ok(to_binary(&PortfolioResponse {
         total_supply: state.total_supply,
-        reserve: state.total_reserve,
         assets: map_to_vec(state.assets),
     })?)
 }
