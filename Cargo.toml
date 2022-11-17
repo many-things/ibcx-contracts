@@ -4,15 +4,12 @@ members = [
     "packages/*"
 ]
 
-[package]
-name = "ibc-cli"
-version = "0.1.0"
-description = "CLI tool for provide useful commands about ibc"
-authors = ["frostornge <frostornge@gmail.com>"]
-edition = "2018"
-
-[dependencies]
-ibc-interface = { path = "./packages/interface" }
-
-cosmwasm-schema = "1.0.0"
-clap = { version = "3.2.19", features = ["derive"] }
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+panic = 'abort'
+incremental = false
+overflow-checks = true
