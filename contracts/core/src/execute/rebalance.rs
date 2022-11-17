@@ -159,7 +159,7 @@ fn deflate(
     }
 
     // setup swap message
-    let msg = MsgSwapExactAmountIn {
+    let swap_msg = MsgSwapExactAmountIn {
         sender: env.contract.address.to_string(),
         routes: strategy.route_sell(),
         token_in: Some(Coin {
@@ -170,7 +170,7 @@ fn deflate(
     };
 
     let resp = Response::new()
-        .add_submessage(SubMsg::reply_on_success(msg, REPLY_ID_REBALANCE))
+        .add_submessage(SubMsg::reply_on_success(swap_msg, REPLY_ID_REBALANCE))
         .add_attributes(vec![
             attr("method", "trade_deflate"),
             attr("executor", info.sender),

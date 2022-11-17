@@ -14,9 +14,7 @@ use osmosis_std::types::{
 use crate::types::SwapRoute;
 
 #[cw_serde]
-pub struct InstantiateMsg {
-    pub core: String,
-}
+pub struct InstantiateMsg {}
 
 #[cw_serde]
 pub struct SwapInfo {

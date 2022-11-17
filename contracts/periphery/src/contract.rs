@@ -12,7 +12,7 @@ use ibc_interface::{
 
 use crate::{
     error::ContractError,
-    state::{Config, Context, CONFIG, CONTEXTS, CURRENT_CONTEXT_ID},
+    state::{Context, CONTEXTS, CURRENT_CONTEXT_ID},
     CONTRACT_NAME, CONTRACT_VERSION, REPLY_ID_BURN, REPLY_ID_MINT,
 };
 
@@ -21,22 +21,11 @@ pub fn instantiate(
     deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    msg: InstantiateMsg,
+    _msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     cw2::set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    CONFIG.save(
-        deps.storage,
-        &Config {
-            core: deps.api.addr_validate(&msg.core)?,
-        },
-    )?;
-
-    let resp = Response::new().add_attributes(vec![
-        attr("method", "instantiate"),
-        attr("core", msg.core),
-        // TODO: add more attributes
-    ]);
+    let resp = Response::new().add_attributes(vec![attr("method", "instantiate")]);
 
     Ok(resp)
 }

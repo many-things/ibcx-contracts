@@ -25,14 +25,14 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 
 [dependencies]
-cosmwasm-std = "1.0.0"
-cosmwasm-storage = "1.0.0"
-cosmwasm-schema = "1.0.0"
-cw-storage-plus = "0.14.0"
-cw2 = "0.14.0"
+cosmwasm-std = "1.1.2"
+cosmwasm-storage = "1.1.2"
+cosmwasm-schema = "1.1.2"
+cw-storage-plus = "0.13.2"
+cw2 = "0.13.2"
 thiserror = { version = "1.0.31" }
 
 osmosis-std = "0.12.0"
 
 [dev-dependencies]
-cw-multi-test = "0.14.0"
+cw-multi-test = "0.13.2"
