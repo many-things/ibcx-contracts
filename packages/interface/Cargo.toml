@@ -2,21 +2,10 @@
 name = "ibc-interface"
 version = "0.1.0"
 authors = ["frostornge <frostornge@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
-
-[profile.release]
-opt-level = 3
-debug = false
-rpath = false
-lto = true
-debug-assertions = false
-codegen-units = 1
-panic = 'abort'
-incremental = false
-overflow-checks = true
 
 [features]
 # for more explicit tests, cargo test --features=backtraces
@@ -25,14 +14,14 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 
 [dependencies]
-cosmwasm-std = "1.1.2"
-cosmwasm-storage = "1.1.2"
-cosmwasm-schema = "1.1.2"
-cw-storage-plus = "0.13.2"
-cw2 = "0.13.2"
+cosmwasm-std = "1.1"
+cosmwasm-storage = "1.1"
+cosmwasm-schema = "1.1"
+cw-storage-plus = "0.16"
+cw2 = "0.16"
 thiserror = { version = "1.0.31" }
 
 osmosis-std = "0.12.0"
 
 [dev-dependencies]
-cw-multi-test = "0.13.2"
+cw-multi-test = "0.16"

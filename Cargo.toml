@@ -4,6 +4,14 @@ members = [
     "packages/*"
 ]
 
+[profile.release.package.ibc-core]
+codegen-units = 1
+incremental = false
+
+[profile.release.package.ibc-periphery]
+codegen-units = 1
+incremental = false
+
 [profile.release]
 opt-level = 3
 debug = false

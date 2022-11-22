@@ -326,6 +326,6 @@ pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> Result<QueryResponse, Co
 }
 
 #[entry_point]
-pub fn migrate(_deps: Deps, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     Ok(Default::default())
 }
