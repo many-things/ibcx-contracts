@@ -1,20 +1,11 @@
-use std::collections::BTreeMap;
-
-use cosmwasm_std::{
-    attr, coins, BankMsg, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdResult, Uint128,
-};
+use cosmwasm_std::{attr, DepsMut, Env, MessageInfo, Response, Uint128};
 use ibc_interface::core::GovMsg;
 use ibc_interface::types::SwapRoute;
-use osmosis_std::types::{
-    cosmos::base::v1beta1::Coin, osmosis::gamm::v1beta1::MsgSwapExactAmountIn,
-};
 
 use crate::{
     error::ContractError,
-    state::{TradeStrategy, CONFIG, PAUSED, STATE, TRADE_STRATEGIES},
+    state::{TradeStrategy, CONFIG, PAUSED, TRADE_STRATEGIES},
 };
-
-use super::check_and_simulate_trade;
 
 pub fn handle_msg(
     deps: DepsMut,
