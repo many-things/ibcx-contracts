@@ -19,9 +19,6 @@ pub enum GovMsg {
     },
     Release {},
 
-    // sweep all untracked assets to reserve
-    Sweep {},
-
     UpdateReserveDenom {
         new_denom: String,
     },
