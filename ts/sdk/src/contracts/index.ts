@@ -4,15 +4,20 @@
 * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
 */
 
-import * as _0 from "./Core.types";
-import * as _1 from "./Core.client";
-import * as _2 from "./Periphery.types";
-import * as _3 from "./Periphery.client";
+import * as _0 from "./Airdrop.types";
+import * as _1 from "./Airdrop.client";
+import * as _2 from "./Core.types";
+import * as _3 from "./Core.client";
+import * as _4 from "./Periphery.types";
+import * as _5 from "./Periphery.client";
 export namespace contracts {
-  export const Core = { ..._0,
+  export const Airdrop = { ..._0,
     ..._1
   };
-  export const Periphery = { ..._2,
+  export const Core = { ..._2,
     ..._3
+  };
+  export const Periphery = { ..._4,
+    ..._5
   };
 }

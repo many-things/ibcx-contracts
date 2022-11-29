@@ -450,6 +450,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "ibc-airdrop"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw-utils",
+ "cw2",
+ "ibc-interface",
+ "osmosis-std",
+ "thiserror",
+]
+
+[[package]]
 name = "ibc-core"
 version = "0.1.0"
 dependencies = [

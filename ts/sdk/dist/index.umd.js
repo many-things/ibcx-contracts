@@ -105,6 +105,122 @@
     * DO NOT MODIFY IT BY HAND. Instead, modify the source JSONSchema file,
     * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
     */
+    var AirdropQueryClient = /** @class */ (function () {
+        function AirdropQueryClient(client, contractAddress) {
+            var _this = this;
+            this.airdrop = function () { return __awaiter(_this, void 0, void 0, function () {
+                return __generator(this, function (_a) {
+                    return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
+                            airdrop: {}
+                        })];
+                });
+            }); };
+            this.airdrops = function () { return __awaiter(_this, void 0, void 0, function () {
+                return __generator(this, function (_a) {
+                    return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
+                            airdrops: {}
+                        })];
+                });
+            }); };
+            this.latestAirdropId = function () { return __awaiter(_this, void 0, void 0, function () {
+                return __generator(this, function (_a) {
+                    return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
+                            latest_airdrop_id: {}
+                        })];
+                });
+            }); };
+            this.qualification = function (_a) {
+                var beneficiary = _a.beneficiary, merkleProof = _a.merkleProof;
+                return __awaiter(_this, void 0, void 0, function () {
+                    return __generator(this, function (_b) {
+                        return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
+                                qualification: {
+                                    beneficiary: beneficiary,
+                                    merkle_proof: merkleProof
+                                }
+                            })];
+                    });
+                });
+            };
+            this.client = client;
+            this.contractAddress = contractAddress;
+            this.airdrop = this.airdrop.bind(this);
+            this.airdrops = this.airdrops.bind(this);
+            this.latestAirdropId = this.latestAirdropId.bind(this);
+            this.qualification = this.qualification.bind(this);
+        }
+        return AirdropQueryClient;
+    }());
+    var AirdropClient = /** @class */ (function (_super) {
+        __extends(AirdropClient, _super);
+        function AirdropClient(client, sender, contractAddress) {
+            var _this = _super.call(this, client, contractAddress) || this;
+            _this.regsiter = function (_a, fee, memo, funds) {
+                var label = _a.label, merkleRoot = _a.merkleRoot;
+                if (fee === void 0) { fee = "auto"; }
+                return __awaiter(_this, void 0, void 0, function () {
+                    return __generator(this, function (_b) {
+                        switch (_b.label) {
+                            case 0: return [4 /*yield*/, this.client.execute(this.sender, this.contractAddress, {
+                                    regsiter: {
+                                        label: label,
+                                        merkle_root: merkleRoot
+                                    }
+                                }, fee, memo, funds)];
+                            case 1: return [2 /*return*/, _b.sent()];
+                        }
+                    });
+                });
+            };
+            _this.claim = function (_a, fee, memo, funds) {
+                var airdropId = _a.airdropId, beneficiary = _a.beneficiary, merkleProof = _a.merkleProof;
+                if (fee === void 0) { fee = "auto"; }
+                return __awaiter(_this, void 0, void 0, function () {
+                    return __generator(this, function (_b) {
+                        switch (_b.label) {
+                            case 0: return [4 /*yield*/, this.client.execute(this.sender, this.contractAddress, {
+                                    claim: {
+                                        airdrop_id: airdropId,
+                                        beneficiary: beneficiary,
+                                        merkle_proof: merkleProof
+                                    }
+                                }, fee, memo, funds)];
+                            case 1: return [2 /*return*/, _b.sent()];
+                        }
+                    });
+                });
+            };
+            _this.client = client;
+            _this.sender = sender;
+            _this.contractAddress = contractAddress;
+            _this.regsiter = _this.regsiter.bind(_this);
+            _this.claim = _this.claim.bind(_this);
+            return _this;
+        }
+        return AirdropClient;
+    }(AirdropQueryClient));
+
+    var _1 = /*#__PURE__*/Object.freeze({
+        __proto__: null,
+        AirdropQueryClient: AirdropQueryClient,
+        AirdropClient: AirdropClient
+    });
+
+    /**
+    * This file was automatically generated by @cosmwasm/ts-codegen@0.16.5.
+    * DO NOT MODIFY IT BY HAND. Instead, modify the source JSONSchema file,
+    * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
+    */
+
+    var _2 = /*#__PURE__*/Object.freeze({
+        __proto__: null
+    });
+
+    /**
+    * This file was automatically generated by @cosmwasm/ts-codegen@0.16.5.
+    * DO NOT MODIFY IT BY HAND. Instead, modify the source JSONSchema file,
+    * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
+    */
     var CoreQueryClient = /** @class */ (function () {
         function CoreQueryClient(client, contractAddress) {
             var _this = this;
@@ -293,7 +409,7 @@
         return CoreClient;
     }(CoreQueryClient));
 
-    var _1 = /*#__PURE__*/Object.freeze({
+    var _3 = /*#__PURE__*/Object.freeze({
         __proto__: null,
         CoreQueryClient: CoreQueryClient,
         CoreClient: CoreClient
@@ -305,7 +421,7 @@
     * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
     */
 
-    var _2 = /*#__PURE__*/Object.freeze({
+    var _4 = /*#__PURE__*/Object.freeze({
         __proto__: null
     });
 
@@ -364,7 +480,7 @@
         return PeripheryClient;
     }());
 
-    var _3 = /*#__PURE__*/Object.freeze({
+    var _5 = /*#__PURE__*/Object.freeze({
         __proto__: null,
         PeripheryClient: PeripheryClient
     });
@@ -376,8 +492,9 @@
     */
     var contracts;
     (function (contracts) {
-        contracts.Core = __assign(__assign({}, _0), _1);
-        contracts.Periphery = __assign(__assign({}, _2), _3);
+        contracts.Airdrop = __assign(__assign({}, _0), _1);
+        contracts.Core = __assign(__assign({}, _2), _3);
+        contracts.Periphery = __assign(__assign({}, _4), _5);
     })(contracts || (contracts = {}));
 
     var index = /*#__PURE__*/Object.freeze({

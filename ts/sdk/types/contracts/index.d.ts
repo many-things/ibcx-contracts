@@ -3,15 +3,20 @@
 * DO NOT MODIFY IT BY HAND. Instead, modify the source JSONSchema file,
 * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
 */
-import * as _1 from "./Core.client";
-import * as _3 from "./Periphery.client";
+import * as _1 from "./Airdrop.client";
+import * as _3 from "./Core.client";
+import * as _5 from "./Periphery.client";
 export declare namespace contracts {
+    const Airdrop: {
+        AirdropQueryClient: typeof _1.AirdropQueryClient;
+        AirdropClient: typeof _1.AirdropClient;
+    };
     const Core: {
-        CoreQueryClient: typeof _1.CoreQueryClient;
-        CoreClient: typeof _1.CoreClient;
+        CoreQueryClient: typeof _3.CoreQueryClient;
+        CoreClient: typeof _3.CoreClient;
     };
     const Periphery: {
-        PeripheryClient: typeof _3.PeripheryClient;
+        PeripheryClient: typeof _5.PeripheryClient;
     };
 }
 //# sourceMappingURL=index.d.ts.map

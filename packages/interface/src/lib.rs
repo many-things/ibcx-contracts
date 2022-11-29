@@ -1,5 +1,6 @@
 pub mod helpers;
 
+pub mod airdrop;
 pub mod core;
 pub mod periphery;
 pub mod types;

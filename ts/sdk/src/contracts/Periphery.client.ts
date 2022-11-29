@@ -6,7 +6,7 @@
 
 import { Coin, StdFee } from "@cosmjs/amino";
 import { SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
-import { InstantiateMsg, ExecuteMsg, Uint128, SwapInfo, SwapRoute } from "./Periphery.types";
+import { InstantiateMsg, ExecuteMsg, Uint128, SwapInfo, SwapRoute, MigrateMsg } from "./Periphery.types";
 export interface PeripheryInterface {
   contractAddress: string;
   sender: string;
