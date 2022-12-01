@@ -1,0 +1,9 @@
+{
+    "gov": "",
+    "denom": "uibc",
+    "reserve_denom": "uosmo",
+    "initial_assets": [
+        ["uosmo", "1000000"],
+        ["uion", "1000000"]
+    ]
+}
