@@ -14,20 +14,10 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum GovMsg {
     // pause mint / burn
-    Pause {
-        expires_at: u64,
-    },
+    Pause { expires_at: u64 },
     Release {},
 
-    UpdateReserveDenom {
-        new_denom: String,
-    },
-    UpdateTradeStrategy {
-        asset: String,
-        routes: Vec<SwapRoute>,
-        cool_down: Option<u64>,
-        max_trade_amount: Uint128, // in reserve denom
-    },
+    UpdateReserveDenom { new_denom: String },
 }
 
 #[cw_serde]
@@ -56,7 +46,6 @@ pub enum ExecuteMsg {
     Burn {},                                    // pub some ibc tokens to tx payload
 
     Gov(GovMsg),
-    Rebalance(RebalanceMsg),
 }
 
 #[cw_serde]

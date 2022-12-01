@@ -4,7 +4,7 @@ use ibc_interface::types::SwapRoute;
 
 use crate::{
     error::ContractError,
-    state::{TradeStrategy, CONFIG, PAUSED, TRADE_STRATEGIES},
+    state::{GOV, PAUSED, TOKEN},
 };
 
 pub fn handle_msg(
@@ -15,19 +15,15 @@ pub fn handle_msg(
 ) -> Result<Response, ContractError> {
     use GovMsg::*;
 
-    // TODO: access control
+    if info.sender != GOV.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {});
+    }
 
     match msg {
         Pause { expires_at } => pause(deps, env, info, expires_at),
         Release {} => release(deps, env, info),
 
         UpdateReserveDenom { new_denom } => update_reserve_denom(deps, info, new_denom),
-        UpdateTradeStrategy {
-            asset,
-            routes,
-            cool_down,
-            max_trade_amount,
-        } => update_trade_strategy(deps, env, info, asset, routes, cool_down, max_trade_amount),
     }
 }
 
@@ -76,46 +72,15 @@ fn update_reserve_denom(
     info: MessageInfo,
     new_denom: String,
 ) -> Result<Response, ContractError> {
-    let mut config = CONFIG.load(deps.storage)?;
+    let mut token = TOKEN.load(deps.storage)?;
 
-    config.reserve_denom = new_denom;
+    token.reserve_denom = new_denom;
 
-    CONFIG.save(deps.storage, &config)?;
+    TOKEN.save(deps.storage, &token)?;
 
     let resp = Response::new().add_attributes(vec![
         attr("method", "gov::update_reserve_denom"),
         attr("executor", info.sender),
-    ]);
-
-    Ok(resp)
-}
-
-fn update_trade_strategy(
-    deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
-    asset: String,
-    routes: Vec<SwapRoute>,
-    cool_down: Option<u64>,
-    max_trade_amount: Uint128,
-) -> Result<Response, ContractError> {
-    let strategy = TradeStrategy {
-        routes,
-        cool_down,
-        max_trade_amount,
-        last_traded_at: TRADE_STRATEGIES
-            .may_load(deps.storage, &asset)?
-            .map(|v| v.last_traded_at)
-            .unwrap_or_default(),
-    };
-    strategy.validate(&CONFIG.load(deps.storage)?.reserve_denom)?;
-
-    TRADE_STRATEGIES.save(deps.storage, &asset, &strategy)?;
-
-    let resp = Response::new().add_attributes(vec![
-        attr("method", "gov::update_trade_strategy"),
-        attr("exector", info.sender),
-        attr("asset", asset),
     ]);
 
     Ok(resp)

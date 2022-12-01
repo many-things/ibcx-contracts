@@ -1,12 +1,10 @@
-use cosmwasm_std::{entry_point, Deps, DepsMut, Env, MessageInfo, QueryResponse, Response};
+use cosmwasm_std::entry_point;
+use cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QueryResponse, Response, Uint128};
 use ibc_interface::core::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use osmosis_std::types::osmosis::tokenfactory::v1beta1::MsgCreateDenom;
 
-use crate::{
-    error::ContractError,
-    state::{Config, State, CONFIG, PAUSED, REBALANCE_LATEST_ID, STATE},
-    CONTRACT_NAME, CONTRACT_VERSION,
-};
+use crate::state::{set_assets, Token, GOV, TOKEN};
+use crate::{error::ContractError, state::PAUSED, CONTRACT_NAME, CONTRACT_VERSION};
 
 #[entry_point]
 pub fn instantiate(
@@ -17,31 +15,60 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     cw2::set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    CONFIG.save(
+    TOKEN.save(
         deps.storage,
-        &Config {
-            gov: deps.api.addr_validate(&msg.gov)?,
+        &Token {
             denom: msg.denom.clone(),
             reserve_denom: msg.reserve_denom,
+            total_supply: Uint128::zero(),
         },
     )?;
 
+    GOV.save(deps.storage, &deps.api.addr_validate(&msg.gov)?)?;
     PAUSED.save(deps.storage, &Default::default())?;
-
-    STATE.save(deps.storage, &State::new(msg.initial_assets)?)?;
-
-    REBALANCE_LATEST_ID.save(deps.storage, &0)?;
-
-    let msg = MsgCreateDenom {
-        sender: env.contract.address.into_string(),
-        subdenom: msg.denom,
-    };
+    set_assets(deps.storage, msg.initial_assets)?;
 
     let resp = Response::new()
-        .add_message(msg)
+        .add_message(MsgCreateDenom {
+            sender: env.contract.address.into_string(),
+            subdenom: msg.denom,
+        })
         .add_attribute("method", "instantiate");
 
     Ok(resp)
+}
+
+#[cfg(test)]
+mod test {
+    use cosmwasm_std::{Addr, Uint128};
+    use cw_multi_test::{App, ContractWrapper, Executor};
+    use ibc_interface::core::InstantiateMsg;
+
+    #[test]
+    pub fn instantiate() {
+        let mut app = App::default();
+        let contract = ContractWrapper::new(super::execute, super::instantiate, super::query);
+        let code = app.store_code(Box::new(contract));
+
+        let code_owner = Addr::unchecked("owner");
+        app.instantiate_contract(
+            code,
+            code_owner,
+            &InstantiateMsg {
+                gov: "gov".to_string(),
+                denom: "uibc".to_string(),
+                reserve_denom: "uosmo".to_string(),
+                initial_assets: vec![
+                    ("uosmo".to_string(), Uint128::new(1000000)),
+                    ("uion".to_string(), Uint128::new(1000000)),
+                ],
+            },
+            &[],
+            "ibc_core",
+            None,
+        )
+        .unwrap();
+    }
 }
 
 #[entry_point]
@@ -58,7 +85,6 @@ pub fn execute(
         Mint { amount, receiver } => execute::mint(deps, env, info, amount, receiver),
         Burn {} => execute::burn(deps, env, info),
         Gov(msg) => execute::gov::handle_msg(deps, env, info, msg),
-        Rebalance(msg) => execute::rebalance::handle_msg(deps, env, info, msg),
     }
 }
 

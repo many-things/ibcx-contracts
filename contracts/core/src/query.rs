@@ -13,13 +13,7 @@ use ibc_interface::{
     DEFAULT_LIMIT, MAX_LIMIT,
 };
 
-use crate::{
-    error::ContractError,
-    state::{
-        RebalanceInfo, TradeStrategy, CONFIG, PAUSED, REBALANCES, REBALANCE_LATEST_ID, STATE,
-        TRADE_ALLOCATIONS, TRADE_STRATEGIES, TRADE_TOTAL_ALLOCATION,
-    },
-};
+use crate::{error::ContractError, state::PAUSED};
 
 fn map_to_vec<T, U>(m: BTreeMap<T, U>) -> Vec<(T, U)> {
     m.into_iter().map(|(t, u)| (t, u)).collect()

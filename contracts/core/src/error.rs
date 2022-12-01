@@ -21,11 +21,20 @@ pub enum ContractError {
     #[error("{0}")]
     CheckedMultiplyRatioError(#[from] cosmwasm_std::CheckedMultiplyRatioError),
 
+    #[error("denom {reserved:?} already reserved")]
+    DenomReserved { reserved: String },
+
+    #[error("length of assets exceeded. limit:{limit:?}")]
+    InvalidAssetLength { limit: u32 },
+
     #[error("Paused")]
     Paused {},
 
     #[error("Not paused")]
     NotPaused {},
+
+    #[error("Unauthorized")]
+    Unauthorized {},
 
     #[error("Trade amount exceeded")]
     TradeAmountExceeded {},
