@@ -1,62 +1,11 @@
 use std::collections::BTreeMap;
 
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{coin, Addr, Coin, Env, Order, StdResult, Storage, Uint128};
-use cw_storage_plus::{Item, Map};
+use cosmwasm_std::{coin, Coin, Order, StdResult, Storage, Uint128};
 use ibc_interface::MAX_LIMIT;
 
 use crate::error::ContractError;
 
-#[cw_serde]
-#[derive(Default)]
-pub struct PauseInfo {
-    pub paused: bool,
-    pub expires_at: Option<u64>,
-}
-
-impl PauseInfo {
-    pub fn refresh(self, storage: &mut dyn Storage, env: &Env) -> StdResult<Self> {
-        if self.paused {
-            if let Some(expiry) = self.expires_at {
-                if expiry <= env.block.time.seconds() {
-                    PAUSED.save(storage, &Default::default())?;
-                }
-            }
-        }
-
-        Ok(self)
-    }
-
-    pub fn assert_paused(self) -> Result<Self, ContractError> {
-        if self.paused {
-            return Err(ContractError::Paused {});
-        }
-
-        Ok(self)
-    }
-
-    pub fn assert_not_paused(self) -> Result<Self, ContractError> {
-        if !self.paused {
-            return Err(ContractError::NotPaused {});
-        }
-
-        Ok(self)
-    }
-}
-
-#[cw_serde]
-pub struct Token {
-    pub denom: String,
-    pub reserve_denom: String,
-    pub total_supply: Uint128,
-}
-
-pub const GOV: Item<Addr> = Item::new("gov");
-pub const TOKEN: Item<Token> = Item::new("token");
-
-pub const RESERVE_DENOM: &str = "reserve";
-pub const ASSETS: Map<String, Uint128> = Map::new("assets");
-pub const PAUSED: Item<PauseInfo> = Item::new("paused");
+use super::{ASSETS, RESERVE_DENOM, TOKEN};
 
 pub fn assert_assets(
     storage: &dyn Storage,
@@ -110,16 +59,23 @@ pub fn set_assets(
     Ok(())
 }
 
-pub fn get_redeem_assets(storage: &dyn Storage, desired: Uint128) -> StdResult<Vec<Coin>> {
-    let mut assets: BTreeMap<_, _> = ASSETS
+pub fn get_assets(storage: &dyn Storage) -> StdResult<Vec<Coin>> {
+    ASSETS
         .range(storage, None, None, Order::Ascending)
         .take(MAX_LIMIT as usize)
         .map(|item| {
             let (k, v) = item?;
 
-            Ok((k, v * desired))
+            Ok(coin(v.u128(), k))
         })
-        .collect::<StdResult<_>>()?;
+        .collect::<StdResult<_>>()
+}
+
+pub fn get_redeem_assets(storage: &dyn Storage, desired: Uint128) -> StdResult<Vec<Coin>> {
+    let mut assets: BTreeMap<_, _> = get_assets(storage)?
+        .into_iter()
+        .map(|Coin { denom, amount }| (denom, amount * desired))
+        .collect();
 
     let token = TOKEN.load(storage)?;
 
