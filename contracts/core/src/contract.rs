@@ -97,24 +97,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
         Config {} => query::config(deps, env),
         PauseInfo {} => query::pause_info(deps, env),
         Portfolio {} => query::portfolio(deps, env),
-        RebalanceInfo { id } => query::rebalance_info(deps, env, id),
-        ListRebalanceInfo {
-            start_after,
-            limit,
-            order,
-        } => query::list_rebalance_info(deps, env, start_after, limit, order),
-        Strategy { asset } => query::strategy(deps, env, asset),
-        ListStrategy {
-            start_after,
-            limit,
-            order,
-        } => query::list_strategy(deps, env, start_after, limit, order),
-        Allocation { asset } => query::allocation(deps, env, asset),
-        ListAllocation {
-            start_after,
-            limit,
-            order,
-        } => query::list_allocation(deps, env, start_after, limit, order),
     }
 }
 

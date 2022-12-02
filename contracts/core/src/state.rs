@@ -101,7 +101,7 @@ pub fn set_assets(
                 reserved: RESERVE_DENOM.to_string(),
             });
         }
-        match ASSETS.may_load(storage, denom)? {
+        match ASSETS.may_load(storage, denom.clone())? {
             Some(_) => return Err(ContractError::DenomReserved { reserved: denom }),
             None => ASSETS.save(storage, denom, &unit)?,
         }
@@ -124,11 +124,14 @@ pub fn get_redeem_assets(storage: &dyn Storage, desired: Uint128) -> StdResult<V
     let token = TOKEN.load(storage)?;
 
     if assets.contains_key(&token.reserve_denom) || assets.contains_key(RESERVE_DENOM) {
-        let reserve_unit = assets.entry(RESERVE_DENOM.to_string()).or_default();
+        let reserve_unit = assets
+            .get(&token.reserve_denom)
+            .map(|v| *v)
+            .unwrap_or_default();
         assets
             .entry(token.reserve_denom)
-            .and_modify(|v| *v += *reserve_unit)
-            .or_insert(*reserve_unit);
+            .and_modify(|v| *v += reserve_unit)
+            .or_insert(reserve_unit);
     }
 
     Ok(assets

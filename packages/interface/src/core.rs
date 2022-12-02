@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Decimal, Uint128};
+use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
 
 use crate::types::{RangeOrder, SwapRoute};
 
@@ -59,36 +59,6 @@ pub enum QueryMsg {
 
     #[returns(PortfolioResponse)]
     Portfolio {},
-
-    #[returns(RebalanceInfoResponse)]
-    RebalanceInfo { id: Option<u64> },
-
-    #[returns(ListRebalanceInfoResponse)]
-    ListRebalanceInfo {
-        start_after: Option<u64>,
-        limit: Option<u32>,
-        order: Option<RangeOrder>,
-    },
-
-    #[returns(StrategyResponse)]
-    Strategy { asset: String },
-
-    #[returns(ListStrategyResponse)]
-    ListStrategy {
-        start_after: Option<String>,
-        limit: Option<u32>,
-        order: Option<RangeOrder>,
-    },
-
-    #[returns(AllocationResponse)]
-    Allocation { asset: String },
-
-    #[returns(ListAllocationResponse)]
-    ListAllocation {
-        start_after: Option<String>,
-        limit: Option<u32>,
-        order: Option<RangeOrder>,
-    },
 }
 
 #[cw_serde]
@@ -107,48 +77,8 @@ pub struct PauseInfoResponse {
 #[cw_serde]
 pub struct PortfolioResponse {
     pub total_supply: Uint128,
-    pub assets: Vec<(String, Uint128)>,
+    pub assets: Vec<Coin>,
 }
 
 #[cw_serde]
-pub struct RebalanceInfoResponse {
-    pub id: u64,
-    pub manager: Addr,
-    pub init_status: Vec<(String, Uint128)>,
-    pub deflation: Vec<(String, Uint128)>,
-    pub amortization: Vec<(String, Uint128)>,
-    pub finished: bool,
-}
-
-#[cw_serde]
-pub struct ListRebalanceInfoResponse(pub Vec<RebalanceInfoResponse>);
-
-#[cw_serde]
-pub struct StrategyResponse {
-    pub asset: String,
-    pub routes: Vec<SwapRoute>,
-    pub cool_down: Option<u64>,
-    pub max_trade_amount: Uint128,
-    pub last_traded_at: u64,
-}
-
-#[cw_serde]
-pub struct ListStrategyResponse(pub Vec<StrategyResponse>);
-
-#[cw_serde]
-pub struct AllocationResponse {
-    pub asset: String,
-    pub allocation: Uint128,
-    pub ratio: Decimal,
-    pub extracted: Uint128, // in amount of reserve token
-}
-
-#[cw_serde]
-pub struct ListAllocationResponse {
-    pub allocations: Vec<AllocationResponse>,
-    pub total: Uint128, // sigma allocations
-    pub total_reserve: Uint128,
-}
-
-#[cw_serde]
-pub enum MigrateMsg {}
+pub struct MigrateMsg {}

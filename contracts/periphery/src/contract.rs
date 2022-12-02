@@ -1,8 +1,9 @@
 use std::collections::BTreeMap;
 
 use cosmwasm_std::{
-    attr, coin, coins, entry_point, Addr, BankMsg, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
-    QuerierWrapper, QueryResponse, Reply, Response, StdResult, Storage, SubMsg, Uint128,
+    attr, coin, coins, entry_point, Addr, BankMsg, Coin, CosmosMsg, Deps, DepsMut, Env,
+    MessageInfo, QuerierWrapper, QueryResponse, Reply, Response, StdResult, Storage, SubMsg,
+    Uint128,
 };
 use ibc_interface::{
     core,
@@ -160,7 +161,7 @@ pub fn execute(
             let desired = core_portfolio
                 .assets
                 .into_iter()
-                .map(|(denom, unit)| (denom, unit * output.amount))
+                .map(|Coin { denom, amount }| (denom, amount * output.amount))
                 .collect::<BTreeMap<_, _>>();
 
             let funds = desired
@@ -222,7 +223,7 @@ pub fn execute(
             let expected = core_portfolio
                 .assets
                 .into_iter()
-                .map(|(denom, unit)| (denom, unit * input.amount))
+                .map(|Coin { denom, amount }| (denom, amount * input.amount))
                 .collect::<BTreeMap<_, _>>();
 
             let burn_msg = core.call_with_funds(
