@@ -13,13 +13,16 @@ pub enum ContractError {
     DivideByZeroError(#[from] cosmwasm_std::DivideByZeroError),
 
     #[error("{0}")]
-    PaymentError(#[from] cw_utils::PaymentError),
-
-    #[error("{0}")]
     CheckedFromRatioError(#[from] cosmwasm_std::CheckedFromRatioError),
 
     #[error("{0}")]
     CheckedMultiplyRatioError(#[from] cosmwasm_std::CheckedMultiplyRatioError),
+
+    #[error("{0}")]
+    PaymentError(#[from] cw_utils::PaymentError),
+
+    #[error("{0}")]
+    ParseReplyError(#[from] cw_utils::ParseReplyError),
 
     #[error("denom {reserved:?} already reserved")]
     DenomReserved { reserved: String },
@@ -36,38 +39,8 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
-    #[error("Trade amount exceeded")]
-    TradeAmountExceeded {},
-
-    #[error("Trade strategy not set")]
-    TradeStrategyNotSet {},
-
-    #[error("Trade simulation failed")]
-    TradeSimulationFailed {},
-
-    #[error("Trade no allocation")]
-    TradeNoAllocation {},
-
-    #[error("Trade cooldown not finished")]
-    TradeCooldownNotFinished {},
-
-    #[error("Rebalance info not found or not initialized")]
-    RebalanceInfoNotFound {},
-
-    #[error("Rebalance already finished")]
-    RebalanceAlreadyFinished {},
-
-    #[error("Rebalance already on going")]
-    RebalanceAlreadyOnGoing {},
-
-    #[error("Rebalance condition fulfilled")]
-    RebalanceConditionFulfilled {},
-
-    #[error("Rebalance ran out of allocation")]
-    RebalanceRanOutOfAllocation {},
-
-    #[error("Rebalance validation failed. reason: {reason:?}")]
-    RebalanceValidationFailed { reason: String },
+    #[error("Unknown reply id {id:?}")]
+    UnknownReplyId { id: u64 },
 
     #[error("Received funds mismatched (denom: {denom:?} => required: {required:?}, received: {received:?})")]
     MismatchedFunds {
