@@ -36,15 +36,12 @@ pub fn assert_assets(
         .collect::<Result<_, _>>()
 }
 
-pub fn set_assets(
-    storage: &mut dyn Storage,
-    assets: Vec<(String, Uint128)>,
-) -> Result<(), ContractError> {
+pub fn set_assets(storage: &mut dyn Storage, assets: Vec<Coin>) -> Result<(), ContractError> {
     if assets.len() > MAX_LIMIT as usize {
         return Err(ContractError::InvalidAssetLength { limit: MAX_LIMIT });
     }
 
-    for (denom, unit) in assets {
+    for Coin { denom, amount } in assets {
         if denom == RESERVE_DENOM {
             return Err(ContractError::DenomReserved {
                 reserved: RESERVE_DENOM.to_string(),
@@ -52,7 +49,7 @@ pub fn set_assets(
         }
         match ASSETS.may_load(storage, denom.clone())? {
             Some(_) => return Err(ContractError::DenomReserved { reserved: denom }),
-            None => ASSETS.save(storage, denom, &unit)?,
+            None => ASSETS.save(storage, denom, &amount)?,
         }
     }
 

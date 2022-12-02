@@ -6,7 +6,7 @@ pub struct InstantiateMsg {
     pub gov: String,
     pub denom: String,
     pub reserve_denom: String,
-    pub initial_assets: Vec<(String, Uint128)>,
+    pub initial_assets: Vec<Coin>,
 }
 
 #[cw_serde]
@@ -16,26 +16,6 @@ pub enum GovMsg {
     Release {},
 
     UpdateReserveDenom { new_denom: String },
-}
-
-#[cw_serde]
-pub enum RebalanceMsg {
-    Init {
-        manager: String,
-        deflation: Vec<(String, Uint128)>,    // in unit
-        amortization: Vec<(String, Uint128)>, // in ratio
-    },
-    Deflate {
-        asset: String,
-        amount_token_in: Uint128,
-        amount_reserve_min: Uint128,
-    },
-    Amortize {
-        asset: String,
-        amount_reserve_in: Uint128,
-        amount_token_min: Uint128,
-    },
-    Finish {},
 }
 
 #[cw_serde]

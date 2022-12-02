@@ -40,7 +40,7 @@ pub fn instantiate(
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{Addr, Uint128};
+    use cosmwasm_std::{coin, Addr};
     use cw_multi_test::{App, ContractWrapper, Executor};
     use ibc_interface::core::InstantiateMsg;
 
@@ -58,10 +58,7 @@ mod test {
                 gov: "gov".to_string(),
                 denom: "uibc".to_string(),
                 reserve_denom: "uosmo".to_string(),
-                initial_assets: vec![
-                    ("uosmo".to_string(), Uint128::new(1000000)),
-                    ("uion".to_string(), Uint128::new(1000000)),
-                ],
+                initial_assets: vec![coin(1000000, "uosmo"), coin(1000000, "uion")],
             },
             &[],
             "ibc_core",
@@ -72,6 +69,7 @@ mod test {
 }
 
 #[entry_point]
+
 pub fn execute(
     deps: DepsMut,
     env: Env,
