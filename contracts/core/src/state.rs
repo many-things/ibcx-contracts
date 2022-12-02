@@ -126,7 +126,7 @@ pub fn get_redeem_assets(storage: &dyn Storage, desired: Uint128) -> StdResult<V
     if assets.contains_key(&token.reserve_denom) || assets.contains_key(RESERVE_DENOM) {
         let reserve_unit = assets
             .get(&token.reserve_denom)
-            .map(|v| *v)
+            .copied()
             .unwrap_or_default();
         assets
             .entry(token.reserve_denom)

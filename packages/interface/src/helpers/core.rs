@@ -3,10 +3,7 @@ use cosmwasm_std::{
     to_binary, Addr, Coin, CosmosMsg, CustomQuery, QuerierWrapper, StdResult, WasmMsg, WasmQuery,
 };
 
-use crate::{
-    core::{ConfigResponse, ExecuteMsg, PauseInfoResponse, PortfolioResponse, QueryMsg},
-    types::RangeOrder,
-};
+use crate::core::{ConfigResponse, ExecuteMsg, PauseInfoResponse, PortfolioResponse, QueryMsg};
 
 /// IbcCore is a wrapper around Addr that provides a lot of helpers
 /// for working with this.

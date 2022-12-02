@@ -1,7 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
-
-use crate::types::{RangeOrder, SwapRoute};
+use cosmwasm_std::{Addr, Coin, Uint128};
 
 #[cw_serde]
 pub struct InstantiateMsg {

@@ -1,6 +1,5 @@
-use cosmwasm_std::{attr, DepsMut, Env, MessageInfo, Response, Uint128};
+use cosmwasm_std::{attr, DepsMut, Env, MessageInfo, Response};
 use ibc_interface::core::GovMsg;
-use ibc_interface::types::SwapRoute;
 
 use crate::{
     error::ContractError,
