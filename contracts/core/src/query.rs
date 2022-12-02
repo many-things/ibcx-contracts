@@ -3,7 +3,7 @@ use ibc_interface::core::{ConfigResponse, PauseInfoResponse, PortfolioResponse};
 
 use crate::{
     error::ContractError,
-    state::{get_redeem_assets, GOV, PAUSED, TOKEN},
+    state::{get_assets, get_redeem_assets, GOV, PAUSED, TOKEN},
 };
 
 pub fn config(deps: Deps, _env: Env) -> Result<Binary, ContractError> {
@@ -32,5 +32,6 @@ pub fn portfolio(deps: Deps, _env: Env) -> Result<Binary, ContractError> {
     Ok(to_binary(&PortfolioResponse {
         total_supply: token.total_supply,
         assets: get_redeem_assets(deps.storage, token.total_supply)?,
+        units: get_assets(deps.storage)?,
     })?)
 }

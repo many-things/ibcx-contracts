@@ -59,6 +59,7 @@ pub struct PauseInfoResponse {
 pub struct PortfolioResponse {
     pub total_supply: Uint128,
     pub assets: Vec<Coin>,
+    pub units: Vec<Coin>,
 }
 
 #[cw_serde]

@@ -77,10 +77,7 @@ pub fn get_redeem_assets(storage: &dyn Storage, desired: Uint128) -> StdResult<V
     let token = TOKEN.load(storage)?;
 
     if assets.contains_key(&token.reserve_denom) || assets.contains_key(RESERVE_DENOM) {
-        let reserve_unit = assets
-            .get(&token.reserve_denom)
-            .copied()
-            .unwrap_or_default();
+        let reserve_unit = assets.get(RESERVE_DENOM).copied().unwrap_or_default();
         assets
             .entry(token.reserve_denom)
             .and_modify(|v| *v += reserve_unit)

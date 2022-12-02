@@ -1,10 +1,7 @@
 pub mod gov;
 
 use cosmwasm_std::{attr, coin, BankMsg, DepsMut, Env, MessageInfo, Response, Uint128};
-use osmosis_std::types::{
-    cosmos::base::v1beta1::Coin,
-    osmosis::tokenfactory::v1beta1::{MsgBurn, MsgMint},
-};
+use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgBurn, MsgMint};
 
 use crate::{
     error::ContractError,
@@ -35,14 +32,22 @@ pub fn mint(
     token.total_supply = token.total_supply.checked_add(amount)?;
     TOKEN.save(deps.storage, &token)?;
 
+    let mint_amount = coin(amount.u128(), token.denom);
+    let mut send_amount = refund;
+    send_amount.push(mint_amount.clone());
+    let send_amount = send_amount
+        .into_iter()
+        .filter(|v| !v.amount.is_zero())
+        .collect();
+
     let resp = Response::new()
         .add_message(MsgMint {
-            sender: receiver.to_string(),
-            amount: Some(coin(amount.u128(), token.denom).into()),
+            sender: env.contract.address.into_string(),
+            amount: Some(mint_amount.into()),
         })
         .add_message(BankMsg::Send {
             to_address: receiver.to_string(),
-            amount: refund,
+            amount: send_amount,
         })
         .add_attributes(vec![
             attr("method", "mint"),
@@ -70,10 +75,7 @@ pub fn burn(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, Cont
     let resp = Response::new()
         .add_message(MsgBurn {
             sender: env.contract.address.to_string(),
-            amount: Some(Coin {
-                denom: token.denom,
-                amount: received.to_string(),
-            }),
+            amount: Some(coin(received.u128(), token.denom).into()),
         })
         .add_message(BankMsg::Send {
             to_address: info.sender.to_string(),
