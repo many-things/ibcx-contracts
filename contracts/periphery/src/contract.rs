@@ -181,7 +181,7 @@ pub fn execute(
             let mint_msg = core.call_with_funds(
                 core::ExecuteMsg::Mint {
                     amount: output.amount,
-                    receiver: info.sender.to_string(),
+                    receiver: Some(info.sender.to_string()),
                 },
                 funds,
             )?;

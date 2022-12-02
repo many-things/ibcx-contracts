@@ -16,7 +16,7 @@ pub fn mint(
     env: Env,
     info: MessageInfo,
     amount: Uint128,
-    receiver: String,
+    receiver: Option<String>,
 ) -> Result<Response, ContractError> {
     PAUSED
         .load(deps.storage)?
@@ -24,7 +24,10 @@ pub fn mint(
         .assert_paused()?;
 
     // validate!
-    deps.api.addr_validate(&receiver)?;
+    let receiver = receiver
+        .map(|v| deps.api.addr_validate(&v))
+        .transpose()?
+        .unwrap_or_else(|| info.sender.clone());
 
     let mut token = TOKEN.load(deps.storage)?;
     let refund = assert_assets(deps.storage, info.funds, &amount)?;
@@ -34,11 +37,11 @@ pub fn mint(
 
     let resp = Response::new()
         .add_message(MsgMint {
-            sender: receiver.clone(),
+            sender: receiver.to_string(),
             amount: Some(coin(amount.u128(), token.denom).into()),
         })
         .add_message(BankMsg::Send {
-            to_address: receiver.clone(),
+            to_address: receiver.to_string(),
             amount: refund,
         })
         .add_attributes(vec![

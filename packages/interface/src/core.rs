@@ -20,8 +20,11 @@ pub enum GovMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    Mint { amount: Uint128, receiver: String }, // put some input tokens to tx payload
-    Burn {},                                    // pub some ibc tokens to tx payload
+    Mint {
+        amount: Uint128,
+        receiver: Option<String>,
+    }, // put some input tokens to tx payload
+    Burn {}, // pub some ibc tokens to tx payload
 
     Gov(GovMsg),
 }
