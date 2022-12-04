@@ -5,7 +5,7 @@ use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgBurn, MsgMint};
 
 use crate::{
     error::ContractError,
-    state::{assert_assets, get_redeem_assets, PAUSED, TOKEN},
+    state::{assert_assets, get_redeem_amounts, PAUSED, TOKEN},
 };
 
 pub fn mint(
@@ -27,7 +27,7 @@ pub fn mint(
         .unwrap_or_else(|| info.sender.clone());
 
     let mut token = TOKEN.load(deps.storage)?;
-    let refund = assert_assets(deps.storage, info.funds, &amount)?;
+    let refund = assert_assets(deps.storage, info.funds, amount)?;
 
     token.total_supply = token.total_supply.checked_add(amount)?;
     TOKEN.save(deps.storage, &token)?;
@@ -67,7 +67,7 @@ pub fn burn(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, Cont
 
     let mut token = TOKEN.load(deps.storage)?;
     let received = cw_utils::must_pay(&info, &token.denom)?;
-    let payback = get_redeem_assets(deps.storage, received)?;
+    let payback = get_redeem_amounts(deps.storage, received)?;
 
     token.total_supply = token.total_supply.checked_sub(received)?;
     TOKEN.save(deps.storage, &token)?;

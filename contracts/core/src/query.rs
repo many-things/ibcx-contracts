@@ -1,9 +1,9 @@
-use cosmwasm_std::{to_binary, Binary, Deps, Env};
+use cosmwasm_std::{to_binary, Binary, Deps, Env, Uint128};
 use ibc_interface::core::{ConfigResponse, PauseInfoResponse, PortfolioResponse};
 
 use crate::{
     error::ContractError,
-    state::{get_assets, get_redeem_assets, GOV, PAUSED, TOKEN},
+    state::{get_redeem_amounts, GOV, PAUSED, TOKEN},
 };
 
 pub fn config(deps: Deps, _env: Env) -> Result<Binary, ContractError> {
@@ -13,6 +13,7 @@ pub fn config(deps: Deps, _env: Env) -> Result<Binary, ContractError> {
     Ok(to_binary(&ConfigResponse {
         gov,
         denom: token.denom,
+        decimal: token.decimal,
         reserve_denom: token.reserve_denom,
     })?)
 }
@@ -28,10 +29,11 @@ pub fn pause_info(deps: Deps, _env: Env) -> Result<Binary, ContractError> {
 
 pub fn portfolio(deps: Deps, _env: Env) -> Result<Binary, ContractError> {
     let token = TOKEN.load(deps.storage)?;
+    let decimal = Uint128::new(10).checked_pow(token.decimal as u32)?;
 
     Ok(to_binary(&PortfolioResponse {
         total_supply: token.total_supply,
-        assets: get_redeem_assets(deps.storage, token.total_supply)?,
-        units: get_assets(deps.storage)?,
+        assets: get_redeem_amounts(deps.storage, token.total_supply)?,
+        units: get_redeem_amounts(deps.storage, decimal)?,
     })?)
 }

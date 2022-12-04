@@ -20,6 +20,7 @@ pub fn instantiate(
         deps.storage,
         &Token {
             denom: msg.denom.clone(),
+            decimal: msg.decimal,
             reserve_denom: msg.reserve_denom,
             total_supply: Uint128::zero(),
         },

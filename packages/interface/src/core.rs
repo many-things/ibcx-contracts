@@ -5,6 +5,7 @@ use cosmwasm_std::{Addr, Coin, Uint128};
 pub struct InstantiateMsg {
     pub gov: String,
     pub denom: String,
+    pub decimal: u8,
     pub reserve_denom: String,
     pub initial_assets: Vec<Coin>,
 }
@@ -46,6 +47,7 @@ pub enum QueryMsg {
 pub struct ConfigResponse {
     pub gov: Addr,
     pub denom: String,
+    pub decimal: u8,
     pub reserve_denom: String,
 }
 

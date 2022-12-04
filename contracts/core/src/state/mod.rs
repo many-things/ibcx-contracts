@@ -5,7 +5,7 @@ use cosmwasm_std::{Addr, Env, StdResult, Storage, Uint128};
 use cw_storage_plus::{Item, Map};
 
 use crate::error::ContractError;
-pub use crate::state::assets::{assert_assets, get_assets, get_redeem_assets, set_assets};
+pub use crate::state::assets::{assert_assets, get_assets, get_redeem_amounts, set_assets};
 
 #[cw_serde]
 #[derive(Default)]
@@ -47,6 +47,7 @@ impl PauseInfo {
 #[cw_serde]
 pub struct Token {
     pub denom: String,
+    pub decimal: u8,
     pub reserve_denom: String,
     pub total_supply: Uint128,
 }
