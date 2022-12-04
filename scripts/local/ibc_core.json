@@ -1,6 +1,7 @@
 {
   "gov": "",
   "denom": "uibc",
+  "decimal": 6,
   "reserve_denom": "uosmo",
   "initial_assets": [
     { "denom": "uosmo", "amount": "1000000" },
