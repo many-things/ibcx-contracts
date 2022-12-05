@@ -1,9 +1,9 @@
 {
   "testnet": {
     "ibc-faucet": {
-      "code_id": 4372,
+      "code_id": 4374,
       "addresses": {
-        "default": "osmo15emkmstgushge3v7q887uvtjjc839d69q5z2sz40zgd2nssxdx4qs2ljnz"
+        "default": "osmo1plvhnhuuxe0t9c5wl8gjzm3qv6nl3rzysssv80g3kdyw9pzdqc7q3twuv7"
       },
       "proposal": {
         "store_code": null
