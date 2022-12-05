@@ -45,7 +45,7 @@ pub struct AirdropResponse {
 pub struct AirdropsResponse(pub Vec<AirdropResponse>);
 
 #[cw_serde]
-pub struct QualificationResponse {}
+pub struct QualificationResponse(pub bool);
 
 #[cw_serde]
 pub struct MigrateMsg {}
