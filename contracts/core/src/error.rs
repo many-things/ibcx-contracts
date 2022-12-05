@@ -42,6 +42,9 @@ pub enum ContractError {
     #[error("Unknown reply id {id:?}")]
     UnknownReplyId { id: u64 },
 
+    #[error("Invalid argument: {0}")]
+    InvalidArgument(String),
+
     #[error("Received funds mismatched (denom: {denom:?} => required: {required:?}, received: {received:?})")]
     MismatchedFunds {
         denom: String,
