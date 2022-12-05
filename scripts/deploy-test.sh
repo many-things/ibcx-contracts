@@ -38,7 +38,7 @@ beaker wasm deploy \
     $OPTIMIZE_FLAG \
     ibc-faucet
 
-DENOMS=("uaaa" "ubbb" "uccc")
+DENOMS=("uaaa" "ubbb" "uccc", "ureserve")
 for denom in "${DENOMS[@]}"; do
     beaker wasm execute ibc-faucet \
         --raw $(printf "{\"create\":{\"denom\":\"$denom\",\"config\":{\"unmanaged\":{}}}}") \
@@ -53,6 +53,7 @@ echo "============ Deploying IBC Core ============"
 CORE_INIT_MSG=$(
     cat $(pwd)/scripts/$NETWORK/ibc_core.json | \
     jq -c '.gov = "'$GOV'"' | \
+    jq -c '.reserve_denom = "ureserve"' | \
     jq -c '.initial_assets[0] = {"denom":"factory/'$FAUCET_ADDR'/uaaa","amount":"100"}' | \
     jq -c '.initial_assets[1] = {"denom":"factory/'$FAUCET_ADDR'/ubbb","amount":"1000"}' | \
     jq -c '.initial_assets[2] = {"denom":"factory/'$FAUCET_ADDR'/uccc","amount":"10000"}'
