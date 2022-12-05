@@ -3,8 +3,5 @@
   "denom": "uibc",
   "decimal": 6,
   "reserve_denom": "uosmo",
-  "initial_assets": [
-    { "denom": "uosmo", "amount": "1000000" },
-    { "denom": "uion", "amount": "1000000" }
-  ]
+  "initial_assets": []
 }
