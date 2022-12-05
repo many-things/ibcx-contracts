@@ -38,7 +38,8 @@ beaker wasm deploy \
     $OPTIMIZE_FLAG \
     ibc-faucet
 
-DENOMS=("uaaa" "ubbb" "uccc", "ureserve")
+DENOMS=("uaaa" "ubbb" "uccc" "ureserve")
+FAUCET_ADDR=$(cat $(pwd)/.beaker/state.local.json | jq -r '.local["ibc-faucet"].addresses.default')
 for denom in "${DENOMS[@]}"; do
     beaker wasm execute ibc-faucet \
         --raw $(printf "{\"create\":{\"denom\":\"$denom\",\"config\":{\"unmanaged\":{}}}}") \
@@ -46,8 +47,6 @@ for denom in "${DENOMS[@]}"; do
         --funds $TOKENFACTORY_FEE \
         $SIGNER_FLAG
 done
-
-FAUCET_ADDR=$(cat $(pwd)/.beaker/state.local.json | jq -r '.local["ibc-faucet"].addresses.default')
 
 echo "============ Deploying IBC Core ============"
 CORE_INIT_MSG=$(
