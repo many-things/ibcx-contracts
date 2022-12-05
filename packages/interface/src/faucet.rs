@@ -71,6 +71,13 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
+    #[returns(AliasesResponse)]
+    Aliases {
+        start_after: Option<String>,
+        limit: Option<u32>,
+        order: Option<RangeOrder>,
+    },
+
     #[returns(TokenResponse)]
     Token { denom: String },
 
@@ -95,6 +102,9 @@ pub enum QueryMsg {
         order: Option<RangeOrder>,
     },
 }
+
+#[cw_serde]
+pub struct AliasesResponse(pub Vec<(String, u64)>);
 
 #[cw_serde]
 pub struct TokenResponse {

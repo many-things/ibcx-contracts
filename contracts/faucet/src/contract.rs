@@ -5,8 +5,8 @@ use cosmwasm_std::{
 use cw_storage_plus::Bound;
 use ibc_interface::{
     faucet::{
-        Action, ExecuteMsg, InstantiateMsg, LastTokenIdResponse, MigrateMsg, QueryMsg,
-        RoleResponse, RolesResponse, TokenCreationConfig, TokenResponse, TokensResponse,
+        Action, AliasesResponse, ExecuteMsg, InstantiateMsg, LastTokenIdResponse, MigrateMsg,
+        QueryMsg, RoleResponse, RolesResponse, TokenCreationConfig, TokenResponse, TokensResponse,
     },
     get_and_check_limit,
     types::RangeOrder,
@@ -245,6 +245,26 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
     use QueryMsg::*;
 
     match msg {
+        Aliases {
+            start_after,
+            limit,
+            order,
+        } => {
+            let limit = get_and_check_limit(limit, MAX_LIMIT, DEFAULT_LIMIT)? as usize;
+            let order = order.unwrap_or(RangeOrder::Asc).into();
+            let (min, max) = match order {
+                Order::Ascending => (start_after.map(Bound::exclusive), None),
+                Order::Descending => (None, start_after.map(Bound::exclusive)),
+            };
+
+            let resps = ALIASES
+                .range(deps.storage, min, max, order)
+                .take(limit)
+                .collect::<StdResult<_>>()?;
+
+            Ok(to_binary(&AliasesResponse(resps))?)
+        }
+
         Token { denom } => {
             let token = get_token(deps.storage, denom)?;
 
