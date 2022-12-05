@@ -8,6 +8,8 @@ use crate::{
     state::{assert_assets, get_redeem_amounts, PAUSED, TOKEN},
 };
 
+pub use crate::execute::gov::handle_msg as handle_gov_msg;
+
 pub fn mint(
     deps: DepsMut,
     env: Env,
