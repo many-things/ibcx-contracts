@@ -29,8 +29,34 @@ TOKENFACTORY_FEE=$(
 SIGNER_FLAG="--signer-keyring=$SIGNER"
 OPTIMIZE_FLAG=$([ "$NETWORK" = "local" ] && echo "--no-wasm-opt")
 
+echo "============ Deploying IBC Faucet ============"
+FAUCET_INIT_MSG=$(cat $(pwd)/scripts/$NETWORK/ibc_faucet.json | jq -c)
+beaker wasm deploy \
+    --raw $FAUCET_INIT_MSG \
+    --network $NETWORK \
+    $SIGNER_FLAG \
+    $OPTIMIZE_FLAG \
+    ibc-faucet
+
+DENOMS=("uaaa" "ubbb" "uccc")
+for denom in "${DENOMS[@]}"; do
+    beaker wasm execute ibc-faucet \
+        --raw $(printf "{\"create\":{\"denom\":\"$denom\",\"config\":{\"unmanaged\":{}}}}") \
+        --network $NETWORK \
+        --funds $TOKENFACTORY_FEE \
+        $SIGNER_FLAG
+done
+
+FAUCET_ADDR=$(cat $(pwd)/.beaker/state.local.json | jq -r '.local["ibc-faucet"].addresses.default')
+
 echo "============ Deploying IBC Core ============"
-CORE_INIT_MSG=$(cat $(pwd)/scripts/$NETWORK/ibc_core.json | jq -c '.gov = "'$GOV'"')
+CORE_INIT_MSG=$(
+    cat $(pwd)/scripts/$NETWORK/ibc_core.json | \
+    jq -c '.gov = "'$GOV'"' | \
+    jq -c '.initial_assets[0] = {"denom":"factory/'$FAUCET_ADDR'/uaaa","amount":"100"}' | \
+    jq -c '.initial_assets[1] = {"denom":"factory/'$FAUCET_ADDR'/ubbb","amount":"1000"}' | \
+    jq -c '.initial_assets[2] = {"denom":"factory/'$FAUCET_ADDR'/uccc","amount":"10000"}'
+)
 beaker wasm deploy \
     --raw $CORE_INIT_MSG \
     --network $NETWORK \
@@ -56,12 +82,3 @@ beaker wasm deploy \
     $SIGNER_FLAG \
     $OPTIMIZE_FLAG \
     ibc-airdrop
-
-echo "============ Deploying IBC Faucet ============"
-FAUCET_INIT_MSG=$(cat $(pwd)/scripts/$NETWORK/ibc_faucet.json | jq -c)
-beaker wasm deploy \
-    --raw $FAUCET_INIT_MSG \
-    --network $NETWORK \
-    $SIGNER_FLAG \
-    $OPTIMIZE_FLAG \
-    ibc-faucet
