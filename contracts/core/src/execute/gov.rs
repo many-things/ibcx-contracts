@@ -35,7 +35,13 @@ fn pause(
     let mut pause_info = PAUSED
         .load(deps.storage)?
         .refresh(deps.storage, &env)?
-        .assert_paused()?;
+        .assert_not_paused()?;
+
+    if env.block.time.seconds() >= expires_at {
+        return Err(ContractError::InvalidArgument(
+            "expires_at must be in the future".to_string(),
+        ));
+    }
 
     pause_info.paused = true;
     pause_info.expires_at = Some(expires_at);
@@ -54,7 +60,7 @@ fn release(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, Contr
     PAUSED
         .load(deps.storage)?
         .refresh(deps.storage, &env)?
-        .assert_not_paused()?;
+        .assert_paused()?;
 
     PAUSED.save(deps.storage, &Default::default())?;
 
@@ -83,4 +89,171 @@ fn update_reserve_denom(
     ]);
 
     Ok(resp)
+}
+
+#[cfg(test)]
+mod test {
+    use cosmwasm_std::{
+        testing::{mock_dependencies, mock_env, mock_info},
+        Addr, StdError, Uint128,
+    };
+
+    use crate::state::{PauseInfo, Token};
+
+    use super::*;
+
+    #[test]
+    fn test_pause() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let now = env.block.time.seconds();
+
+        let gov = Addr::unchecked("gov");
+        let abu = Addr::unchecked("abu");
+
+        let info_gov = mock_info(gov.as_str(), &[]);
+        let info_abu = mock_info(abu.as_str(), &[]);
+
+        GOV.save(deps.as_mut().storage, &gov).unwrap();
+        PAUSED
+            .save(deps.as_mut().storage, &Default::default())
+            .unwrap();
+
+        let pause = |deps: DepsMut, env: Env, info: MessageInfo, expires_at: u64| {
+            handle_msg(deps, env, info, GovMsg::Pause { expires_at })
+        };
+
+        // check arguments
+        assert!(matches!(
+            pause(deps.as_mut(), env.clone(), info_gov.clone(), now - 1000).unwrap_err(),
+            ContractError::InvalidArgument(reason) if reason == "expires_at must be in the future",
+        ));
+        assert!(matches!(
+            pause(deps.as_mut(), env.clone(), info_abu.clone(), now - 1000).unwrap_err(),
+            ContractError::Unauthorized {},
+        ));
+
+        // check role
+        assert!(matches!(
+            pause(deps.as_mut(), env.clone(), info_abu, now + 1000).unwrap_err(),
+            ContractError::Unauthorized {},
+        ));
+        pause(deps.as_mut(), env.clone(), info_gov.clone(), now + 1000).unwrap();
+
+        // check already paused
+        assert!(matches!(
+            pause(deps.as_mut(), env, info_gov, now + 1000).unwrap_err(),
+            ContractError::Paused {},
+        ));
+
+        assert_eq!(
+            PAUSED.load(deps.as_ref().storage).unwrap(),
+            PauseInfo {
+                paused: true,
+                expires_at: Some(now + 1000),
+            }
+        );
+    }
+
+    #[test]
+    fn test_release() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let now = env.block.time.seconds();
+
+        let gov = Addr::unchecked("gov");
+        let info_gov = mock_info(gov.as_str(), &[]);
+        let abu = Addr::unchecked("abu");
+        let info_abu = mock_info(abu.as_str(), &[]);
+
+        GOV.save(deps.as_mut().storage, &gov).unwrap();
+
+        let release = |deps: DepsMut, env: Env, info: MessageInfo| {
+            handle_msg(deps, env, info, GovMsg::Release {})
+        };
+
+        assert!(matches!(
+            release(deps.as_mut(), env.clone(), info_abu).unwrap_err(),
+            ContractError::Unauthorized {},
+        ));
+        assert!(matches!(
+            release(deps.as_mut(), env.clone(), info_gov.clone()).unwrap_err(),
+            ContractError::Std(StdError::NotFound { kind }) if kind == "ibc_core::state::PauseInfo",
+        ));
+
+        PAUSED
+            .save(
+                deps.as_mut().storage,
+                &PauseInfo {
+                    paused: true,
+                    expires_at: Some(now - 1000),
+                },
+            )
+            .unwrap();
+        assert!(matches!(
+            release(deps.as_mut(), env.clone(), info_gov.clone()).unwrap_err(),
+            ContractError::NotPaused {},
+        ));
+
+        PAUSED
+            .save(
+                deps.as_mut().storage,
+                &PauseInfo {
+                    paused: true,
+                    expires_at: Some(now + 1000),
+                },
+            )
+            .unwrap();
+        release(deps.as_mut(), env, info_gov).unwrap();
+
+        PAUSED
+            .load(deps.as_ref().storage)
+            .unwrap()
+            .assert_not_paused()
+            .unwrap();
+    }
+
+    #[test]
+    fn test_update_reserve_denom() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+        let gov = Addr::unchecked("gov");
+        let info_gov = mock_info(gov.as_str(), &[]);
+        let abu = Addr::unchecked("abu");
+        let info_abu = mock_info(abu.as_str(), &[]);
+
+        GOV.save(deps.as_mut().storage, &gov).unwrap();
+        TOKEN
+            .save(
+                deps.as_mut().storage,
+                &Token {
+                    denom: "test".to_string(),
+                    decimal: 6,
+                    reserve_denom: "reserve".to_string(),
+                    total_supply: Uint128::zero(),
+                },
+            )
+            .unwrap();
+
+        let update_reserve_denom = |deps: DepsMut, info: MessageInfo, new_denom: String| {
+            handle_msg(
+                deps,
+                env.clone(),
+                info,
+                GovMsg::UpdateReserveDenom { new_denom },
+            )
+        };
+
+        assert!(matches!(
+            update_reserve_denom(deps.as_mut(), info_abu, "no".to_string()).unwrap_err(),
+            ContractError::Unauthorized {},
+        ));
+        update_reserve_denom(deps.as_mut(), info_gov, "yes".to_string()).unwrap();
+
+        assert_eq!(
+            TOKEN.load(deps.as_ref().storage).unwrap().reserve_denom,
+            "yes"
+        );
+    }
 }

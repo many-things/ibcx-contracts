@@ -20,6 +20,7 @@ impl PauseInfo {
             if let Some(expiry) = self.expires_at {
                 if expiry <= env.block.time.seconds() {
                     PAUSED.save(storage, &Default::default())?;
+                    return Ok(Default::default());
                 }
             }
         }
@@ -28,16 +29,16 @@ impl PauseInfo {
     }
 
     pub fn assert_paused(self) -> Result<Self, ContractError> {
-        if self.paused {
-            return Err(ContractError::Paused {});
+        if !self.paused {
+            return Err(ContractError::NotPaused {});
         }
 
         Ok(self)
     }
 
     pub fn assert_not_paused(self) -> Result<Self, ContractError> {
-        if !self.paused {
-            return Err(ContractError::NotPaused {});
+        if self.paused {
+            return Err(ContractError::Paused {});
         }
 
         Ok(self)
