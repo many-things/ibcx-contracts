@@ -93,7 +93,7 @@ pub fn execute(
             let token = get_token(deps.storage, denom.clone())?;
             token.check_role(deps.storage, &info.sender, Action::Mint)?;
 
-            let mint_amount = coin(amount.u128(), &denom);
+            let mint_amount = coin(amount.u128(), &token.denom_r);
             Ok(Response::new()
                 .add_message(MsgMint {
                     sender: env.contract.address.to_string(),
