@@ -3,7 +3,10 @@
 GOV=${GOV:-"osmo1cyyzpxplxdzkeea7kwsydadg87357qnahakaks"}
 BEAKER=${BEAKER:-"beaker"}
 DAEMON=${DAEMON:-"osmosisd"}
-SIGNER_ACCOUNT=${SIGNER_ACCOUNT:-"test1"}
+MNEMONIC=${SIGNER_MNEMONIC:-"notice oak worry limit wrap speak medal online prefer cluster roof addict wrist behave treat actual wasp year salad speed social layer crew genius"}
+
+SIGNER="deployer-test"
+beaker key set "$SIGNER" "$MNEMONIC" -y
 
 function check {
     if [ -z "$1" ]
@@ -23,9 +26,7 @@ TOKENFACTORY_FEE=$(
         --node=$NODE | \
     jq -r '.params.denom_creation_fee[0] | .amount + .denom'
 )
-SIGNER_FLAG=$([ -z "$SIGNER_KEYRING" ] && \ 
-    echo '--signer-account='$SIGNER_ACCOUNT || \
-    echo '--signer-keyring='$SIGNER_KEYRING)
+SIGNER_FLAG="--signer-keyring=$SIGNER"
 OPTIMIZE_FLAG=$([ "$NETWORK" = "local" ] && echo "--no-wasm-opt")
 
 echo "============ Deploying IBC Core ============"
@@ -56,7 +57,7 @@ beaker wasm deploy \
     $OPTIMIZE_FLAG \
     ibc-airdrop
 
-echo "============ Deploying IBC Airdrop ============"
+echo "============ Deploying IBC Faucet ============"
 FAUCET_INIT_MSG=$(cat $(pwd)/scripts/$NETWORK/ibc_faucet.json | jq -c)
 beaker wasm deploy \
     --raw $FAUCET_INIT_MSG \
