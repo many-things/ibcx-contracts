@@ -460,8 +460,10 @@ dependencies = [
  "cw-storage-plus",
  "cw-utils",
  "cw2",
+ "hex",
  "ibc-interface",
  "osmosis-std",
+ "sha2 0.10.6",
  "thiserror",
 ]
 

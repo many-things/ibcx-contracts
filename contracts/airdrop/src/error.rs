@@ -1,4 +1,4 @@
-use cosmwasm_std::{StdError, Uint128};
+use cosmwasm_std::{Addr, StdError};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -21,55 +21,18 @@ pub enum ContractError {
     #[error("{0}")]
     ParseReplyError(#[from] cw_utils::ParseReplyError),
 
-    #[error("Paused")]
-    Paused {},
+    #[error("{0}")]
+    FromHexError(#[from] hex::FromHexError),
 
-    #[error("Not paused")]
-    NotPaused {},
+    #[error("Key already exists. {key:?}")]
+    KeyAlreadyExists { typ: String, key: String },
 
-    #[error("Invalid reply id")]
-    InvalidReplyId {},
+    #[error("Already claimed. id:{airdrop_id:?}, claimer:{claimer:?}")]
+    AlreadyClaimed { airdrop_id: u64, claimer: Addr },
 
-    #[error("Invalid trade route")]
-    InvalidTradeRoute {},
+    #[error("WrongLength")]
+    WrongLength {},
 
-    #[error("Trade amount exceeded")]
-    TradeAmountExceeded {},
-
-    #[error("Trade strategy not set")]
-    TradeStrategyNotSet {},
-
-    #[error("Trade simulation failed")]
-    TradeSimulationFailed {},
-
-    #[error("Trade no allocation")]
-    TradeNoAllocation {},
-
-    #[error("Trade cooldown not finished")]
-    TradeCooldownNotFinished {},
-
-    #[error("Rebalance info not found or not initialized")]
-    RebalanceInfoNotFound {},
-
-    #[error("Rebalance already finished")]
-    RebalanceAlreadyFinished {},
-
-    #[error("Rebalance already on going")]
-    RebalanceAlreadyOnGoing {},
-
-    #[error("Rebalance condition fulfilled")]
-    RebalanceConditionFulfilled {},
-
-    #[error("Rebalance ran out of allocation")]
-    RebalanceRanOutOfAllocation {},
-
-    #[error("Rebalance validation failed. reason: {reason:?}")]
-    RebalanceValidationFailed { reason: String },
-
-    #[error("Received funds mismatched (denom: {denom:?} => required: {required:?}, received: {received:?})")]
-    MismatchedFunds {
-        denom: String,
-        required: Uint128,
-        received: Uint128,
-    },
+    #[error("InvalidProof")]
+    InvalidProof {},
 }

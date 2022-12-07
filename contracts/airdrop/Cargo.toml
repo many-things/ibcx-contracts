@@ -20,6 +20,8 @@ cosmwasm-schema = "1.1"
 cw-storage-plus = "0.16"
 cw-utils = "0.16"
 cw2 = "0.16"
+sha2 = "0.10"
+hex = "0.4"
 thiserror = { version = "1.0.31" }
 
 osmosis-std = "0.12.0"
