@@ -1,9 +1,18 @@
 {
   "testnet": {
     "ibc-faucet": {
-      "code_id": 4374,
+      "code_id": 4441,
       "addresses": {
-        "default": "osmo1plvhnhuuxe0t9c5wl8gjzm3qv6nl3rzysssv80g3kdyw9pzdqc7q3twuv7"
+        "default": "osmo1q40tj3zsmpkttmd4k89cyjgp3a2yjrkd8hhwnuj7cfs6lfelyxfsnq849a"
+      },
+      "proposal": {
+        "store_code": null
+      }
+    },
+    "ibc-core": {
+      "code_id": 4442,
+      "addresses": {
+        "default": "osmo1h4fa8fa2rf6ftww35vupnegfq9pfzm4dmcz2g6lxh78aw0tqvqwst2znsw"
       },
       "proposal": {
         "store_code": null
