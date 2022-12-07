@@ -53,9 +53,9 @@ CORE_INIT_MSG=$(
     cat $(pwd)/scripts/$NETWORK/ibc_core.json | \
     jq -c '.gov = "'$GOV'"' | \
     jq -c '.reserve_denom = "ureserve"' | \
-    jq -c '.initial_assets += {"denom":"factory/'$FAUCET_ADDR'/uaaa","amount":"100"}' | \
-    jq -c '.initial_assets += {"denom":"factory/'$FAUCET_ADDR'/ubbb","amount":"1000"}' | \
-    jq -c '.initial_assets += {"denom":"factory/'$FAUCET_ADDR'/uccc","amount":"10000"}'
+    jq -c '.initial_assets += [{"denom":"factory/'$FAUCET_ADDR'/uaaa","amount":"100"}]' | \
+    jq -c '.initial_assets += [{"denom":"factory/'$FAUCET_ADDR'/ubbb","amount":"1000"}]' | \
+    jq -c '.initial_assets += [{"denom":"factory/'$FAUCET_ADDR'/uccc","amount":"10000"}]'
 )
 beaker wasm deploy \
     --raw $CORE_INIT_MSG \
