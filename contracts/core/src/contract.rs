@@ -57,6 +57,7 @@ pub fn execute(
         Mint { amount, receiver } => execute::mint(deps, env, info, amount, receiver),
         Burn {} => execute::burn(deps, env, info),
         Gov(msg) => execute::handle_gov_msg(deps, env, info, msg),
+        Rebalance(msg) => execute::handle_rebalance_msg(deps, env, info, msg),
     }
 }
 

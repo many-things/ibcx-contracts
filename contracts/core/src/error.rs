@@ -45,10 +45,9 @@ pub enum ContractError {
     #[error("Invalid argument: {0}")]
     InvalidArgument(String),
 
-    #[error("Received funds mismatched (denom: {denom:?} => required: {required:?}, received: {received:?})")]
-    MismatchedFunds {
-        denom: String,
-        required: Uint128,
-        received: Uint128,
-    },
+    #[error("Cooldown not expired")]
+    CooldownNotExpired {},
+
+    #[error("Finalized")]
+    Finalized {},
 }

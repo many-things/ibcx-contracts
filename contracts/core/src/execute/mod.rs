@@ -1,4 +1,5 @@
-pub mod gov;
+mod gov;
+mod rebalance;
 
 use cosmwasm_std::{attr, coin, BankMsg, DepsMut, Env, MessageInfo, Response, Uint128};
 use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgBurn, MsgMint};
@@ -9,6 +10,7 @@ use crate::{
 };
 
 pub use crate::execute::gov::handle_msg as handle_gov_msg;
+pub use crate::execute::rebalance::handle_msg as handle_rebalance_msg;
 
 pub fn mint(
     deps: DepsMut,

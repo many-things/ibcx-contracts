@@ -1,6 +1,8 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Coin, Uint128};
 
+use crate::types::SwapRoutes;
+
 #[cw_serde]
 pub struct InstantiateMsg {
     pub gov: String,
@@ -13,10 +15,33 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum GovMsg {
     // pause mint / burn
-    Pause { expires_at: u64 },
+    Pause {
+        expires_at: u64,
+    },
     Release {},
 
-    UpdateReserveDenom { new_denom: String },
+    UpdateReserveDenom {
+        new_denom: String,
+    },
+    UpdateTradeInfo {
+        denom: String,
+        routes: SwapRoutes,
+        cooldown: u64,
+    },
+}
+
+#[cw_serde]
+pub enum RebalanceMsg {
+    Init {
+        manager: String,
+        deflation: Vec<Coin>, // target units
+        inflation: Vec<Coin>, // conversion weights
+    },
+    Trade {
+        denom: String,
+        amount: Uint128,
+    },
+    Finalize {},
 }
 
 #[cw_serde]
@@ -28,6 +53,7 @@ pub enum ExecuteMsg {
     Burn {}, // pub some ibc tokens to tx payload
 
     Gov(GovMsg),
+    Rebalance(RebalanceMsg),
 }
 
 #[cw_serde]

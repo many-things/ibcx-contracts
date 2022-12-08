@@ -1,9 +1,9 @@
 use cosmwasm_std::{attr, DepsMut, Env, MessageInfo, Response};
-use ibc_interface::core::GovMsg;
+use ibc_interface::{core::GovMsg, types::SwapRoutes};
 
 use crate::{
     error::ContractError,
-    state::{GOV, PAUSED, TOKEN},
+    state::{TradeInfo, GOV, PAUSED, TOKEN, TRADE_INFOS},
 };
 
 pub fn handle_msg(
@@ -23,6 +23,11 @@ pub fn handle_msg(
         Release {} => release(deps, env, info),
 
         UpdateReserveDenom { new_denom } => update_reserve_denom(deps, info, new_denom),
+        UpdateTradeInfo {
+            denom,
+            routes,
+            cooldown,
+        } => update_trade_info(deps, info, denom, routes, cooldown),
     }
 }
 
@@ -85,6 +90,31 @@ fn update_reserve_denom(
 
     let resp = Response::new().add_attributes(vec![
         attr("method", "gov::update_reserve_denom"),
+        attr("executor", info.sender),
+    ]);
+
+    Ok(resp)
+}
+
+fn update_trade_info(
+    deps: DepsMut,
+    info: MessageInfo,
+    denom: String,
+    routes: SwapRoutes,
+    cooldown: u64,
+) -> Result<Response, ContractError> {
+    TRADE_INFOS.save(
+        deps.storage,
+        denom,
+        &TradeInfo {
+            routes,
+            cooldown,
+            last_traded_at: None,
+        },
+    )?;
+
+    let resp = Response::new().add_attributes(vec![
+        attr("method", "gov::update_trade_info"),
         attr("executor", info.sender),
     ]);
 

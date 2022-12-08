@@ -1,11 +1,15 @@
 use std::collections::BTreeMap;
 
 use cosmwasm_std::{coin, Coin, Decimal, Order, StdResult, Storage, Uint128};
+use cw_storage_plus::Map;
 use ibc_interface::MAX_LIMIT;
 
 use crate::error::ContractError;
 
-use super::{ASSETS, RESERVE_DENOM, TOKEN};
+use super::{RESERVE_DENOM, TOKEN};
+
+pub const ASSETS_PREFIX: &str = "assets";
+pub const ASSETS: Map<String, Uint128> = Map::new(ASSETS_PREFIX);
 
 pub fn assert_assets(
     storage: &dyn Storage,
