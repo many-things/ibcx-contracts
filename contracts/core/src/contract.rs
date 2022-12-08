@@ -88,9 +88,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
     use QueryMsg::*;
 
     match msg {
-        Config {} => query::config(deps, env),
-        PauseInfo {} => query::pause_info(deps, env),
-        Portfolio {} => query::portfolio(deps, env),
+        GetConfig {} => query::config(deps, env),
+        GetPauseInfo {} => query::pause_info(deps, env),
+        GetPortfolio {} => query::portfolio(deps, env),
     }
 }
 

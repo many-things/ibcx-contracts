@@ -5,9 +5,9 @@ use cosmwasm_std::{
 use cw_storage_plus::Bound;
 use ibc_interface::{
     airdrop::{
-        AirdropId, AirdropIdOptional, AirdropResponse, AirdropsResponse, ClaimResponse,
-        ClaimsResponse, ExecuteMsg, InstantiateMsg, LatestAirdropResponse, MigrateMsg,
-        QualificationResponse, QueryMsg,
+        AirdropId, AirdropIdOptional, CheckQualificationResponse, ExecuteMsg, GetAirdropResponse,
+        GetClaimResponse, InstantiateMsg, LatestAirdropResponse, ListAirdropsResponse,
+        ListClaimsResponse, MigrateMsg, QueryMsg,
     },
     get_and_check_limit,
     types::RangeOrder,
@@ -197,14 +197,14 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
     use QueryMsg::*;
 
     match msg {
-        Airdrop { id } => {
+        GetAirdrop { id } => {
             let (airdrop_id, label) = match id {
                 AirdropId::Id(id) => (id, None),
                 AirdropId::Label(l) => (LABELS.load(deps.storage, l.clone())?, Some(l)),
             };
             let airdrop = AIRDROPS.load(deps.storage, airdrop_id)?;
 
-            Ok(to_binary(&AirdropResponse {
+            Ok(to_binary(&GetAirdropResponse {
                 id: airdrop_id,
                 label,
                 denom: airdrop.denom,
@@ -212,7 +212,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
                 total_claimed: airdrop.total_claimed,
             })?)
         }
-        Airdrops {
+        ListAirdrops {
             start_after,
             limit,
             order,
@@ -233,7 +233,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
                         .map(|item| {
                             let (k, v) = item?;
 
-                            Ok(AirdropResponse {
+                            Ok(GetAirdropResponse {
                                 id: k,
                                 label: None,
                                 denom: v.denom,
@@ -258,7 +258,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
 
                             let airdrop = AIRDROPS.load(deps.storage, v)?;
 
-                            Ok(AirdropResponse {
+                            Ok(GetAirdropResponse {
                                 id: v,
                                 label: Some(k),
                                 denom: airdrop.denom,
@@ -270,12 +270,12 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
                 }
             };
 
-            Ok(to_binary(&AirdropsResponse(resps))?)
+            Ok(to_binary(&ListAirdropsResponse(resps))?)
         }
         LatestAirdropId {} => Ok(to_binary(&LatestAirdropResponse(
             LATEST_AIRDROP_ID.load(deps.storage)?,
         ))?),
-        Claim { id, account } => {
+        GetClaim { id, account } => {
             let airdrop_id = match id {
                 AirdropId::Id(id) => id,
                 AirdropId::Label(l) => LABELS.load(deps.storage, l)?,
@@ -283,9 +283,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
             let account = deps.api.addr_validate(&account)?;
             let amount = CLAIM_LOGS.load(deps.storage, (airdrop_id, account.clone()))?;
 
-            Ok(to_binary(&ClaimResponse { amount, account })?)
+            Ok(to_binary(&GetClaimResponse { amount, account })?)
         }
-        Claims {
+        ListClaims {
             id,
             start_after,
             limit,
@@ -313,16 +313,16 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
                 .map(|item| {
                     let (k, v) = item?;
 
-                    Ok(ClaimResponse {
+                    Ok(GetClaimResponse {
                         account: k,
                         amount: v,
                     })
                 })
                 .collect::<StdResult<_>>()?;
 
-            Ok(to_binary(&ClaimsResponse(resps))?)
+            Ok(to_binary(&ListClaimsResponse(resps))?)
         }
-        Qualification {
+        CheckQualification {
             id,
             amount,
             beneficiary,
@@ -335,7 +335,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
             let airdrop = AIRDROPS.load(deps.storage, airdrop_id)?;
             let account = deps.api.addr_validate(&beneficiary)?;
 
-            Ok(to_binary(&QualificationResponse(
+            Ok(to_binary(&CheckQualificationResponse(
                 verify_merkle_proof(&airdrop.merkle_root, merkle_proof, &account, amount).is_ok(),
             ))?)
         }

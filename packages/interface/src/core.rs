@@ -33,18 +33,18 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    #[returns(ConfigResponse)]
-    Config {},
+    #[returns(GetConfigResponse)]
+    GetConfig {},
 
-    #[returns(PauseInfoResponse)]
-    PauseInfo {},
+    #[returns(GetPauseInfoResponse)]
+    GetPauseInfo {},
 
-    #[returns(PortfolioResponse)]
-    Portfolio {},
+    #[returns(GetPortfolioResponse)]
+    GetPortfolio {},
 }
 
 #[cw_serde]
-pub struct ConfigResponse {
+pub struct GetConfigResponse {
     pub gov: Addr,
     pub denom: String,
     pub decimal: u8,
@@ -52,13 +52,13 @@ pub struct ConfigResponse {
 }
 
 #[cw_serde]
-pub struct PauseInfoResponse {
+pub struct GetPauseInfoResponse {
     pub paused: bool,
     pub expires_at: Option<u64>,
 }
 
 #[cw_serde]
-pub struct PortfolioResponse {
+pub struct GetPortfolioResponse {
     pub total_supply: Uint128,
     pub assets: Vec<Coin>,
     pub units: Vec<Coin>,

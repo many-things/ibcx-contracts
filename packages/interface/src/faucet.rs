@@ -71,31 +71,31 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    #[returns(AliasesResponse)]
-    Aliases {
+    #[returns(ListAliasesResponse)]
+    ListAliases {
         start_after: Option<String>,
         limit: Option<u32>,
         order: Option<RangeOrder>,
     },
 
-    #[returns(TokenResponse)]
-    Token { denom: String },
+    #[returns(GetTokenResponse)]
+    GetToken { denom: String },
 
-    #[returns(TokensResponse)]
-    Tokens {
+    #[returns(ListTokensResponse)]
+    ListTokens {
         start_after: Option<u64>,
         limit: Option<u32>,
         order: Option<RangeOrder>,
     },
 
-    #[returns(LastTokenIdResponse)]
-    LastTokenId {},
+    #[returns(GetLastTokenIdResponse)]
+    GetLastTokenId {},
 
-    #[returns(RoleResponse)]
-    Role { denom: String, account: String },
+    #[returns(GetRoleResponse)]
+    GetRole { denom: String, account: String },
 
-    #[returns(RolesResponse)]
-    Roles {
+    #[returns(ListRolesResponse)]
+    ListRoles {
         denom: String,
         start_after: Option<(String, String)>,
         limit: Option<u32>,
@@ -104,10 +104,10 @@ pub enum QueryMsg {
 }
 
 #[cw_serde]
-pub struct AliasesResponse(pub Vec<(String, u64)>);
+pub struct ListAliasesResponse(pub Vec<(String, u64)>);
 
 #[cw_serde]
-pub struct TokenResponse {
+pub struct GetTokenResponse {
     pub id: u64,
     pub denom_v: String,
     pub denom_r: String,
@@ -115,20 +115,20 @@ pub struct TokenResponse {
 }
 
 #[cw_serde]
-pub struct TokensResponse(pub Vec<TokenResponse>);
+pub struct ListTokensResponse(pub Vec<GetTokenResponse>);
 
 #[cw_serde]
-pub struct LastTokenIdResponse(pub u64);
+pub struct GetLastTokenIdResponse(pub u64);
 
 #[cw_serde]
-pub struct RoleResponse {
+pub struct GetRoleResponse {
     pub denom: String,
     pub account: String,
     pub roles: Vec<(Action, bool)>,
 }
 
 #[cw_serde]
-pub struct RolesResponse(pub Vec<(String, String, bool)>);
+pub struct ListRolesResponse(pub Vec<(String, String, bool)>);
 
 #[cw_serde]
 pub struct MigrateMsg {}

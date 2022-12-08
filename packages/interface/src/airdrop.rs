@@ -41,11 +41,11 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    #[returns(AirdropResponse)]
-    Airdrop { id: AirdropId },
+    #[returns(GetAirdropResponse)]
+    GetAirdrop { id: AirdropId },
 
-    #[returns(AirdropsResponse)]
-    Airdrops {
+    #[returns(ListAirdropsResponse)]
+    ListAirdrops {
         start_after: AirdropIdOptional,
         limit: Option<u32>,
         order: Option<RangeOrder>,
@@ -54,19 +54,19 @@ pub enum QueryMsg {
     #[returns(LatestAirdropResponse)]
     LatestAirdropId {},
 
-    #[returns(ClaimResponse)]
-    Claim { id: AirdropId, account: String },
+    #[returns(GetClaimResponse)]
+    GetClaim { id: AirdropId, account: String },
 
-    #[returns(ClaimsResponse)]
-    Claims {
+    #[returns(ListClaimsResponse)]
+    ListClaims {
         id: AirdropId,
         start_after: Option<String>,
         limit: Option<u32>,
         order: Option<RangeOrder>,
     },
 
-    #[returns(QualificationResponse)]
-    Qualification {
+    #[returns(CheckQualificationResponse)]
+    CheckQualification {
         id: AirdropId,
         amount: Uint128,
         beneficiary: String,
@@ -75,7 +75,7 @@ pub enum QueryMsg {
 }
 
 #[cw_serde]
-pub struct AirdropResponse {
+pub struct GetAirdropResponse {
     pub id: u64,
     pub label: Option<String>,
     pub denom: String,
@@ -84,22 +84,22 @@ pub struct AirdropResponse {
 }
 
 #[cw_serde]
-pub struct AirdropsResponse(pub Vec<AirdropResponse>);
+pub struct ListAirdropsResponse(pub Vec<GetAirdropResponse>);
 
 #[cw_serde]
 pub struct LatestAirdropResponse(pub u64);
 
 #[cw_serde]
-pub struct ClaimResponse {
+pub struct GetClaimResponse {
     pub amount: Uint128,
     pub account: Addr,
 }
 
 #[cw_serde]
-pub struct ClaimsResponse(pub Vec<ClaimResponse>);
+pub struct ListClaimsResponse(pub Vec<GetClaimResponse>);
 
 #[cw_serde]
-pub struct QualificationResponse(pub bool);
+pub struct CheckQualificationResponse(pub bool);
 
 #[cw_serde]
 pub struct MigrateMsg {}

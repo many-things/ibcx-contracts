@@ -3,7 +3,9 @@ use cosmwasm_std::{
     to_binary, Addr, Coin, CosmosMsg, CustomQuery, QuerierWrapper, StdResult, WasmMsg, WasmQuery,
 };
 
-use crate::core::{ConfigResponse, ExecuteMsg, PauseInfoResponse, PortfolioResponse, QueryMsg};
+use crate::core::{
+    ExecuteMsg, GetConfigResponse, GetPauseInfoResponse, GetPortfolioResponse, QueryMsg,
+};
 
 /// IbcCore is a wrapper around Addr that provides a lot of helpers
 /// for working with this.
@@ -39,11 +41,11 @@ impl IbcCore {
         .into())
     }
 
-    pub fn get_config<CQ>(&self, querier: &QuerierWrapper<CQ>) -> StdResult<ConfigResponse>
+    pub fn get_config<CQ>(&self, querier: &QuerierWrapper<CQ>) -> StdResult<GetConfigResponse>
     where
         CQ: CustomQuery,
     {
-        let msg = QueryMsg::Config {};
+        let msg = QueryMsg::GetConfig {};
 
         querier.query(
             &WasmQuery::Smart {
@@ -54,11 +56,14 @@ impl IbcCore {
         )
     }
 
-    pub fn get_pause_info<CQ>(&self, querier: &QuerierWrapper<CQ>) -> StdResult<PauseInfoResponse>
+    pub fn get_pause_info<CQ>(
+        &self,
+        querier: &QuerierWrapper<CQ>,
+    ) -> StdResult<GetPauseInfoResponse>
     where
         CQ: CustomQuery,
     {
-        let msg = QueryMsg::PauseInfo {};
+        let msg = QueryMsg::GetPauseInfo {};
 
         querier.query(
             &WasmQuery::Smart {
@@ -69,11 +74,11 @@ impl IbcCore {
         )
     }
 
-    pub fn get_portfolio<CQ>(&self, querier: &QuerierWrapper<CQ>) -> StdResult<PortfolioResponse>
+    pub fn get_portfolio<CQ>(&self, querier: &QuerierWrapper<CQ>) -> StdResult<GetPortfolioResponse>
     where
         CQ: CustomQuery,
     {
-        let msg = QueryMsg::Portfolio {};
+        let msg = QueryMsg::GetPortfolio {};
 
         querier.query(
             &WasmQuery::Smart {

@@ -5,8 +5,9 @@ use cosmwasm_std::{
 use cw_storage_plus::Bound;
 use ibc_interface::{
     faucet::{
-        Action, AliasesResponse, ExecuteMsg, InstantiateMsg, LastTokenIdResponse, MigrateMsg,
-        QueryMsg, RoleResponse, RolesResponse, TokenCreationConfig, TokenResponse, TokensResponse,
+        Action, ExecuteMsg, GetLastTokenIdResponse, GetRoleResponse, GetTokenResponse,
+        InstantiateMsg, ListAliasesResponse, ListRolesResponse, ListTokensResponse, MigrateMsg,
+        QueryMsg, TokenCreationConfig,
     },
     get_and_check_limit,
     types::RangeOrder,
@@ -245,7 +246,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
     use QueryMsg::*;
 
     match msg {
-        Aliases {
+        ListAliases {
             start_after,
             limit,
             order,
@@ -262,10 +263,10 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
                 .take(limit)
                 .collect::<StdResult<_>>()?;
 
-            Ok(to_binary(&AliasesResponse(resps))?)
+            Ok(to_binary(&ListAliasesResponse(resps))?)
         }
 
-        Token { denom } => {
+        GetToken { denom } => {
             let token = get_token(deps.storage, denom)?;
 
             let config = match token.config {
@@ -275,14 +276,14 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
                 TokenConfig::Unmanaged {} => TokenCreationConfig::Unmanaged {},
             };
 
-            Ok(to_binary(&TokenResponse {
+            Ok(to_binary(&GetTokenResponse {
                 id: token.id,
                 denom_v: token.denom_v,
                 denom_r: token.denom_r,
                 config,
             })?)
         }
-        Tokens {
+        ListTokens {
             start_after,
             limit,
             order,
@@ -300,7 +301,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
                 .map(|item| {
                     let (_, token) = item?;
 
-                    Ok(TokenResponse {
+                    Ok(GetTokenResponse {
                         id: token.id,
                         denom_v: token.denom_v,
                         denom_r: token.denom_r,
@@ -314,12 +315,12 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
                 })
                 .collect::<StdResult<Vec<_>>>()?;
 
-            Ok(to_binary(&TokensResponse(resps))?)
+            Ok(to_binary(&ListTokensResponse(resps))?)
         }
-        LastTokenId {} => Ok(to_binary(&LastTokenIdResponse(
+        GetLastTokenId {} => Ok(to_binary(&GetLastTokenIdResponse(
             LAST_TOKEN_ID.load(deps.storage)?,
         ))?),
-        Role { denom, account } => {
+        GetRole { denom, account } => {
             let token = get_token(deps.storage, denom.clone())?;
             let account = deps.api.addr_validate(&account)?;
 
@@ -345,13 +346,13 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
                 })
                 .collect::<StdResult<_>>()?;
 
-            Ok(to_binary(&RoleResponse {
+            Ok(to_binary(&GetRoleResponse {
                 denom,
                 account: account.to_string(),
                 roles,
             })?)
         }
-        Roles {
+        ListRoles {
             denom,
             start_after,
             limit,
@@ -399,7 +400,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
                 })
                 .collect::<StdResult<_>>()?;
 
-            Ok(to_binary(&RolesResponse(resps))?)
+            Ok(to_binary(&ListRolesResponse(resps))?)
         }
     }
 }
