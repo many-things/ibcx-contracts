@@ -5,7 +5,8 @@
 */
 import * as _1 from "./Airdrop.client";
 import * as _3 from "./Core.client";
-import * as _5 from "./Periphery.client";
+import * as _5 from "./Faucet.client";
+import * as _7 from "./Periphery.client";
 export declare namespace contracts {
     const Airdrop: {
         AirdropQueryClient: typeof _1.AirdropQueryClient;
@@ -15,8 +16,12 @@ export declare namespace contracts {
         CoreQueryClient: typeof _3.CoreQueryClient;
         CoreClient: typeof _3.CoreClient;
     };
+    const Faucet: {
+        FaucetQueryClient: typeof _5.FaucetQueryClient;
+        FaucetClient: typeof _5.FaucetClient;
+    };
     const Periphery: {
-        PeripheryClient: typeof _5.PeripheryClient;
+        PeripheryClient: typeof _7.PeripheryClient;
     };
 }
 //# sourceMappingURL=index.d.ts.map

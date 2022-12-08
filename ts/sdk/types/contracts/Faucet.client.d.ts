@@ -5,8 +5,8 @@
 */
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { AirdropId, Uint128, RangeOrder, AirdropIdOptional, CheckQualificationResponse, GetAirdropResponse, GetClaimResponse, LatestAirdropResponse, ListAirdropsResponse, ListClaimsResponse } from "./Airdrop.types";
-export interface AirdropReadOnlyInterface {
+import { AirdropId, Uint128, RangeOrder, AirdropIdOptional, CheckQualificationResponse, GetAirdropResponse, GetClaimResponse, LatestAirdropResponse, ListAirdropsResponse, ListClaimsResponse } from "./Faucet.types";
+export interface FaucetReadOnlyInterface {
     contractAddress: string;
     getAirdrop: ({ id }: {
         id: AirdropId;
@@ -34,7 +34,7 @@ export interface AirdropReadOnlyInterface {
         merkleProof: string[];
     }) => Promise<CheckQualificationResponse>;
 }
-export declare class AirdropQueryClient implements AirdropReadOnlyInterface {
+export declare class FaucetQueryClient implements FaucetReadOnlyInterface {
     client: CosmWasmClient;
     contractAddress: string;
     constructor(client: CosmWasmClient, contractAddress: string);
@@ -64,7 +64,7 @@ export declare class AirdropQueryClient implements AirdropReadOnlyInterface {
         merkleProof: string[];
     }) => Promise<CheckQualificationResponse>;
 }
-export interface AirdropInterface extends AirdropReadOnlyInterface {
+export interface FaucetInterface extends FaucetReadOnlyInterface {
     contractAddress: string;
     sender: string;
     regsiter: ({ denom, label, merkleRoot }: {
@@ -82,7 +82,7 @@ export interface AirdropInterface extends AirdropReadOnlyInterface {
         merkleProof: string[];
     }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
-export declare class AirdropClient extends AirdropQueryClient implements AirdropInterface {
+export declare class FaucetClient extends FaucetQueryClient implements FaucetInterface {
     client: SigningCosmWasmClient;
     sender: string;
     contractAddress: string;
@@ -102,4 +102,4 @@ export declare class AirdropClient extends AirdropQueryClient implements Airdrop
         merkleProof: string[];
     }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
-//# sourceMappingURL=Airdrop.client.d.ts.map
+//# sourceMappingURL=Faucet.client.d.ts.map

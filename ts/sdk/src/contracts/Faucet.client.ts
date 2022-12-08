@@ -6,8 +6,8 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { InstantiateMsg, ExecuteMsg, AirdropId, Uint128, QueryMsg, RangeOrder, AirdropIdOptional, MigrateMsg, CheckQualificationResponse, GetAirdropResponse, Addr, GetClaimResponse, LatestAirdropResponse, ListAirdropsResponse, ListClaimsResponse } from "./Airdrop.types";
-export interface AirdropReadOnlyInterface {
+import { InstantiateMsg, ExecuteMsg, AirdropId, Uint128, QueryMsg, RangeOrder, AirdropIdOptional, MigrateMsg, CheckQualificationResponse, GetAirdropResponse, Addr, GetClaimResponse, LatestAirdropResponse, ListAirdropsResponse, ListClaimsResponse } from "./Faucet.types";
+export interface FaucetReadOnlyInterface {
   contractAddress: string;
   getAirdrop: ({
     id
@@ -54,7 +54,7 @@ export interface AirdropReadOnlyInterface {
     merkleProof: string[];
   }) => Promise<CheckQualificationResponse>;
 }
-export class AirdropQueryClient implements AirdropReadOnlyInterface {
+export class FaucetQueryClient implements FaucetReadOnlyInterface {
   client: CosmWasmClient;
   contractAddress: string;
 
@@ -157,7 +157,7 @@ export class AirdropQueryClient implements AirdropReadOnlyInterface {
     });
   };
 }
-export interface AirdropInterface extends AirdropReadOnlyInterface {
+export interface FaucetInterface extends FaucetReadOnlyInterface {
   contractAddress: string;
   sender: string;
   regsiter: ({
@@ -186,7 +186,7 @@ export interface AirdropInterface extends AirdropReadOnlyInterface {
     merkleProof: string[];
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
-export class AirdropClient extends AirdropQueryClient implements AirdropInterface {
+export class FaucetClient extends FaucetQueryClient implements FaucetInterface {
   client: SigningCosmWasmClient;
   sender: string;
   contractAddress: string;

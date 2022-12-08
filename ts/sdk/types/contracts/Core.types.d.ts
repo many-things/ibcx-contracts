@@ -5,22 +5,26 @@
 */
 export type Uint128 = string;
 export interface InstantiateMsg {
+    decimal: number;
     denom: string;
     gov: string;
-    initial_assets: [string, Uint128][];
+    initial_assets: Coin[];
     reserve_denom: string;
+}
+export interface Coin {
+    amount: Uint128;
+    denom: string;
+    [k: string]: unknown;
 }
 export type ExecuteMsg = {
     mint: {
         amount: Uint128;
-        receiver: string;
+        receiver?: string | null;
     };
 } | {
     burn: {};
 } | {
     gov: GovMsg;
-} | {
-    rebalance: RebalanceMsg;
 };
 export type GovMsg = {
     pause: {
@@ -29,123 +33,31 @@ export type GovMsg = {
 } | {
     release: {};
 } | {
-    sweep: {};
-} | {
     update_reserve_denom: {
         new_denom: string;
     };
-} | {
-    update_trade_strategy: {
-        asset: string;
-        cool_down?: number | null;
-        max_trade_amount: Uint128;
-        routes: SwapRoute[];
-    };
 };
-export type RebalanceMsg = {
-    init: {
-        amortization: [string, Uint128][];
-        deflation: [string, Uint128][];
-        manager: string;
-    };
-} | {
-    deflate: {
-        amount_reserve_min: Uint128;
-        amount_token_in: Uint128;
-        asset: string;
-    };
-} | {
-    amortize: {
-        amount_reserve_in: Uint128;
-        amount_token_min: Uint128;
-        asset: string;
-    };
-} | {
-    finish: {};
-};
-export interface SwapRoute {
-    pool_id: number;
-    token_denom: string;
-}
 export type QueryMsg = {
-    config: {};
+    get_config: {};
 } | {
-    pause_info: {};
+    get_pause_info: {};
 } | {
-    portfolio: {};
-} | {
-    rebalance_info: {
-        id?: number | null;
-    };
-} | {
-    list_rebalance_info: {
-        limit?: number | null;
-        order?: RangeOrder | null;
-        start_after?: number | null;
-    };
-} | {
-    strategy: {
-        asset: string;
-    };
-} | {
-    list_strategy: {
-        limit?: number | null;
-        order?: RangeOrder | null;
-        start_after?: string | null;
-    };
-} | {
-    allocation: {
-        asset: string;
-    };
-} | {
-    list_allocation: {
-        limit?: number | null;
-        order?: RangeOrder | null;
-        start_after?: string | null;
-    };
+    get_portfolio: {};
 };
-export type RangeOrder = "asc" | "desc";
-export type Decimal = string;
-export interface AllocationResponse {
-    allocation: Uint128;
-    asset: string;
-    extracted: Uint128;
-    ratio: Decimal;
-}
 export type Addr = string;
-export interface ConfigResponse {
+export interface GetConfigResponse {
+    decimal: number;
     denom: string;
     gov: Addr;
     reserve_denom: string;
 }
-export interface ListAllocationResponse {
-    allocations: AllocationResponse[];
-    total: Uint128;
-    total_reserve: Uint128;
-}
-export type ListRebalanceInfoResponse = RebalanceInfoResponse[];
-export interface RebalanceInfoResponse {
-    amortization: [string, Uint128][];
-    deflation: [string, Uint128][];
-    finished: boolean;
-    id: number;
-    init_status: [string, Uint128][];
-    manager: Addr;
-}
-export type ListStrategyResponse = StrategyResponse[];
-export interface StrategyResponse {
-    asset: string;
-    cool_down?: number | null;
-    last_traded_at: number;
-    max_trade_amount: Uint128;
-    routes: SwapRoute[];
-}
-export interface PauseInfoResponse {
+export interface GetPauseInfoResponse {
     expires_at?: number | null;
     paused: boolean;
 }
-export interface PortfolioResponse {
-    assets: [string, Uint128][];
+export interface GetPortfolioResponse {
+    assets: Coin[];
     total_supply: Uint128;
+    units: Coin[];
 }
 //# sourceMappingURL=Core.types.d.ts.map

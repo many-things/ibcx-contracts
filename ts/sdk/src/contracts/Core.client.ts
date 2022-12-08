@@ -5,55 +5,13 @@
 */
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
-import { Coin, StdFee } from "@cosmjs/amino";
-import { Uint128, InstantiateMsg, ExecuteMsg, GovMsg, RebalanceMsg, SwapRoute, QueryMsg, RangeOrder, Decimal, AllocationResponse, Addr, ConfigResponse, ListAllocationResponse, ListRebalanceInfoResponse, RebalanceInfoResponse, ListStrategyResponse, StrategyResponse, PauseInfoResponse, PortfolioResponse } from "./Core.types";
+import { StdFee } from "@cosmjs/amino";
+import { Uint128, InstantiateMsg, Coin, ExecuteMsg, GovMsg, QueryMsg, Addr, GetConfigResponse, GetPauseInfoResponse, GetPortfolioResponse } from "./Core.types";
 export interface CoreReadOnlyInterface {
   contractAddress: string;
-  config: () => Promise<ConfigResponse>;
-  pauseInfo: () => Promise<PauseInfoResponse>;
-  portfolio: () => Promise<PortfolioResponse>;
-  rebalanceInfo: ({
-    id
-  }: {
-    id?: number;
-  }) => Promise<RebalanceInfoResponse>;
-  listRebalanceInfo: ({
-    limit,
-    order,
-    startAfter
-  }: {
-    limit?: number;
-    order?: RangeOrder;
-    startAfter?: number;
-  }) => Promise<ListRebalanceInfoResponse>;
-  strategy: ({
-    asset
-  }: {
-    asset: string;
-  }) => Promise<StrategyResponse>;
-  listStrategy: ({
-    limit,
-    order,
-    startAfter
-  }: {
-    limit?: number;
-    order?: RangeOrder;
-    startAfter?: string;
-  }) => Promise<ListStrategyResponse>;
-  allocation: ({
-    asset
-  }: {
-    asset: string;
-  }) => Promise<AllocationResponse>;
-  listAllocation: ({
-    limit,
-    order,
-    startAfter
-  }: {
-    limit?: number;
-    order?: RangeOrder;
-    startAfter?: string;
-  }) => Promise<ListAllocationResponse>;
+  getConfig: () => Promise<GetConfigResponse>;
+  getPauseInfo: () => Promise<GetPauseInfoResponse>;
+  getPortfolio: () => Promise<GetPortfolioResponse>;
 }
 export class CoreQueryClient implements CoreReadOnlyInterface {
   client: CosmWasmClient;
@@ -62,114 +20,24 @@ export class CoreQueryClient implements CoreReadOnlyInterface {
   constructor(client: CosmWasmClient, contractAddress: string) {
     this.client = client;
     this.contractAddress = contractAddress;
-    this.config = this.config.bind(this);
-    this.pauseInfo = this.pauseInfo.bind(this);
-    this.portfolio = this.portfolio.bind(this);
-    this.rebalanceInfo = this.rebalanceInfo.bind(this);
-    this.listRebalanceInfo = this.listRebalanceInfo.bind(this);
-    this.strategy = this.strategy.bind(this);
-    this.listStrategy = this.listStrategy.bind(this);
-    this.allocation = this.allocation.bind(this);
-    this.listAllocation = this.listAllocation.bind(this);
+    this.getConfig = this.getConfig.bind(this);
+    this.getPauseInfo = this.getPauseInfo.bind(this);
+    this.getPortfolio = this.getPortfolio.bind(this);
   }
 
-  config = async (): Promise<ConfigResponse> => {
+  getConfig = async (): Promise<GetConfigResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
-      config: {}
+      get_config: {}
     });
   };
-  pauseInfo = async (): Promise<PauseInfoResponse> => {
+  getPauseInfo = async (): Promise<GetPauseInfoResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
-      pause_info: {}
+      get_pause_info: {}
     });
   };
-  portfolio = async (): Promise<PortfolioResponse> => {
+  getPortfolio = async (): Promise<GetPortfolioResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
-      portfolio: {}
-    });
-  };
-  rebalanceInfo = async ({
-    id
-  }: {
-    id?: number;
-  }): Promise<RebalanceInfoResponse> => {
-    return this.client.queryContractSmart(this.contractAddress, {
-      rebalance_info: {
-        id
-      }
-    });
-  };
-  listRebalanceInfo = async ({
-    limit,
-    order,
-    startAfter
-  }: {
-    limit?: number;
-    order?: RangeOrder;
-    startAfter?: number;
-  }): Promise<ListRebalanceInfoResponse> => {
-    return this.client.queryContractSmart(this.contractAddress, {
-      list_rebalance_info: {
-        limit,
-        order,
-        start_after: startAfter
-      }
-    });
-  };
-  strategy = async ({
-    asset
-  }: {
-    asset: string;
-  }): Promise<StrategyResponse> => {
-    return this.client.queryContractSmart(this.contractAddress, {
-      strategy: {
-        asset
-      }
-    });
-  };
-  listStrategy = async ({
-    limit,
-    order,
-    startAfter
-  }: {
-    limit?: number;
-    order?: RangeOrder;
-    startAfter?: string;
-  }): Promise<ListStrategyResponse> => {
-    return this.client.queryContractSmart(this.contractAddress, {
-      list_strategy: {
-        limit,
-        order,
-        start_after: startAfter
-      }
-    });
-  };
-  allocation = async ({
-    asset
-  }: {
-    asset: string;
-  }): Promise<AllocationResponse> => {
-    return this.client.queryContractSmart(this.contractAddress, {
-      allocation: {
-        asset
-      }
-    });
-  };
-  listAllocation = async ({
-    limit,
-    order,
-    startAfter
-  }: {
-    limit?: number;
-    order?: RangeOrder;
-    startAfter?: string;
-  }): Promise<ListAllocationResponse> => {
-    return this.client.queryContractSmart(this.contractAddress, {
-      list_allocation: {
-        limit,
-        order,
-        start_after: startAfter
-      }
+      get_portfolio: {}
     });
   };
 }
@@ -181,11 +49,10 @@ export interface CoreInterface extends CoreReadOnlyInterface {
     receiver
   }: {
     amount: Uint128;
-    receiver: string;
+    receiver?: string;
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
   burn: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
   gov: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
-  rebalance: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
 export class CoreClient extends CoreQueryClient implements CoreInterface {
   client: SigningCosmWasmClient;
@@ -200,7 +67,6 @@ export class CoreClient extends CoreQueryClient implements CoreInterface {
     this.mint = this.mint.bind(this);
     this.burn = this.burn.bind(this);
     this.gov = this.gov.bind(this);
-    this.rebalance = this.rebalance.bind(this);
   }
 
   mint = async ({
@@ -208,7 +74,7 @@ export class CoreClient extends CoreQueryClient implements CoreInterface {
     receiver
   }: {
     amount: Uint128;
-    receiver: string;
+    receiver?: string;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       mint: {
@@ -225,11 +91,6 @@ export class CoreClient extends CoreQueryClient implements CoreInterface {
   gov = async (fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       gov: {}
-    }, fee, memo, funds);
-  };
-  rebalance = async (fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
-    return await this.client.execute(this.sender, this.contractAddress, {
-      rebalance: {}
     }, fee, memo, funds);
   };
 }

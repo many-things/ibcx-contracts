@@ -85,4 +85,4 @@ export interface GetClaimResponse {
 export type LatestAirdropResponse = number;
 export type ListAirdropsResponse = GetAirdropResponse[];
 export type ListClaimsResponse = GetClaimResponse[];
-//# sourceMappingURL=Airdrop.types.d.ts.map
+//# sourceMappingURL=Faucet.types.d.ts.map
