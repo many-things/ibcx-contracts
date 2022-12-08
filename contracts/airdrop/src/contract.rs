@@ -61,7 +61,7 @@ fn verify_merkle_proof(
     })?;
 
     let mut root_buf: [u8; 32] = [0; 32];
-    hex::decode_to_slice(&root, &mut root_buf)?;
+    hex::decode_to_slice(root, &mut root_buf)?;
     if root_buf != hash {
         return Err(ContractError::InvalidProof {});
     }
