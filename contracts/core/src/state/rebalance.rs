@@ -10,7 +10,7 @@ pub const LATEST_REBALANCE_ID_KEY: &str = "latest_rebalance_id";
 pub const LATEST_REBALANCE_ID: Item<u64> = Item::new(LATEST_REBALANCE_ID_KEY);
 
 pub const REBALANCES_PREFIX: &str = "rebalances";
-pub const REBALANCES: Map<u64, Uint128> = Map::new(REBALANCES_PREFIX);
+pub const REBALANCES: Map<u64, Rebalance> = Map::new(REBALANCES_PREFIX);
 
 pub const TRADE_INFOS_PREFIX: &str = "trade_infos";
 pub const TRADE_INFOS: Map<String, TradeInfo> = Map::new(TRADE_INFOS_PREFIX);
