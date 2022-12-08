@@ -1,1 +1,1 @@
-# ibc-contracts-sdk
+# ibcx-contracts-sdk
