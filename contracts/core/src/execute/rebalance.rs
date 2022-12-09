@@ -54,18 +54,22 @@ fn init(
     }
 
     let rebalance_id = LATEST_REBALANCE_ID.load(deps.storage)?;
-    LATEST_REBALANCE_ID.save(deps.storage, &(rebalance_id + 1))?;
+    if let Some(r) = REBALANCES.may_load(deps.storage, rebalance_id)? {
+        if !r.finalized {
+            return Err(ContractError::RebalanceNotFinalized {});
+        }
+    }
 
     check_duplication(deflation.clone(), inflation.clone())?;
 
-    let assets = get_assets(deps.storage)?;
     let rebalance = Rebalance {
         manager: deps.api.addr_validate(&manager)?,
-        snapshot: assets,
         deflation,
         inflation,
         finalized: false,
     };
+    let assets = get_assets(deps.storage)?;
+    rebalance.validate(assets)?;
     REBALANCES.save(deps.storage, rebalance_id, &rebalance)?;
 
     let resp = Response::new().add_attributes(vec![
