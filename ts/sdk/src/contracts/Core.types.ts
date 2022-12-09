@@ -43,7 +43,6 @@ export type GovMsg = {
   update_trade_info: {
     cooldown: number;
     denom: string;
-    max_trade_amount: Uint128;
     routes: SwapRoutes;
   };
 };
@@ -57,7 +56,6 @@ export type RebalanceMsg = {
 } | {
   trade: {
     amount: Uint128;
-    amount_out_min: Uint128;
     denom: string;
   };
 } | {

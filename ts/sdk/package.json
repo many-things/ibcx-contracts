@@ -1,6 +1,6 @@
 {
   "name": "@many-things/ibcx-contracts-sdk",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Typescript SDK for IBCX Contracts",
   "cdn": "dist/index.umd.js",
   "main": "dist/index.js",
@@ -58,6 +58,6 @@
   },
   "license": "MIT OR Apache-2.0",
   "dependencies": {
-    "@cosmjs/cosmwasm-stargate": "^0.28.11"
+    "@cosmjs/cosmwasm-stargate": "^0.29.5"
   }
 }
