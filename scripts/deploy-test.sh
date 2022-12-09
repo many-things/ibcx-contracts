@@ -34,12 +34,15 @@ FAUCET_INIT_MSG=$(cat $(pwd)/scripts/$NETWORK/ibc_faucet.json | jq -c)
 beaker wasm deploy \
     --raw $FAUCET_INIT_MSG \
     --network $NETWORK \
+    --admin "signer" \
     $SIGNER_FLAG \
     $OPTIMIZE_FLAG \
     ibc-faucet
 
 DENOMS=("uaaa" "ubbb" "uccc" "ureserve")
-FAUCET_ADDR=$(cat $(pwd)/.beaker/state.local.json | jq -r '.local["ibc-faucet"].addresses.default')
+STATES=$([ "$NETWORK" = "local" ] && echo "state.local.json" || echo "state.json")
+FAUCET_ADDR=$(cat $(pwd)/.beaker/$STATES | jq -r '.'$NETWORK'["ibc-faucet"].addresses.default')
+
 for denom in "${DENOMS[@]}"; do
     beaker wasm execute ibc-faucet \
         --raw $(printf "{\"create\":{\"denom\":\"$denom\",\"config\":{\"unmanaged\":{}}}}") \
@@ -60,6 +63,7 @@ CORE_INIT_MSG=$(
 beaker wasm deploy \
     --raw $CORE_INIT_MSG \
     --network $NETWORK \
+    --admin "signer" \
     --funds $TOKENFACTORY_FEE \
     $SIGNER_FLAG \
     $OPTIMIZE_FLAG \
@@ -70,6 +74,7 @@ PERIPHERY_INIT_MSG=$(cat $(pwd)/scripts/$NETWORK/ibc_periphery.json | jq -c)
 beaker wasm deploy \
     --raw $PERIPHERY_INIT_MSG \
     --network $NETWORK \
+    --admin "signer" \
     $SIGNER_FLAG \
     $OPTIMIZE_FLAG \
     ibc-periphery
@@ -79,6 +84,7 @@ AIRDROP_INIT_MSG=$(cat $(pwd)/scripts/$NETWORK/ibc_airdrop.json | jq -c)
 beaker wasm deploy \
     --raw $AIRDROP_INIT_MSG \
     --network $NETWORK \
+    --admin "signer" \
     $SIGNER_FLAG \
     $OPTIMIZE_FLAG \
     ibc-airdrop
