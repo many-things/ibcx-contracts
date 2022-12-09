@@ -229,7 +229,7 @@ dependencies = [
  "anyhow",
  "cosmwasm-std",
  "cw-storage-plus 0.16.0",
- "cw-utils 0.16.0",
+ "cw-utils",
  "derivative",
  "itertools",
  "k256",
@@ -270,23 +270,6 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw2 0.16.0",
- "schemars",
- "semver",
- "serde",
- "thiserror",
-]
-
-[[package]]
-name = "cw-utils"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b50d0cac456f98b4339b78e890fbe60e4dfe888c87abacc1129fc3fe34bbe20a"
-dependencies = [
- "anyhow",
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw2 0.16.0",
- "k256",
  "schemars",
  "semver",
  "serde",
@@ -500,7 +483,7 @@ dependencies = [
  "cosmwasm-storage",
  "cw-multi-test",
  "cw-storage-plus 1.0.1",
- "cw-utils 1.0.0",
+ "cw-utils",
  "cw2 1.0.0",
  "hex",
  "ibc-interface",
@@ -518,7 +501,7 @@ dependencies = [
  "cosmwasm-storage",
  "cw-multi-test",
  "cw-storage-plus 1.0.1",
- "cw-utils 1.0.0",
+ "cw-utils",
  "cw2 1.0.0",
  "ibc-interface",
  "osmosis-std",
@@ -534,7 +517,7 @@ dependencies = [
  "cosmwasm-storage",
  "cw-multi-test",
  "cw-storage-plus 1.0.1",
- "cw-utils 1.0.0",
+ "cw-utils",
  "cw2 1.0.0",
  "ibc-interface",
  "osmosis-std",
@@ -564,7 +547,7 @@ dependencies = [
  "cosmwasm-storage",
  "cw-multi-test",
  "cw-storage-plus 1.0.1",
- "cw-utils 1.0.0",
+ "cw-utils",
  "cw2 1.0.0",
  "ibc-interface",
  "osmosis-std",
