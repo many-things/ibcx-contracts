@@ -26,6 +26,8 @@ export type ExecuteMsg = {
   burn: {};
 } | {
   gov: GovMsg;
+} | {
+  rebalance: RebalanceMsg;
 };
 export type GovMsg = {
   pause: {
@@ -37,7 +39,34 @@ export type GovMsg = {
   update_reserve_denom: {
     new_denom: string;
   };
+} | {
+  update_trade_info: {
+    cooldown: number;
+    denom: string;
+    max_trade_amount: Uint128;
+    routes: SwapRoutes;
+  };
 };
+export type SwapRoutes = SwapRoute[];
+export type RebalanceMsg = {
+  init: {
+    deflation: Coin[];
+    inflation: Coin[];
+    manager: string;
+  };
+} | {
+  trade: {
+    amount: Uint128;
+    amount_out_min: Uint128;
+    denom: string;
+  };
+} | {
+  finalize: {};
+};
+export interface SwapRoute {
+  pool_id: number;
+  token_denom: string;
+}
 export type QueryMsg = {
   get_config: {};
 } | {

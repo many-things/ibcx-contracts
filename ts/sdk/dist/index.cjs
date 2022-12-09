@@ -361,12 +361,26 @@ var CoreClient = /** @class */ (function (_super) {
                 });
             });
         };
+        _this.rebalance = function (fee, memo, funds) {
+            if (fee === void 0) { fee = "auto"; }
+            return __awaiter(_this, void 0, void 0, function () {
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0: return [4 /*yield*/, this.client.execute(this.sender, this.contractAddress, {
+                                rebalance: {}
+                            }, fee, memo, funds)];
+                        case 1: return [2 /*return*/, _a.sent()];
+                    }
+                });
+            });
+        };
         _this.client = client;
         _this.sender = sender;
         _this.contractAddress = contractAddress;
         _this.mint = _this.mint.bind(_this);
         _this.burn = _this.burn.bind(_this);
         _this.gov = _this.gov.bind(_this);
+        _this.rebalance = _this.rebalance.bind(_this);
         return _this;
     }
     return CoreClient;

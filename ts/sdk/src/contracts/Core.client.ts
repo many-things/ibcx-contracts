@@ -6,7 +6,7 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { StdFee } from "@cosmjs/amino";
-import { Uint128, InstantiateMsg, Coin, ExecuteMsg, GovMsg, QueryMsg, Addr, GetConfigResponse, GetPauseInfoResponse, GetPortfolioResponse } from "./Core.types";
+import { Uint128, InstantiateMsg, Coin, ExecuteMsg, GovMsg, SwapRoutes, RebalanceMsg, SwapRoute, QueryMsg, Addr, GetConfigResponse, GetPauseInfoResponse, GetPortfolioResponse } from "./Core.types";
 export interface CoreReadOnlyInterface {
   contractAddress: string;
   getConfig: () => Promise<GetConfigResponse>;
@@ -53,6 +53,7 @@ export interface CoreInterface extends CoreReadOnlyInterface {
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
   burn: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
   gov: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  rebalance: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
 export class CoreClient extends CoreQueryClient implements CoreInterface {
   client: SigningCosmWasmClient;
@@ -67,6 +68,7 @@ export class CoreClient extends CoreQueryClient implements CoreInterface {
     this.mint = this.mint.bind(this);
     this.burn = this.burn.bind(this);
     this.gov = this.gov.bind(this);
+    this.rebalance = this.rebalance.bind(this);
   }
 
   mint = async ({
@@ -91,6 +93,11 @@ export class CoreClient extends CoreQueryClient implements CoreInterface {
   gov = async (fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       gov: {}
+    }, fee, memo, funds);
+  };
+  rebalance = async (fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      rebalance: {}
     }, fee, memo, funds);
   };
 }
