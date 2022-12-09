@@ -27,6 +27,7 @@ pub enum GovMsg {
         denom: String,
         routes: SwapRoutes,
         cooldown: u64,
+        max_trade_amount: Uint128,
     },
 }
 
@@ -40,6 +41,7 @@ pub enum RebalanceMsg {
     Trade {
         denom: String,
         amount: Uint128,
+        amount_out_min: Uint128,
     },
     Finalize {},
 }
