@@ -1,8 +1,11 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{coin, Addr, Coin, CosmosMsg, Uint128};
+use cosmwasm_std::{coin, Addr, Coin, CosmosMsg, QuerierWrapper, StdResult, Uint128};
 use cw_storage_plus::{Item, Map};
 use ibc_interface::types::SwapRoutes;
-use osmosis_std::types::osmosis::gamm::v1beta1::{MsgSwapExactAmountIn, MsgSwapExactAmountOut};
+use osmosis_std::types::osmosis::gamm::v1beta1::{
+    MsgSwapExactAmountIn, MsgSwapExactAmountOut, QuerySwapExactAmountInRequest,
+    QuerySwapExactAmountOutRequest,
+};
 
 use crate::error::ContractError;
 
@@ -18,19 +21,41 @@ pub const TRADE_INFOS: Map<String, TradeInfo> = Map::new(TRADE_INFOS_PREFIX);
 #[cw_serde]
 pub struct Rebalance {
     pub manager: Addr,
-    pub snapshot: Vec<Coin>,
     pub deflation: Vec<Coin>,
     pub inflation: Vec<Coin>,
     pub finalized: bool,
 }
 
 impl Rebalance {
-    pub fn assert_basic(&self, manager: &Addr) -> Result<(), ContractError> {
-        if &self.manager != manager {
-            return Err(ContractError::Unauthorized {});
+    pub fn validate(&self, assets: Vec<Coin>) -> Result<(), ContractError> {
+        // check current asset & deflation
+        let f = assets
+            .iter()
+            .filter(|xc| {
+                self.deflation
+                    .iter()
+                    .any(|yc| yc.denom == xc.denom && yc.amount > xc.amount)
+            })
+            .collect::<Vec<_>>();
+        if !f.is_empty() {
+            return Err(ContractError::InvalidArgument(format!(
+                "cannot deflate non-portfolio asset: {:?}",
+                f
+            )));
         }
-        if self.finalized {
-            return Err(ContractError::Finalized {});
+
+        // check duplication
+        let mut y = self.deflation.iter();
+        let f = self
+            .inflation
+            .iter()
+            .filter(|xc| y.any(|yc| yc.denom == xc.denom))
+            .collect::<Vec<_>>();
+        if !f.is_empty() {
+            return Err(ContractError::InvalidArgument(format!(
+                "duplicated coin: {:?}",
+                f
+            )));
         }
 
         Ok(())
@@ -41,6 +66,7 @@ impl Rebalance {
 pub struct TradeInfo {
     pub routes: SwapRoutes,
     pub cooldown: u64,
+    pub max_trade_amount: Uint128,
     pub last_traded_at: Option<u64>,
 }
 
@@ -55,6 +81,42 @@ impl TradeInfo {
         self.last_traded_at = Some(now);
 
         Ok(())
+    }
+
+    pub fn sim_swap_exact_amount_in(
+        &self,
+        querier: &QuerierWrapper,
+        sender: &Addr,
+        token_in: &str,
+        token_in_amount: Uint128,
+    ) -> StdResult<Uint128> {
+        querier.query(
+            &QuerySwapExactAmountInRequest {
+                sender: sender.to_string(),
+                routes: self.routes.clone().into(),
+                token_in: coin(token_in_amount.u128(), token_in).to_string(),
+                pool_id: self.routes.0[0].pool_id,
+            }
+            .into(),
+        )
+    }
+
+    pub fn sim_swap_exact_amount_out(
+        &self,
+        querier: &QuerierWrapper,
+        sender: &Addr,
+        token_out: &str,
+        token_out_amount: Uint128,
+    ) -> StdResult<Uint128> {
+        querier.query(
+            &QuerySwapExactAmountOutRequest {
+                sender: sender.to_string(),
+                routes: self.routes.clone().into(),
+                token_out: coin(token_out_amount.u128(), token_out).to_string(),
+                pool_id: self.routes.0[0].pool_id,
+            }
+            .into(),
+        )
     }
 
     pub fn swap_exact_amount_in(

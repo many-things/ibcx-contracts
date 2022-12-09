@@ -1,4 +1,4 @@
-use cosmwasm_std::{attr, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{attr, DepsMut, Env, MessageInfo, Response, Uint128};
 use ibc_interface::{core::GovMsg, types::SwapRoutes};
 
 use crate::{
@@ -27,7 +27,8 @@ pub fn handle_msg(
             denom,
             routes,
             cooldown,
-        } => update_trade_info(deps, info, denom, routes, cooldown),
+            max_trade_amount,
+        } => update_trade_info(deps, info, denom, routes, cooldown, max_trade_amount),
     }
 }
 
@@ -102,6 +103,7 @@ fn update_trade_info(
     denom: String,
     routes: SwapRoutes,
     cooldown: u64,
+    max_trade_amount: Uint128,
 ) -> Result<Response, ContractError> {
     TRADE_INFOS.save(
         deps.storage,
@@ -109,6 +111,7 @@ fn update_trade_info(
         &TradeInfo {
             routes,
             cooldown,
+            max_trade_amount,
             last_traded_at: None,
         },
     )?;
