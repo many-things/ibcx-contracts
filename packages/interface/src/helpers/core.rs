@@ -6,6 +6,7 @@ use cosmwasm_std::{
 
 use crate::core::{
     ExecuteMsg, GetConfigResponse, GetPauseInfoResponse, GetPortfolioResponse, QueryMsg,
+    SimulateBurnResponse, SimulateMintResponse,
 };
 
 /// IbcCore is a wrapper around Addr that provides a lot of helpers
@@ -95,7 +96,7 @@ impl IbcCore {
         querier: &QuerierWrapper<CQ>,
         amount: Uint128,
         funds: Vec<Coin>,
-    ) -> StdResult<Coin>
+    ) -> StdResult<SimulateMintResponse>
     where
         CQ: CustomQuery,
     {
@@ -114,7 +115,7 @@ impl IbcCore {
         &self,
         querier: &QuerierWrapper<CQ>,
         amount: Uint128,
-    ) -> StdResult<Coin>
+    ) -> StdResult<SimulateBurnResponse>
     where
         CQ: CustomQuery,
     {

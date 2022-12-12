@@ -1,13 +1,16 @@
 use std::collections::BTreeMap;
 
 use cosmwasm_std::{
-    attr, coin, coins, entry_point, Addr, BankMsg, Coin, CosmosMsg, Deps, DepsMut, Env,
+    attr, coin, coins, entry_point, to_binary, Addr, BankMsg, Coin, CosmosMsg, Deps, DepsMut, Env,
     MessageInfo, QuerierWrapper, QueryResponse, Response, Uint128,
 };
 use ibc_interface::{
     core,
     helpers::IbcCore,
-    periphery::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
+    periphery::{
+        ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SimulateBurnExactAmountInResponse,
+        SimulateMintExactAmountOutResponse,
+    },
     types::SwapRoutes,
 };
 
@@ -35,7 +38,7 @@ fn make_mint_swap_msgs(
     swap_info: BTreeMap<String, SwapRoutes>,
     desired: BTreeMap<String, Uint128>,
     max_input: &Coin,
-) -> Result<Vec<CosmosMsg>, ContractError> {
+) -> Result<(Vec<CosmosMsg>, Uint128), ContractError> {
     let mut swap_msgs: Vec<CosmosMsg> = Vec::new();
     let mut simulated_total_spend_amount = Uint128::zero();
 
@@ -57,21 +60,17 @@ fn make_mint_swap_msgs(
         return Err(ContractError::TradeAmountExceeded {});
     }
 
+    let refund = max_input.amount.checked_sub(simulated_total_spend_amount)?;
+
     swap_msgs.push(
         BankMsg::Send {
             to_address: sender.to_string(),
-            amount: vec![coin(
-                max_input
-                    .amount
-                    .checked_sub(simulated_total_spend_amount)?
-                    .u128(),
-                &max_input.denom,
-            )],
+            amount: vec![coin(refund.u128(), &max_input.denom)],
         }
         .into(),
     );
 
-    Ok(swap_msgs)
+    Ok((swap_msgs, refund))
 }
 
 fn make_burn_swap_msgs(
@@ -81,7 +80,7 @@ fn make_burn_swap_msgs(
     swap_info: BTreeMap<String, SwapRoutes>,
     expected: BTreeMap<String, Uint128>,
     min_output: &Coin,
-) -> Result<Vec<CosmosMsg>, ContractError> {
+) -> Result<(Vec<CosmosMsg>, Uint128), ContractError> {
     let mut swap_msgs: Vec<CosmosMsg> = Vec::new();
     let mut simulated_total_receive_amount = Uint128::zero();
 
@@ -116,7 +115,7 @@ fn make_burn_swap_msgs(
         .into(),
     );
 
-    Ok(swap_msgs)
+    Ok((swap_msgs, simulated_total_receive_amount))
 }
 
 #[entry_point]
@@ -159,7 +158,7 @@ pub fn execute(
                 .map(|(denom, want)| coin(want.u128(), denom))
                 .collect();
 
-            let swap_msgs = make_mint_swap_msgs(
+            let (swap_msgs, _) = make_mint_swap_msgs(
                 &deps.querier,
                 &env.contract.address,
                 &info.sender,
@@ -221,7 +220,7 @@ pub fn execute(
                 coins(input.amount.u128(), core_config.reserve_denom),
             )?;
 
-            let swap_msgs = make_burn_swap_msgs(
+            let (swap_msgs, _) = make_burn_swap_msgs(
                 &deps.querier,
                 &env.contract.address,
                 &info.sender,
@@ -246,8 +245,99 @@ pub fn execute(
 }
 
 #[entry_point]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> Result<QueryResponse, ContractError> {
-    Ok(Default::default())
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, ContractError> {
+    use QueryMsg::*;
+
+    match msg {
+        SimulateMintExactAmountOut {
+            core_addr,
+            output_amount,
+            input_asset,
+            swap_info,
+        } => {
+            // pre-transform swap_info
+            let swap_info = swap_info.into_iter().collect::<BTreeMap<_, _>>();
+
+            // query to core contract
+            let core = IbcCore(deps.api.addr_validate(&core_addr)?);
+            let core_config = core.get_config(&deps.querier)?;
+            let core_portfolio = core.get_portfolio(&deps.querier)?;
+
+            // input & output
+            let output = coin(output_amount.u128(), &core_config.denom);
+
+            let desired = core_portfolio
+                .assets
+                .into_iter()
+                .map(|Coin { denom, amount }| (denom, amount * output.amount))
+                .collect::<BTreeMap<_, _>>();
+
+            let funds = desired
+                .iter()
+                .map(|(denom, want)| coin(want.u128(), denom))
+                .collect();
+
+            let (_, refund) = make_mint_swap_msgs(
+                &deps.querier,
+                &env.contract.address,
+                &env.contract.address,
+                core_config.reserve_denom,
+                swap_info,
+                desired,
+                &input_asset,
+            )?;
+
+            let sim_resp = core.simulate_mint(&deps.querier, output_amount, funds)?;
+
+            Ok(to_binary(&SimulateMintExactAmountOutResponse {
+                mint_amount: sim_resp.mint_amount,
+                mint_refund_amount: sim_resp.refund_amount,
+                swap_refund_amount: coin(refund.u128(), &input_asset.denom),
+            })?)
+        }
+        SimulateBurnExactAmountIn {
+            core_addr,
+            input_amount,
+            output_asset,
+            min_output_amount,
+            swap_info,
+        } => {
+            // pre-transform swap_info
+            let swap_info = swap_info.into_iter().collect::<BTreeMap<_, _>>();
+
+            // query to core contract
+            let core = IbcCore(deps.api.addr_validate(&core_addr)?);
+            let core_config = core.get_config(&deps.querier)?;
+            let core_portfolio = core.get_portfolio(&deps.querier)?;
+
+            // input & output
+            let input = coin(input_amount.u128(), &core_config.denom);
+            let min_output = coin(min_output_amount.u128(), &output_asset);
+
+            let expected = core_portfolio
+                .assets
+                .into_iter()
+                .map(|Coin { denom, amount }| (denom, amount * input.amount))
+                .collect::<BTreeMap<_, _>>();
+
+            let (_, receive) = make_burn_swap_msgs(
+                &deps.querier,
+                &env.contract.address,
+                &env.contract.address,
+                swap_info,
+                expected,
+                &min_output,
+            )?;
+
+            let sim_resp = core.simulate_burn(&deps.querier, input_amount)?;
+
+            Ok(to_binary(&SimulateBurnExactAmountInResponse {
+                burn_amount: sim_resp.burn_amount,
+                burn_redeem_amount: sim_resp.redeem_amount,
+                swap_result_amount: coin(receive.u128(), &output_asset),
+            })?)
+        }
+    }
 }
 
 #[entry_point]
