@@ -1,11 +1,7 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{coin, Addr, CosmosMsg, Decimal, QuerierWrapper, StdResult, Uint128};
+use cosmwasm_std::{Addr, Decimal, Uint128};
 use cw_storage_plus::{Item, Map};
 use ibc_interface::types::SwapRoutes;
-use osmosis_std::types::osmosis::gamm::v1beta1::{
-    MsgSwapExactAmountIn, MsgSwapExactAmountOut, QuerySwapExactAmountInRequest,
-    QuerySwapExactAmountOutRequest,
-};
 
 use crate::error::ContractError;
 

@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Uint128;
 
