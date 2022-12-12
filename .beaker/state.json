@@ -10,18 +10,18 @@
       }
     },
     "ibc-core": {
-      "code_id": 4591,
+      "code_id": 4598,
       "addresses": {
-        "default": "osmo1kee536apwlqnsk7p8k523capat6uyswa8mhcltg4dsnkcc967llq35n2ln"
+        "default": "osmo1qsxmeayz5h00d75gtkevzpmne9rnc37fn5sw9eyxvueq9mm3z9hslch5rh"
       },
       "proposal": {
         "store_code": null
       }
     },
     "ibc-periphery": {
-      "code_id": 4502,
+      "code_id": 4600,
       "addresses": {
-        "default": "osmo1j373tqafkyyasmv8eegevd2l33y7qtn0uugj7ed2xx4p3qwf8cvq3ym8dj"
+        "default": "osmo1vusdzjh90vxrvszdnut004dsymhcusmhcjncv7s6khnt3dyn5nzqxht272"
       },
       "proposal": {
         "store_code": null
