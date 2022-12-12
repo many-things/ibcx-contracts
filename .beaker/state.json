@@ -10,9 +10,9 @@
       }
     },
     "ibc-core": {
-      "code_id": 4501,
+      "code_id": 4591,
       "addresses": {
-        "default": "osmo1teffh9htda5nhmst4ykjswp3est9rh73kxh69dj2tflhadfgxpzsj34rj6"
+        "default": "osmo1kee536apwlqnsk7p8k523capat6uyswa8mhcltg4dsnkcc967llq35n2ln"
       },
       "proposal": {
         "store_code": null
