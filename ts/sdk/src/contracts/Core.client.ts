@@ -6,12 +6,24 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { StdFee } from "@cosmjs/amino";
-import { Uint128, InstantiateMsg, Coin, ExecuteMsg, GovMsg, SwapRoutes, RebalanceMsg, SwapRoute, QueryMsg, Addr, GetConfigResponse, GetPauseInfoResponse, GetPortfolioResponse } from "./Core.types";
+import { Decimal, InstantiateMsg, ExecuteMsg, Uint128, GovMsg, SwapRoutes, RebalanceMsg, RebalanceTradeMsg, SwapRoute, QueryMsg, Coin, Addr, GetConfigResponse, GetPauseInfoResponse, GetPortfolioResponse, SimulateBurnResponse, SimulateMintResponse } from "./Core.types";
 export interface CoreReadOnlyInterface {
   contractAddress: string;
   getConfig: () => Promise<GetConfigResponse>;
   getPauseInfo: () => Promise<GetPauseInfoResponse>;
   getPortfolio: () => Promise<GetPortfolioResponse>;
+  simulateMint: ({
+    amount,
+    funds
+  }: {
+    amount: Uint128;
+    funds: Coin[];
+  }) => Promise<SimulateMintResponse>;
+  simulateBurn: ({
+    amount
+  }: {
+    amount: Uint128;
+  }) => Promise<SimulateBurnResponse>;
 }
 export class CoreQueryClient implements CoreReadOnlyInterface {
   client: CosmWasmClient;
@@ -23,6 +35,8 @@ export class CoreQueryClient implements CoreReadOnlyInterface {
     this.getConfig = this.getConfig.bind(this);
     this.getPauseInfo = this.getPauseInfo.bind(this);
     this.getPortfolio = this.getPortfolio.bind(this);
+    this.simulateMint = this.simulateMint.bind(this);
+    this.simulateBurn = this.simulateBurn.bind(this);
   }
 
   getConfig = async (): Promise<GetConfigResponse> => {
@@ -40,16 +54,43 @@ export class CoreQueryClient implements CoreReadOnlyInterface {
       get_portfolio: {}
     });
   };
+  simulateMint = async ({
+    amount,
+    funds
+  }: {
+    amount: Uint128;
+    funds: Coin[];
+  }): Promise<SimulateMintResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      simulate_mint: {
+        amount,
+        funds
+      }
+    });
+  };
+  simulateBurn = async ({
+    amount
+  }: {
+    amount: Uint128;
+  }): Promise<SimulateBurnResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      simulate_burn: {
+        amount
+      }
+    });
+  };
 }
 export interface CoreInterface extends CoreReadOnlyInterface {
   contractAddress: string;
   sender: string;
   mint: ({
     amount,
-    receiver
+    receiver,
+    refundTo
   }: {
     amount: Uint128;
     receiver?: string;
+    refundTo?: string;
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
   burn: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
   gov: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
@@ -73,15 +114,18 @@ export class CoreClient extends CoreQueryClient implements CoreInterface {
 
   mint = async ({
     amount,
-    receiver
+    receiver,
+    refundTo
   }: {
     amount: Uint128;
     receiver?: string;
+    refundTo?: string;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       mint: {
         amount,
-        receiver
+        receiver,
+        refund_to: refundTo
       }
     }, fee, memo, funds);
   };

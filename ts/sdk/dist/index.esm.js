@@ -302,11 +302,38 @@ var CoreQueryClient = /** @class */ (function () {
                     })];
             });
         }); };
+        this.simulateMint = function (_a) {
+            var amount = _a.amount, funds = _a.funds;
+            return __awaiter(_this, void 0, void 0, function () {
+                return __generator(this, function (_b) {
+                    return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
+                            simulate_mint: {
+                                amount: amount,
+                                funds: funds
+                            }
+                        })];
+                });
+            });
+        };
+        this.simulateBurn = function (_a) {
+            var amount = _a.amount;
+            return __awaiter(_this, void 0, void 0, function () {
+                return __generator(this, function (_b) {
+                    return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
+                            simulate_burn: {
+                                amount: amount
+                            }
+                        })];
+                });
+            });
+        };
         this.client = client;
         this.contractAddress = contractAddress;
         this.getConfig = this.getConfig.bind(this);
         this.getPauseInfo = this.getPauseInfo.bind(this);
         this.getPortfolio = this.getPortfolio.bind(this);
+        this.simulateMint = this.simulateMint.bind(this);
+        this.simulateBurn = this.simulateBurn.bind(this);
     }
     return CoreQueryClient;
 }());
@@ -315,7 +342,7 @@ var CoreClient = /** @class */ (function (_super) {
     function CoreClient(client, sender, contractAddress) {
         var _this = _super.call(this, client, contractAddress) || this;
         _this.mint = function (_a, fee, memo, funds) {
-            var amount = _a.amount, receiver = _a.receiver;
+            var amount = _a.amount, receiver = _a.receiver, refundTo = _a.refundTo;
             if (fee === void 0) { fee = "auto"; }
             return __awaiter(_this, void 0, void 0, function () {
                 return __generator(this, function (_b) {
@@ -323,7 +350,8 @@ var CoreClient = /** @class */ (function (_super) {
                         case 0: return [4 /*yield*/, this.client.execute(this.sender, this.contractAddress, {
                                 mint: {
                                     amount: amount,
-                                    receiver: receiver
+                                    receiver: receiver,
+                                    refund_to: refundTo
                                 }
                             }, fee, memo, funds)];
                         case 1: return [2 /*return*/, _b.sent()];

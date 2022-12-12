@@ -3,23 +3,18 @@
 * DO NOT MODIFY IT BY HAND. Instead, modify the source JSONSchema file,
 * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
 */
-export type Uint128 = string;
+export type Decimal = string;
 export interface InstantiateMsg {
-    decimal: number;
     denom: string;
     gov: string;
-    initial_assets: Coin[];
+    initial_assets: [string, Decimal][];
     reserve_denom: string;
-}
-export interface Coin {
-    amount: Uint128;
-    denom: string;
-    [k: string]: unknown;
 }
 export type ExecuteMsg = {
     mint: {
         amount: Uint128;
         receiver?: string | null;
+        refund_to?: string | null;
     };
 } | {
     burn: {};
@@ -28,6 +23,7 @@ export type ExecuteMsg = {
 } | {
     rebalance: RebalanceMsg;
 };
+export type Uint128 = string;
 export type GovMsg = {
     pause: {
         expires_at: number;
@@ -42,23 +38,34 @@ export type GovMsg = {
     update_trade_info: {
         cooldown: number;
         denom: string;
+        max_trade_amount: Uint128;
         routes: SwapRoutes;
     };
 };
 export type SwapRoutes = SwapRoute[];
 export type RebalanceMsg = {
     init: {
-        deflation: Coin[];
-        inflation: Coin[];
+        deflation: [string, Decimal][];
+        inflation: [string, Decimal][];
         manager: string;
     };
 } | {
-    trade: {
-        amount: Uint128;
-        denom: string;
-    };
+    trade: RebalanceTradeMsg;
 } | {
     finalize: {};
+};
+export type RebalanceTradeMsg = {
+    deflate: {
+        amount: Uint128;
+        denom: string;
+        max_amount_in: Uint128;
+    };
+} | {
+    inflate: {
+        amount: Uint128;
+        denom: string;
+        min_amount_out: Uint128;
+    };
 };
 export interface SwapRoute {
     pool_id: number;
@@ -70,10 +77,23 @@ export type QueryMsg = {
     get_pause_info: {};
 } | {
     get_portfolio: {};
+} | {
+    simulate_mint: {
+        amount: Uint128;
+        funds: Coin[];
+    };
+} | {
+    simulate_burn: {
+        amount: Uint128;
+    };
 };
+export interface Coin {
+    amount: Uint128;
+    denom: string;
+    [k: string]: unknown;
+}
 export type Addr = string;
 export interface GetConfigResponse {
-    decimal: number;
     denom: string;
     gov: Addr;
     reserve_denom: string;
@@ -85,6 +105,14 @@ export interface GetPauseInfoResponse {
 export interface GetPortfolioResponse {
     assets: Coin[];
     total_supply: Uint128;
-    units: Coin[];
+    units: [string, Decimal][];
+}
+export interface SimulateBurnResponse {
+    burn_amount: Uint128;
+    redeem_amount: Coin[];
+}
+export interface SimulateMintResponse {
+    mint_amount: Uint128;
+    refund_amount: Coin[];
 }
 //# sourceMappingURL=Core.types.d.ts.map

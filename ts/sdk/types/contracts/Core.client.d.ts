@@ -5,12 +5,19 @@
 */
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { StdFee } from "@cosmjs/amino";
-import { Uint128, Coin, GetConfigResponse, GetPauseInfoResponse, GetPortfolioResponse } from "./Core.types";
+import { Uint128, Coin, GetConfigResponse, GetPauseInfoResponse, GetPortfolioResponse, SimulateBurnResponse, SimulateMintResponse } from "./Core.types";
 export interface CoreReadOnlyInterface {
     contractAddress: string;
     getConfig: () => Promise<GetConfigResponse>;
     getPauseInfo: () => Promise<GetPauseInfoResponse>;
     getPortfolio: () => Promise<GetPortfolioResponse>;
+    simulateMint: ({ amount, funds }: {
+        amount: Uint128;
+        funds: Coin[];
+    }) => Promise<SimulateMintResponse>;
+    simulateBurn: ({ amount }: {
+        amount: Uint128;
+    }) => Promise<SimulateBurnResponse>;
 }
 export declare class CoreQueryClient implements CoreReadOnlyInterface {
     client: CosmWasmClient;
@@ -19,13 +26,21 @@ export declare class CoreQueryClient implements CoreReadOnlyInterface {
     getConfig: () => Promise<GetConfigResponse>;
     getPauseInfo: () => Promise<GetPauseInfoResponse>;
     getPortfolio: () => Promise<GetPortfolioResponse>;
+    simulateMint: ({ amount, funds }: {
+        amount: Uint128;
+        funds: Coin[];
+    }) => Promise<SimulateMintResponse>;
+    simulateBurn: ({ amount }: {
+        amount: Uint128;
+    }) => Promise<SimulateBurnResponse>;
 }
 export interface CoreInterface extends CoreReadOnlyInterface {
     contractAddress: string;
     sender: string;
-    mint: ({ amount, receiver }: {
+    mint: ({ amount, receiver, refundTo }: {
         amount: Uint128;
         receiver?: string;
+        refundTo?: string;
     }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
     burn: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
     gov: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
@@ -36,9 +51,10 @@ export declare class CoreClient extends CoreQueryClient implements CoreInterface
     sender: string;
     contractAddress: string;
     constructor(client: SigningCosmWasmClient, sender: string, contractAddress: string);
-    mint: ({ amount, receiver }: {
+    mint: ({ amount, receiver, refundTo }: {
         amount: Uint128;
         receiver?: string;
+        refundTo?: string;
     }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
     burn: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
     gov: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
