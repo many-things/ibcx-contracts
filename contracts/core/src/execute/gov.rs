@@ -3,7 +3,7 @@ use ibc_interface::{core::GovMsg, types::SwapRoutes};
 
 use crate::{
     error::ContractError,
-    state::{TradeInfo, GOV, PAUSED, TOKEN, TRADE_INFOS},
+    state::{TradeInfo, ASSETS, GOV, PAUSED, RESERVE_DENOM, TOKEN, TRADE_INFOS},
 };
 
 pub fn handle_msg(
@@ -84,6 +84,12 @@ fn update_reserve_denom(
     new_denom: String,
 ) -> Result<Response, ContractError> {
     let mut token = TOKEN.load(deps.storage)?;
+    let unit = ASSETS.load(deps.storage, RESERVE_DENOM.to_string())?;
+    if !unit.is_zero() {
+        return Err(ContractError::InvalidArgument(
+            "reserve_denom must be zero in portfolio".to_string(),
+        ));
+    }
 
     token.reserve_denom = new_denom;
 
@@ -128,7 +134,7 @@ fn update_trade_info(
 mod test {
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info},
-        Addr, StdError, Uint128,
+        Addr, StdError,
     };
 
     use crate::state::{PauseInfo, Token};
