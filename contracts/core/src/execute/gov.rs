@@ -134,7 +134,7 @@ fn update_trade_info(
 mod test {
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info},
-        Addr, StdError,
+        Addr, Decimal, StdError,
     };
 
     use crate::state::{PauseInfo, Token};
@@ -273,6 +273,13 @@ mod test {
                 },
             )
             .unwrap();
+        ASSETS
+            .save(
+                deps.as_mut().storage,
+                RESERVE_DENOM.to_string(),
+                &Decimal::from_ratio(10u128, 1u128),
+            )
+            .unwrap();
 
         let update_reserve_denom = |deps: DepsMut, info: MessageInfo, new_denom: String| {
             handle_msg(
@@ -287,6 +294,19 @@ mod test {
             update_reserve_denom(deps.as_mut(), info_abu, "no".to_string()).unwrap_err(),
             ContractError::Unauthorized {},
         ));
+        assert!(matches!(
+            update_reserve_denom(deps.as_mut(), info_gov.clone(), "no".to_string()).unwrap_err(),
+            ContractError::InvalidArgument(reason) if reason == "reserve_denom must be zero in portfolio",
+        ));
+
+        ASSETS
+            .save(
+                deps.as_mut().storage,
+                RESERVE_DENOM.to_string(),
+                &Decimal::zero(),
+            )
+            .unwrap();
+
         update_reserve_denom(deps.as_mut(), info_gov, "yes".to_string()).unwrap();
 
         assert_eq!(
