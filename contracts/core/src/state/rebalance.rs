@@ -18,6 +18,9 @@ pub const REBALANCES: Map<u64, Rebalance> = Map::new(REBALANCES_PREFIX);
 pub const TRADE_INFOS_PREFIX: &str = "trade_infos";
 pub const TRADE_INFOS: Map<String, TradeInfo> = Map::new(TRADE_INFOS_PREFIX);
 
+pub const RESERVE_BUFFER_PREFIX: &str = "reserve_buffer";
+pub const RESERVE_BUFFER: Map<String, Uint128> = Map::new(RESERVE_BUFFER_PREFIX);
+
 #[cw_serde]
 pub struct Rebalance {
     pub manager: Addr,

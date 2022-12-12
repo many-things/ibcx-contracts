@@ -9,7 +9,7 @@ use crate::error::ContractError;
 
 pub use crate::state::assets::{assert_assets, get_assets, get_redeem_amounts, set_assets, ASSETS};
 pub use crate::state::rebalance::{
-    Rebalance, TradeInfo, LATEST_REBALANCE_ID, REBALANCES, TRADE_INFOS,
+    Rebalance, TradeInfo, LATEST_REBALANCE_ID, REBALANCES, RESERVE_BUFFER, TRADE_INFOS,
 };
 
 pub const RESERVE_DENOM: &str = "reserve";
