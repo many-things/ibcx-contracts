@@ -95,6 +95,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
         GetConfig {} => query::config(deps, env),
         GetPauseInfo {} => query::pause_info(deps, env),
         GetPortfolio {} => query::portfolio(deps, env),
+        SimulateMint { amount, funds } => query::simulate_mint(deps, env, amount, funds),
+        SimulateBurn { amount } => query::simulate_burn(deps, env, amount),
     }
 }
 

@@ -81,6 +81,12 @@ pub enum QueryMsg {
 
     #[returns(GetPortfolioResponse)]
     GetPortfolio {},
+
+    #[returns(SimulateMintResponse)]
+    SimulateMint { amount: Uint128, funds: Vec<Coin> },
+
+    #[returns(SimulateBurnResponse)]
+    SimulateBurn { amount: Uint128 },
 }
 
 #[cw_serde]
@@ -101,6 +107,18 @@ pub struct GetPortfolioResponse {
     pub total_supply: Uint128,
     pub assets: Vec<Coin>,
     pub units: Vec<(String, Decimal)>,
+}
+
+#[cw_serde]
+pub struct SimulateMintResponse {
+    pub mint_amount: Uint128,
+    pub refund_amount: Vec<Coin>,
+}
+
+#[cw_serde]
+pub struct SimulateBurnResponse {
+    pub burn_amount: Uint128,
+    pub redeem_amount: Vec<Coin>,
 }
 
 #[cw_serde]
