@@ -28,7 +28,7 @@
 
 #### Defined in
 
-[contracts/index.ts:16](https://github.com/many-things/ibc-contracts/blob/f35927e/ts/sdk/src/contracts/index.ts#L16)
+[contracts/index.ts:16](https://github.com/many-things/ibc-contracts/blob/b2862bf/ts/sdk/src/contracts/index.ts#L16)
 
 ___
 
@@ -45,7 +45,7 @@ ___
 
 #### Defined in
 
-[contracts/index.ts:19](https://github.com/many-things/ibc-contracts/blob/f35927e/ts/sdk/src/contracts/index.ts#L19)
+[contracts/index.ts:19](https://github.com/many-things/ibc-contracts/blob/b2862bf/ts/sdk/src/contracts/index.ts#L19)
 
 ___
 
@@ -62,7 +62,7 @@ ___
 
 #### Defined in
 
-[contracts/index.ts:22](https://github.com/many-things/ibc-contracts/blob/f35927e/ts/sdk/src/contracts/index.ts#L22)
+[contracts/index.ts:22](https://github.com/many-things/ibc-contracts/blob/b2862bf/ts/sdk/src/contracts/index.ts#L22)
 
 ___
 
@@ -78,4 +78,4 @@ ___
 
 #### Defined in
 
-[contracts/index.ts:25](https://github.com/many-things/ibc-contracts/blob/f35927e/ts/sdk/src/contracts/index.ts#L25)
+[contracts/index.ts:25](https://github.com/many-things/ibc-contracts/blob/b2862bf/ts/sdk/src/contracts/index.ts#L25)
