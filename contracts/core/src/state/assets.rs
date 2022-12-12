@@ -22,12 +22,7 @@ pub fn assert_assets(
     funds
         .iter()
         .map(|Coin { denom, amount }| {
-            let mut unit = Decimal::from_ratio(
-                ASSETS
-                    .may_load(storage, denom.to_string())?
-                    .unwrap_or_default(),
-                decimal,
-            );
+            let mut unit = Decimal::from_ratio(ASSETS.load(storage, denom.to_string())?, decimal);
 
             if denom == RESERVE_DENOM {
                 unit += Decimal::from_ratio(
