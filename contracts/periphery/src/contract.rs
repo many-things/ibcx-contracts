@@ -30,10 +30,11 @@ pub fn instantiate(
 fn make_mint_swap_msgs(
     querier: &QuerierWrapper,
     contract: &Addr,
+    sender: &Addr,
     reserve_denom: String,
     swap_info: BTreeMap<String, SwapRoutes>,
     desired: BTreeMap<String, Uint128>,
-    max_input_amount: Uint128,
+    max_input: &Coin,
 ) -> Result<Vec<CosmosMsg>, ContractError> {
     let mut swap_msgs: Vec<CosmosMsg> = Vec::new();
     let mut simulated_total_spend_amount = Uint128::zero();
@@ -52,9 +53,23 @@ fn make_mint_swap_msgs(
         swap_msgs.push(swap_info.msg_swap_exact_out(contract, &denom, want, simulated_token_in));
     }
 
-    if max_input_amount < simulated_total_spend_amount {
+    if max_input.amount < simulated_total_spend_amount {
         return Err(ContractError::TradeAmountExceeded {});
     }
+
+    swap_msgs.push(
+        BankMsg::Send {
+            to_address: sender.to_string(),
+            amount: vec![coin(
+                max_input
+                    .amount
+                    .checked_sub(simulated_total_spend_amount)?
+                    .u128(),
+                &max_input.denom,
+            )],
+        }
+        .into(),
+    );
 
     Ok(swap_msgs)
 }
@@ -147,10 +162,11 @@ pub fn execute(
             let swap_msgs = make_mint_swap_msgs(
                 &deps.querier,
                 &env.contract.address,
+                &info.sender,
                 core_config.reserve_denom,
                 swap_info,
                 desired,
-                max_input.amount,
+                &max_input,
             )?;
 
             let mint_msg = core.call_with_funds(
