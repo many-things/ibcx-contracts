@@ -1,6 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Addr, Coin, CosmosMsg, CustomQuery, QuerierWrapper, StdResult, WasmMsg, WasmQuery,
+    to_binary, Addr, Coin, CosmosMsg, CustomQuery, QuerierWrapper, StdResult, Uint128, WasmMsg,
+    WasmQuery,
 };
 
 use crate::core::{
@@ -79,6 +80,45 @@ impl IbcCore {
         CQ: CustomQuery,
     {
         let msg = QueryMsg::GetPortfolio {};
+
+        querier.query(
+            &WasmQuery::Smart {
+                contract_addr: self.addr().into(),
+                msg: to_binary(&msg)?,
+            }
+            .into(),
+        )
+    }
+
+    pub fn simulate_mint<CQ>(
+        &self,
+        querier: &QuerierWrapper<CQ>,
+        amount: Uint128,
+        funds: Vec<Coin>,
+    ) -> StdResult<Coin>
+    where
+        CQ: CustomQuery,
+    {
+        let msg = QueryMsg::SimulateMint { amount, funds };
+
+        querier.query(
+            &WasmQuery::Smart {
+                contract_addr: self.addr().into(),
+                msg: to_binary(&msg)?,
+            }
+            .into(),
+        )
+    }
+
+    pub fn simulate_burn<CQ>(
+        &self,
+        querier: &QuerierWrapper<CQ>,
+        amount: Uint128,
+    ) -> StdResult<Coin>
+    where
+        CQ: CustomQuery,
+    {
+        let msg = QueryMsg::SimulateBurn { amount };
 
         querier.query(
             &WasmQuery::Smart {
