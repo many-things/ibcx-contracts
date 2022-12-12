@@ -96,10 +96,12 @@ pub fn burn(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, Cont
 
 #[cfg(test)]
 mod test {
+    use std::str::FromStr;
+
     use cosmwasm_std::{
         coin,
         testing::{mock_dependencies_with_balances, mock_env, mock_info},
-        Addr, Storage, SubMsg,
+        Addr, Decimal, Storage, SubMsg,
     };
 
     use super::*;
@@ -129,10 +131,14 @@ mod test {
             .unwrap()
     }
 
-    fn register_assets(storage: &mut dyn Storage, assets: &[(&str, u128)]) {
+    fn register_assets(storage: &mut dyn Storage, assets: &[(&str, &str)]) {
         for (denom, unit) in assets {
             ASSETS
-                .save(storage, denom.to_string(), &Uint128::from(*unit))
+                .save(
+                    storage,
+                    denom.to_string(),
+                    &Decimal::from_str(unit).unwrap(),
+                )
                 .unwrap();
         }
     }
@@ -151,14 +157,11 @@ mod test {
         let env = mock_env();
         let now = env.block.time.seconds();
 
-        let base = 1000000;
-
         TOKEN
             .save(
                 deps.as_mut().storage,
                 &Token {
                     denom: "ibcx".to_string(),
-                    decimal: 6,
                     reserve_denom: "uosmo".to_string(),
                     total_supply: Uint128::zero(),
                 },
@@ -166,7 +169,7 @@ mod test {
             .unwrap();
         register_assets(
             deps.as_mut().storage,
-            &[("uaaa", base), ("ubbb", 10 * base), ("uccc", 100 * base)], // 1 10 100
+            &[("uaaa", "1.0"), ("ubbb", "1.2"), ("uccc", "1.5")],
         );
 
         stop(deps.as_mut().storage, now);
@@ -176,7 +179,7 @@ mod test {
                 deps.as_mut(),
                 env.clone(),
                 mock_info(alice.as_str(), &[]),
-                Uint128::new(base),
+                Uint128::new(10),
                 Some(bob.into_string()),
             )
             .unwrap_err(),
@@ -190,33 +193,29 @@ mod test {
             env.clone(),
             mock_info(
                 alice.as_str(),
-                &[
-                    coin(2 * base, "uaaa"),
-                    coin(20 * base, "ubbb"),
-                    coin(200 * base, "uccc"),
-                ],
+                &[coin(20, "uaaa"), coin(24, "ubbb"), coin(30, "uccc")],
             ),
-            Uint128::new(base),
+            Uint128::new(10),
             Some(alice.clone().into_string()),
         )
         .unwrap();
 
         let token = TOKEN.load(deps.as_ref().storage).unwrap();
-        assert_eq!(token.total_supply, Uint128::new(base));
+        assert_eq!(token.total_supply, Uint128::new(10));
         assert_eq!(
             resp.messages,
             vec![
                 SubMsg::new(MsgMint {
                     sender: env.contract.address.to_string(),
-                    amount: Some(coin(base, "ibcx").into()),
+                    amount: Some(coin(10, "ibcx").into()),
                 }),
                 SubMsg::new(BankMsg::Send {
                     to_address: alice.to_string(),
                     amount: vec![
-                        coin(base, "uaaa"),
-                        coin(10 * base, "ubbb"),
-                        coin(100 * base, "uccc"),
-                        coin(base, "ibcx"),
+                        coin(10, "uaaa"),
+                        coin(12, "ubbb"),
+                        coin(15, "uccc"),
+                        coin(10, "ibcx"),
                     ],
                 }),
             ]

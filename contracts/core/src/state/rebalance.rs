@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{coin, Addr, Coin, CosmosMsg, QuerierWrapper, StdResult, Uint128};
+use cosmwasm_std::{coin, Addr, CosmosMsg, Decimal, QuerierWrapper, StdResult, Uint128};
 use cw_storage_plus::{Item, Map};
 use ibc_interface::types::SwapRoutes;
 use osmosis_std::types::osmosis::gamm::v1beta1::{
@@ -24,21 +24,17 @@ pub const RESERVE_BUFFER: Map<String, Uint128> = Map::new(RESERVE_BUFFER_PREFIX)
 #[cw_serde]
 pub struct Rebalance {
     pub manager: Addr,
-    pub deflation: Vec<Coin>,
-    pub inflation: Vec<Coin>,
+    pub deflation: Vec<(String, Decimal)>,
+    pub inflation: Vec<(String, Decimal)>,
     pub finalized: bool,
 }
 
 impl Rebalance {
-    pub fn validate(&self, assets: Vec<Coin>) -> Result<(), ContractError> {
+    pub fn validate(&self, assets: Vec<(String, Decimal)>) -> Result<(), ContractError> {
         // check current asset & deflation
         let f = assets
             .iter()
-            .filter(|xc| {
-                self.deflation
-                    .iter()
-                    .any(|yc| yc.denom == xc.denom && yc.amount > xc.amount)
-            })
+            .filter(|xc| self.deflation.iter().any(|yc| yc.0 == xc.0 && yc.1 > xc.1))
             .collect::<Vec<_>>();
         if !f.is_empty() {
             return Err(ContractError::InvalidArgument(format!(
@@ -52,7 +48,7 @@ impl Rebalance {
         let f = self
             .inflation
             .iter()
-            .filter(|xc| y.any(|yc| yc.denom == xc.denom))
+            .filter(|xc| y.any(|yc| yc.0 == xc.0))
             .collect::<Vec<_>>();
         if !f.is_empty() {
             return Err(ContractError::InvalidArgument(format!(

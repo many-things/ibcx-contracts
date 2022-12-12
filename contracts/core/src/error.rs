@@ -48,6 +48,18 @@ pub enum ContractError {
     #[error("Cooldown not expired")]
     CooldownNotExpired {},
 
-    #[error("Finalized")]
-    Finalized {},
+    #[error("Rebalance not finalized")]
+    RebalanceNotFinalized {},
+
+    #[error("Rebalance finalized")]
+    RebalanceFinalized {},
+
+    #[error("Unable to finalize")]
+    UnableToFinalize {},
+
+    #[error("Insufficient balance")]
+    InsufficientBalance {},
+
+    #[error("Over slippage allowance")]
+    OverSlippageAllowance {},
 }

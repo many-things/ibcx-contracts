@@ -64,7 +64,6 @@ impl PauseInfo {
 #[cw_serde]
 pub struct Token {
     pub denom: String,
-    pub decimal: u8,
     pub reserve_denom: String,
     pub total_supply: Uint128,
 }

@@ -9,28 +9,22 @@ use crate::error::ContractError;
 use super::{RESERVE_DENOM, TOKEN};
 
 pub const ASSETS_PREFIX: &str = "assets";
-pub const ASSETS: Map<String, Uint128> = Map::new(ASSETS_PREFIX);
+pub const ASSETS: Map<String, Decimal> = Map::new(ASSETS_PREFIX);
 
 pub fn assert_assets(
     storage: &dyn Storage,
     funds: Vec<Coin>,
     desired: Uint128,
 ) -> Result<Vec<Coin>, ContractError> {
-    let token = TOKEN.load(storage)?;
-    let decimal = Uint128::new(10).checked_pow(token.decimal as u32)?;
-
     funds
         .iter()
         .map(|Coin { denom, amount }| {
-            let mut unit = Decimal::from_ratio(ASSETS.load(storage, denom.to_string())?, decimal);
+            let mut unit = ASSETS.load(storage, denom.to_string())?;
 
             if denom == RESERVE_DENOM {
-                unit += Decimal::from_ratio(
-                    ASSETS
-                        .may_load(storage, RESERVE_DENOM.to_string())?
-                        .unwrap_or_default(),
-                    decimal,
-                );
+                unit += ASSETS
+                    .may_load(storage, RESERVE_DENOM.to_string())?
+                    .unwrap_or_default()
             }
 
             let refund = amount.checked_sub(unit * desired)?;
@@ -40,12 +34,15 @@ pub fn assert_assets(
         .collect::<Result<_, _>>()
 }
 
-pub fn set_assets(storage: &mut dyn Storage, assets: Vec<Coin>) -> Result<(), ContractError> {
+pub fn set_assets(
+    storage: &mut dyn Storage,
+    assets: Vec<(String, Decimal)>,
+) -> Result<(), ContractError> {
     if assets.len() > MAX_LIMIT as usize {
         return Err(ContractError::InvalidAssetLength { limit: MAX_LIMIT });
     }
 
-    for Coin { denom, amount } in assets {
+    for (denom, unit) in assets {
         if denom == RESERVE_DENOM {
             return Err(ContractError::DenomReserved {
                 reserved: RESERVE_DENOM.to_string(),
@@ -53,37 +50,22 @@ pub fn set_assets(storage: &mut dyn Storage, assets: Vec<Coin>) -> Result<(), Co
         }
         match ASSETS.may_load(storage, denom.clone())? {
             Some(_) => return Err(ContractError::DenomReserved { reserved: denom }),
-            None => ASSETS.save(storage, denom, &amount)?,
+            None => ASSETS.save(storage, denom, &unit)?,
         }
     }
 
     Ok(())
 }
 
-pub fn get_assets(storage: &dyn Storage) -> StdResult<Vec<Coin>> {
+pub fn get_assets(storage: &dyn Storage) -> StdResult<Vec<(String, Decimal)>> {
     ASSETS
         .range(storage, None, None, Order::Ascending)
         .take(MAX_LIMIT as usize)
-        .map(|item| {
-            let (k, v) = item?;
-
-            Ok(coin(v.u128(), k))
-        })
         .collect::<StdResult<_>>()
 }
 
-pub fn get_units(storage: &dyn Storage) -> StdResult<Vec<(String, Decimal)>> {
-    let token = TOKEN.load(storage)?;
-    let decimal = Uint128::new(10).checked_pow(token.decimal as u32)?;
-
-    Ok(get_assets(storage)?
-        .into_iter()
-        .map(|Coin { denom, amount }| (denom, Decimal::from_ratio(amount, decimal)))
-        .collect())
-}
-
 pub fn get_redeem_amounts(storage: &dyn Storage, desired: Uint128) -> StdResult<Vec<Coin>> {
-    let mut assets: BTreeMap<_, _> = get_units(storage)?
+    let mut assets: BTreeMap<_, _> = get_assets(storage)?
         .into_iter()
         .map(|(denom, unit)| (denom, unit * desired))
         .collect();
@@ -106,6 +88,8 @@ pub fn get_redeem_amounts(storage: &dyn Storage, desired: Uint128) -> StdResult<
 
 #[cfg(test)]
 mod test {
+    use std::str::FromStr;
+
     use cosmwasm_std::testing::MockStorage;
 
     use crate::state::Token;
@@ -118,7 +102,6 @@ mod test {
                 storage,
                 &Token {
                     denom: "test".to_string(),
-                    decimal: 6,
                     reserve_denom: RESERVE_DENOM.to_string(),
                     total_supply: Uint128::new(1234),
                 },
@@ -127,7 +110,11 @@ mod test {
 
         set_assets(
             storage,
-            vec![coin(100, "ueur"), coin(10000, "ukrw"), coin(1000, "uusd")],
+            vec![
+                ("ueur".to_string(), Decimal::from_str("1.0").unwrap()),
+                ("ukrw".to_string(), Decimal::from_str("1.2").unwrap()),
+                ("uusd".to_string(), Decimal::from_str("1.5").unwrap()),
+            ],
         )
         .unwrap();
     }
@@ -143,41 +130,10 @@ mod test {
         assert_eq!(
             assets,
             vec![
-                ("ueur".to_string(), 100),
-                ("ukrw".to_string(), 10000),
-                ("uusd".to_string(), 1000),
+                ("ueur".to_string(), Decimal::from_str("1.0").unwrap()),
+                ("ukrw".to_string(), Decimal::from_str("1.2").unwrap()),
+                ("uusd".to_string(), Decimal::from_str("1.5").unwrap()),
             ]
-            .into_iter()
-            .map(|v| coin(v.1, v.0))
-            .collect::<Vec<_>>(),
-        );
-    }
-
-    #[test]
-    fn test_get_units() {
-        let mut storage = MockStorage::new();
-
-        setup_test(&mut storage);
-
-        let token = TOKEN.load(&storage).unwrap();
-        let units = get_units(&storage).unwrap();
-
-        assert_eq!(
-            units,
-            vec![
-                ("ueur".to_string(), 100),
-                ("ukrw".to_string(), 10000),
-                ("uusd".to_string(), 1000),
-            ]
-            .into_iter()
-            .map(|(denom, amount)| (
-                denom,
-                Decimal::from_ratio(
-                    Uint128::new(amount),
-                    Uint128::new(10).checked_pow(token.decimal as u32).unwrap()
-                )
-            ))
-            .collect::<Vec<_>>(),
         );
     }
 
@@ -187,14 +143,9 @@ mod test {
 
         setup_test(&mut storage);
 
-        let token = TOKEN.load(&storage).unwrap();
-        let amounts = get_redeem_amounts(
-            &storage,
-            Uint128::new(10).checked_pow(token.decimal as u32).unwrap(),
-        )
-        .unwrap();
-        let assets = get_assets(&storage).unwrap();
-
-        assert_eq!(amounts, assets);
+        assert_eq!(
+            get_redeem_amounts(&storage, Uint128::new(10)).unwrap(),
+            vec![coin(10, "ueur"), coin(12, "ukrw"), coin(15, "uusd"),]
+        );
     }
 }

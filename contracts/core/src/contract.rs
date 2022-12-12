@@ -20,7 +20,6 @@ pub fn instantiate(
         deps.storage,
         &Token {
             denom: msg.denom.clone(),
-            decimal: msg.decimal,
             reserve_denom: msg.reserve_denom,
             total_supply: Uint128::zero(),
         },
@@ -73,7 +72,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
             TOKEN.save(deps.storage, &token)?;
 
             let resp = Response::new().add_attributes(vec![
-                attr("method", "init_reply"),
+                attr("method", "reply_init"),
                 attr("new_denom", token.denom),
             ]);
 

@@ -268,7 +268,6 @@ mod test {
                 deps.as_mut().storage,
                 &Token {
                     denom: "test".to_string(),
-                    decimal: 6,
                     reserve_denom: "reserve".to_string(),
                     total_supply: Uint128::zero(),
                 },
