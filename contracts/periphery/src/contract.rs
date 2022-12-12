@@ -65,7 +65,7 @@ fn make_burn_swap_msgs(
     sender: &Addr,
     swap_info: BTreeMap<String, SwapRoutes>,
     expected: BTreeMap<String, Uint128>,
-    min_output_amount: Uint128,
+    min_output: &Coin,
 ) -> Result<Vec<CosmosMsg>, ContractError> {
     let mut swap_msgs: Vec<CosmosMsg> = Vec::new();
     let mut simulated_total_receive_amount = Uint128::zero();
@@ -84,19 +84,22 @@ fn make_burn_swap_msgs(
             expected,
             simulated_token_out,
         ));
-
-        swap_msgs.push(
-            BankMsg::Send {
-                to_address: sender.to_string(),
-                amount: vec![coin(simulated_token_out.u128(), denom)],
-            }
-            .into(),
-        );
     }
 
-    if min_output_amount > simulated_total_receive_amount {
+    if min_output.amount > simulated_total_receive_amount {
         return Err(ContractError::TradeAmountExceeded {});
     }
+
+    swap_msgs.push(
+        BankMsg::Send {
+            to_address: sender.to_string(),
+            amount: vec![coin(
+                simulated_total_receive_amount.u128(),
+                &min_output.denom,
+            )],
+        }
+        .into(),
+    );
 
     Ok(swap_msgs)
 }
@@ -208,7 +211,7 @@ pub fn execute(
                 &info.sender,
                 swap_info,
                 expected,
-                min_output.amount,
+                &min_output,
             )?;
 
             let resp = Response::new()
