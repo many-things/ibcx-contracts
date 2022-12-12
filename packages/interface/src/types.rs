@@ -1,6 +1,9 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::Order;
-use osmosis_std::types::osmosis::gamm::v1beta1::{SwapAmountInRoute, SwapAmountOutRoute};
+use cosmwasm_std::{coin, Addr, CosmosMsg, Order, QuerierWrapper, StdResult, Uint128};
+use osmosis_std::types::osmosis::gamm::v1beta1::{
+    MsgSwapExactAmountIn, MsgSwapExactAmountOut, QuerySwapExactAmountInRequest,
+    QuerySwapExactAmountOutRequest, SwapAmountInRoute, SwapAmountOutRoute,
+};
 
 #[cw_serde]
 pub struct SwapRoute {
@@ -32,6 +35,76 @@ impl From<SwapRoutes> for Vec<SwapAmountOutRoute> {
                 token_in_denom: v.token_denom,
             })
             .collect()
+    }
+}
+
+impl SwapRoutes {
+    pub fn sim_swap_exact_in(
+        &self,
+        querier: &QuerierWrapper,
+        sender: &Addr,
+        token_in: &str,
+        token_in_amount: Uint128,
+    ) -> StdResult<Uint128> {
+        querier.query(
+            &QuerySwapExactAmountInRequest {
+                sender: sender.to_string(),
+                routes: self.clone().into(),
+                token_in: coin(token_in_amount.u128(), token_in).to_string(),
+                pool_id: self.0[0].pool_id,
+            }
+            .into(),
+        )
+    }
+
+    pub fn sim_swap_exact_out(
+        &self,
+        querier: &QuerierWrapper,
+        sender: &Addr,
+        token_out: &str,
+        token_out_amount: Uint128,
+    ) -> StdResult<Uint128> {
+        querier.query(
+            &QuerySwapExactAmountOutRequest {
+                sender: sender.to_string(),
+                routes: self.clone().into(),
+                token_out: coin(token_out_amount.u128(), token_out).to_string(),
+                pool_id: self.0[0].pool_id,
+            }
+            .into(),
+        )
+    }
+
+    pub fn msg_swap_exact_in(
+        &self,
+        sender: &Addr,
+        token_in: &str,
+        token_in_amount: Uint128,
+        token_out_min: Uint128,
+    ) -> CosmosMsg {
+        MsgSwapExactAmountIn {
+            sender: sender.to_string(),
+            routes: self.clone().into(),
+            token_in: Some(coin(token_in_amount.u128(), token_in).into()),
+            token_out_min_amount: token_out_min.to_string(),
+        }
+        .into()
+    }
+
+    pub fn msg_swap_exact_out(
+        &self,
+        sender: &Addr,
+        token_out: &str,
+        token_out_amount: Uint128,
+        token_in_max: Uint128,
+    ) -> CosmosMsg {
+        MsgSwapExactAmountOut {
+            sender: sender.to_string(),
+            routes: self.clone().into(),
+            token_in_max_amount: token_in_max.to_string(),
+            token_out: Some(coin(token_out_amount.u128(), token_out).into()),
+        }
+        .into()
     }
 }
 

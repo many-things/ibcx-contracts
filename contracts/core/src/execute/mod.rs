@@ -18,6 +18,7 @@ pub fn mint(
     info: MessageInfo,
     amount: Uint128,
     receiver: Option<String>,
+    refund_to: Option<String>,
 ) -> Result<Response, ContractError> {
     PAUSED
         .load(deps.storage)?
@@ -29,6 +30,10 @@ pub fn mint(
         .map(|v| deps.api.addr_validate(&v))
         .transpose()?
         .unwrap_or_else(|| info.sender.clone());
+    let refund_to = refund_to
+        .map(|v| deps.api.addr_validate(&v))
+        .transpose()?
+        .unwrap_or_else(|| info.sender.clone());
 
     let mut token = TOKEN.load(deps.storage)?;
     let refund = assert_assets(deps.storage, info.funds, amount)?;
@@ -37,21 +42,20 @@ pub fn mint(
     TOKEN.save(deps.storage, &token)?;
 
     let mint_amount = coin(amount.u128(), token.denom);
-    let mut send_amount = refund;
-    send_amount.push(mint_amount.clone());
-    let send_amount = send_amount
-        .into_iter()
-        .filter(|v| !v.amount.is_zero())
-        .collect();
+    let refund_amount = refund.into_iter().filter(|v| !v.amount.is_zero()).collect();
 
     let resp = Response::new()
         .add_message(MsgMint {
             sender: env.contract.address.into_string(),
-            amount: Some(mint_amount.into()),
+            amount: Some(mint_amount.clone().into()),
         })
         .add_message(BankMsg::Send {
             to_address: receiver.to_string(),
-            amount: send_amount,
+            amount: vec![mint_amount],
+        })
+        .add_message(BankMsg::Send {
+            to_address: refund_to.to_string(),
+            amount: refund_amount,
         })
         .add_attributes(vec![
             attr("method", "mint"),
@@ -180,7 +184,8 @@ mod test {
                 env.clone(),
                 mock_info(alice.as_str(), &[]),
                 Uint128::new(10),
-                Some(bob.into_string()),
+                Some(bob.clone().into_string()),
+                Some(bob.clone().into_string()),
             )
             .unwrap_err(),
             ContractError::Paused {}
@@ -197,6 +202,7 @@ mod test {
             ),
             Uint128::new(10),
             Some(alice.clone().into_string()),
+            Some(bob.clone().into_string()),
         )
         .unwrap();
 
@@ -210,14 +216,13 @@ mod test {
                     amount: Some(coin(10, "ibcx").into()),
                 }),
                 SubMsg::new(BankMsg::Send {
-                    to_address: alice.to_string(),
-                    amount: vec![
-                        coin(10, "uaaa"),
-                        coin(12, "ubbb"),
-                        coin(15, "uccc"),
-                        coin(10, "ibcx"),
-                    ],
+                    to_address: alice.into_string(),
+                    amount: vec![coin(10, "ibcx"),],
                 }),
+                SubMsg::new(BankMsg::Send {
+                    to_address: bob.into_string(),
+                    amount: vec![coin(10, "uaaa"), coin(12, "ubbb"), coin(15, "uccc"),]
+                })
             ]
         );
     }

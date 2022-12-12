@@ -2,20 +2,16 @@ use std::collections::BTreeMap;
 
 use cosmwasm_std::{
     attr, coin, coins, entry_point, Addr, BankMsg, Coin, CosmosMsg, Deps, DepsMut, Env,
-    MessageInfo, QuerierWrapper, QueryResponse, Reply, Response, StdResult, Storage, SubMsg,
-    Uint128,
+    MessageInfo, QuerierWrapper, QueryResponse, Response, Uint128,
 };
 use ibc_interface::{
     core,
     helpers::IbcCore,
-    periphery::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SwapInfo},
+    periphery::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
+    types::SwapRoutes,
 };
 
-use crate::{
-    error::ContractError,
-    state::{Context, CONTEXTS, CURRENT_CONTEXT_ID},
-    CONTRACT_NAME, CONTRACT_VERSION, REPLY_ID_BURN, REPLY_ID_MINT,
-};
+use crate::{error::ContractError, CONTRACT_NAME, CONTRACT_VERSION};
 
 #[entry_point]
 pub fn instantiate(
@@ -35,7 +31,7 @@ fn make_mint_swap_msgs(
     querier: &QuerierWrapper,
     contract: &Addr,
     reserve_denom: String,
-    swap_info: BTreeMap<String, SwapInfo>,
+    swap_info: BTreeMap<String, SwapRoutes>,
     desired: BTreeMap<String, Uint128>,
     max_input_amount: Uint128,
 ) -> Result<Vec<CosmosMsg>, ContractError> {
@@ -49,21 +45,11 @@ fn make_mint_swap_msgs(
 
         let swap_info = swap_info.get(&denom).unwrap();
 
-        let simulated_token_in = swap_info.simulate_swap_exact_out(
-            querier,
-            contract.to_string(),
-            denom.clone(),
-            want,
-        )?;
+        let simulated_token_in = swap_info.sim_swap_exact_out(querier, contract, &denom, want)?;
 
         simulated_total_spend_amount += simulated_token_in;
 
-        swap_msgs.push(swap_info.msg_swap_exact_out(
-            contract.to_string(),
-            simulated_token_in,
-            denom,
-            want,
-        ));
+        swap_msgs.push(swap_info.msg_swap_exact_out(contract, &denom, want, simulated_token_in));
     }
 
     if max_input_amount < simulated_total_spend_amount {
@@ -76,7 +62,8 @@ fn make_mint_swap_msgs(
 fn make_burn_swap_msgs(
     querier: &QuerierWrapper,
     contract: &Addr,
-    swap_info: BTreeMap<String, SwapInfo>,
+    sender: &Addr,
+    swap_info: BTreeMap<String, SwapRoutes>,
     expected: BTreeMap<String, Uint128>,
     min_output_amount: Uint128,
 ) -> Result<Vec<CosmosMsg>, ContractError> {
@@ -86,21 +73,25 @@ fn make_burn_swap_msgs(
     for (denom, expected) in expected {
         let swap_info = swap_info.get(&denom).unwrap();
 
-        let simulated_token_out = swap_info.simulate_swap_exact_in(
-            querier,
-            contract.to_string(),
-            denom.clone(),
-            expected,
-        )?;
+        let simulated_token_out =
+            swap_info.sim_swap_exact_in(querier, contract, &denom, expected)?;
 
         simulated_total_receive_amount += simulated_token_out;
 
         swap_msgs.push(swap_info.msg_swap_exact_in(
-            contract.to_string(),
-            simulated_token_out,
-            denom,
+            contract,
+            &denom,
             expected,
+            simulated_token_out,
         ));
+
+        swap_msgs.push(
+            BankMsg::Send {
+                to_address: sender.to_string(),
+                amount: vec![coin(simulated_token_out.u128(), denom)],
+            }
+            .into(),
+        );
     }
 
     if min_output_amount > simulated_total_receive_amount {
@@ -108,25 +99,6 @@ fn make_burn_swap_msgs(
     }
 
     Ok(swap_msgs)
-}
-
-fn save_context(
-    storage: &mut dyn Storage,
-    executor: Addr,
-    asset_to_check: String,
-) -> StdResult<()> {
-    let current_context_id = CURRENT_CONTEXT_ID.load(storage)?;
-
-    CONTEXTS.save(
-        storage,
-        current_context_id,
-        &Context {
-            executor,
-            asset_to_check,
-        },
-    )?;
-
-    Ok(())
 }
 
 #[entry_point]
@@ -182,15 +154,14 @@ pub fn execute(
                 core::ExecuteMsg::Mint {
                     amount: output.amount,
                     receiver: Some(info.sender.to_string()),
+                    refund_to: Some(info.sender.to_string()),
                 },
                 funds,
             )?;
 
-            save_context(deps.storage, info.sender.clone(), max_input.denom.clone())?;
-
             let resp = Response::new()
                 .add_messages(swap_msgs)
-                .add_submessage(SubMsg::reply_on_success(mint_msg, REPLY_ID_MINT))
+                .add_message(mint_msg)
                 .add_attributes(vec![
                     attr("method", "mint_exact_amount_out"),
                     attr("executor", info.sender),
@@ -231,27 +202,18 @@ pub fn execute(
                 coins(input.amount.u128(), core_config.reserve_denom),
             )?;
 
-            let mut swap_msgs = make_burn_swap_msgs(
+            let swap_msgs = make_burn_swap_msgs(
                 &deps.querier,
                 &env.contract.address,
+                &info.sender,
                 swap_info,
                 expected,
                 min_output.amount,
-            )?
-            .into_iter()
-            .map(SubMsg::new)
-            .collect::<Vec<SubMsg>>();
-
-            // add reply setting to last message
-            swap_msgs
-                .last_mut()
-                .map(|v| SubMsg::reply_on_success(v.msg.clone(), REPLY_ID_BURN));
-
-            save_context(deps.storage, info.sender.clone(), min_output.denom.clone())?;
+            )?;
 
             let resp = Response::new()
                 .add_message(burn_msg)
-                .add_submessages(swap_msgs)
+                .add_messages(swap_msgs)
                 .add_attributes(vec![
                     attr("method", "burn_exact_amount_in"),
                     attr("executor", info.sender),
@@ -261,63 +223,6 @@ pub fn execute(
 
             Ok(resp)
         }
-    }
-}
-
-#[entry_point]
-pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
-    match msg.id {
-        REPLY_ID_MINT => {
-            // parse = validate
-            cw_utils::parse_reply_execute_data(msg)?;
-
-            let current_context_id = CURRENT_CONTEXT_ID.load(deps.storage)?;
-            let context = CONTEXTS.load(deps.storage, current_context_id)?;
-            CURRENT_CONTEXT_ID.save(deps.storage, &(current_context_id + 1))?;
-
-            let balance = deps
-                .querier
-                .query_balance(&env.contract.address, context.asset_to_check)?;
-
-            let resp = Response::new()
-                .add_message(BankMsg::Send {
-                    to_address: context.executor.to_string(),
-                    amount: vec![balance.clone()],
-                })
-                .add_attributes(vec![
-                    attr("method", "reply_mint_exact_amount_out"),
-                    attr("dust", balance.to_string()),
-                    attr("return_to", context.executor.into_string()),
-                ]);
-
-            Ok(resp)
-        }
-        REPLY_ID_BURN => {
-            // parse = validate
-            cw_utils::parse_reply_execute_data(msg)?;
-
-            let current_context_id = CURRENT_CONTEXT_ID.load(deps.storage)?;
-            let context = CONTEXTS.load(deps.storage, current_context_id)?;
-            CURRENT_CONTEXT_ID.save(deps.storage, &(current_context_id + 1))?;
-
-            let balance = deps
-                .querier
-                .query_balance(&env.contract.address, context.asset_to_check)?;
-
-            let resp = Response::new()
-                .add_message(BankMsg::Send {
-                    to_address: context.executor.to_string(),
-                    amount: vec![balance.clone()],
-                })
-                .add_attributes(vec![
-                    attr("method", "reply_burn_exact_amount_out"),
-                    attr("dust", balance.to_string()),
-                    attr("return_to", context.executor.into_string()),
-                ]);
-
-            Ok(resp)
-        }
-        _ => Err(ContractError::InvalidReplyId {}),
     }
 }
 

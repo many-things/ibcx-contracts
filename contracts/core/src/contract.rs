@@ -53,7 +53,11 @@ pub fn execute(
     use ExecuteMsg::*;
 
     match msg {
-        Mint { amount, receiver } => execute::mint(deps, env, info, amount, receiver),
+        Mint {
+            amount,
+            receiver,
+            refund_to,
+        } => execute::mint(deps, env, info, amount, receiver, refund_to),
         Burn {} => execute::burn(deps, env, info),
         Gov(msg) => execute::handle_gov_msg(deps, env, info, msg),
         Rebalance(msg) => execute::handle_rebalance_msg(deps, env, info, msg),

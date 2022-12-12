@@ -62,6 +62,7 @@ pub enum ExecuteMsg {
     Mint {
         amount: Uint128,
         receiver: Option<String>,
+        refund_to: Option<String>,
     }, // put some input tokens to tx payload
     Burn {}, // pub some ibc tokens to tx payload
 

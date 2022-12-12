@@ -196,7 +196,7 @@ fn deflate(
     }
 
     // simulate
-    let amount_in = trade_info.sim_swap_exact_amount_out(
+    let amount_in = trade_info.routes.sim_swap_exact_out(
         &deps.querier,
         &env.contract.address,
         &denom,
@@ -235,7 +235,7 @@ fn deflate(
 
     // build response
     Ok(Response::new()
-        .add_message(trade_info.swap_exact_amount_out(
+        .add_message(trade_info.routes.msg_swap_exact_out(
             &env.contract.address,
             &denom,
             amount,
@@ -288,7 +288,7 @@ fn inflate(
     }
 
     // simulate
-    let amount_out = trade_info.sim_swap_exact_amount_in(
+    let amount_out = trade_info.routes.sim_swap_exact_in(
         &deps.querier,
         &env.contract.address,
         &denom,
@@ -323,7 +323,7 @@ fn inflate(
 
     // build response
     Ok(Response::new()
-        .add_message(trade_info.swap_exact_amount_in(
+        .add_message(trade_info.routes.msg_swap_exact_in(
             &env.contract.address,
             RESERVE_DENOM,
             amount,
