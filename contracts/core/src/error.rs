@@ -45,6 +45,9 @@ pub enum ContractError {
     #[error("Invalid argument: {0}")]
     InvalidArgument(String),
 
+    #[error("Insufficient funds: {0}")]
+    InsufficientFunds(String),
+
     #[error("Cooldown not expired")]
     CooldownNotExpired {},
 

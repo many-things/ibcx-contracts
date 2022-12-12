@@ -216,7 +216,7 @@ mod test {
                     amount: Some(coin(10, "ibcx").into()),
                 }),
                 SubMsg::new(BankMsg::Send {
-                    to_address: alice.into_string(),
+                    to_address: alice.to_string(),
                     amount: vec![coin(10, "ibcx"),],
                 }),
                 SubMsg::new(BankMsg::Send {

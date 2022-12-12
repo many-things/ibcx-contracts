@@ -16,22 +16,19 @@ pub fn assert_assets(
     funds: Vec<Coin>,
     desired: Uint128,
 ) -> Result<Vec<Coin>, ContractError> {
-    funds
-        .iter()
-        .map(|Coin { denom, amount }| {
-            let mut unit = ASSETS.load(storage, denom.to_string())?;
+    get_assets(storage)?
+        .into_iter()
+        .map(|(denom, unit)| {
+            let received = match funds.iter().find(|v| v.denom == denom) {
+                Some(c) => c,
+                None => return Err(ContractError::InsufficientFunds(denom)),
+            };
 
-            if denom == RESERVE_DENOM {
-                unit += ASSETS
-                    .may_load(storage, RESERVE_DENOM.to_string())?
-                    .unwrap_or_default()
-            }
-
-            let refund = amount.checked_sub(unit * desired)?;
+            let refund = received.amount.checked_sub(unit * desired)?;
 
             Ok(coin(refund.u128(), denom))
         })
-        .collect::<Result<_, _>>()
+        .collect()
 }
 
 pub fn set_assets(
