@@ -8,6 +8,12 @@ pub struct InstantiateMsg {}
 
 #[cw_serde]
 pub enum ExecuteMsg {
+    MintExactAmountIn {
+        core_addr: String,
+        input_asset: Uint128,
+        min_output_amount: Uint128,
+        swap_info: Vec<(String, SwapRoutes)>,
+    },
     MintExactAmountOut {
         core_addr: String,
         output_amount: Uint128,
@@ -18,6 +24,11 @@ pub enum ExecuteMsg {
         core_addr: String,
         output_asset: String,
         min_output_amount: Uint128,
+        swap_info: Vec<(String, SwapRoutes)>,
+    },
+    BurnExactAmountOut {
+        core_addr: String,
+        output_amount: Uint128,
         swap_info: Vec<(String, SwapRoutes)>,
     },
 }
