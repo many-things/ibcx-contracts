@@ -19,7 +19,9 @@ pub fn make_mint_swap_msgs(
 
     for (denom, want) in desired {
         if denom == reserve_denom {
+            // skip swap for reserve denom
             simulated_total_spend_amount += want;
+            continue;
         }
 
         let swap_info = swap_info.get(&denom).unwrap();
