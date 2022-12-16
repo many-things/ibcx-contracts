@@ -1,9 +1,7 @@
 use std::collections::BTreeMap;
 
-use cosmwasm_std::{
-    attr, coin, entry_point, to_binary, Coin, Deps, DepsMut, Env, MessageInfo, QueryResponse,
-    Response,
-};
+use cosmwasm_std::{attr, coin, entry_point, to_binary, Coin, Env, MessageInfo, QueryResponse};
+use ibc_alias::{Deps, DepsMut, Response};
 use ibc_interface::{
     helpers::IbcCore,
     periphery::{
@@ -15,7 +13,7 @@ use ibc_interface::{
 use crate::{
     error::ContractError,
     execute,
-    msgs::{make_burn_swap_msgs, make_mint_swap_msgs},
+    msgs::{make_burn_swap_msgs, make_mint_swap_exact_out_msgs},
     CONTRACT_NAME, CONTRACT_VERSION,
 };
 
@@ -118,7 +116,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
                 .map(|(denom, want)| coin(want.u128(), denom))
                 .collect();
 
-            let (_, refund) = make_mint_swap_msgs(
+            let (_, refund) = make_mint_swap_exact_out_msgs(
                 &deps.querier,
                 &env.contract.address,
                 &env.contract.address,

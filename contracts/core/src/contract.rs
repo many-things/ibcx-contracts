@@ -1,5 +1,6 @@
-use cosmwasm_std::{attr, entry_point, Reply, SubMsg};
-use cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QueryResponse, Response, Uint128};
+use cosmwasm_std::{attr, entry_point, Reply};
+use cosmwasm_std::{Env, MessageInfo, QueryResponse, Uint128};
+use ibc_alias::{Deps, DepsMut, Response, SubMsg};
 use ibc_interface::core::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgCreateDenom, MsgCreateDenomResponse};
 

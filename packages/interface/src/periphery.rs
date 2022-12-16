@@ -10,7 +10,7 @@ pub struct InstantiateMsg {}
 pub enum ExecuteMsg {
     MintExactAmountIn {
         core_addr: String,
-        input_asset: Uint128,
+        input_asset: String,
         min_output_amount: Uint128,
         swap_info: Vec<((String, String), SwapRoutes)>,
     },
@@ -41,7 +41,7 @@ pub enum QueryMsg {
         core_addr: String,
         output_amount: Uint128,
         input_asset: Coin,
-        swap_info: Vec<(String, SwapRoutes)>,
+        swap_info: Vec<((String, String), SwapRoutes)>,
     },
 
     #[returns(SimulateBurnExactAmountInResponse)]
@@ -50,7 +50,7 @@ pub enum QueryMsg {
         input_amount: Uint128,
         output_asset: String,
         min_output_amount: Uint128,
-        swap_info: Vec<(String, SwapRoutes)>,
+        swap_info: Vec<((String, String), SwapRoutes)>,
     },
 }
 

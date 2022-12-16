@@ -1,8 +1,9 @@
 use cosmwasm_std::{
-    attr, coins, entry_point, to_binary, Addr, BankMsg, Binary, Deps, DepsMut, Env, MessageInfo,
-    Order, Response, StdResult, Uint128,
+    attr, coins, entry_point, to_binary, Addr, BankMsg, Env, MessageInfo, Order, QueryResponse,
+    StdResult, Uint128,
 };
 use cw_storage_plus::Bound;
+use ibc_alias::{Deps, DepsMut, Response};
 use ibc_interface::{
     airdrop::{
         AirdropId, AirdropIdOptional, CheckQualificationResponse, ExecuteMsg, GetAirdropResponse,
@@ -193,7 +194,7 @@ pub fn execute(
 }
 
 #[entry_point]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, ContractError> {
     use QueryMsg::*;
 
     match msg {

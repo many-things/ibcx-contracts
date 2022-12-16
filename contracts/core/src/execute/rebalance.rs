@@ -1,4 +1,5 @@
-use cosmwasm_std::{attr, Decimal, DepsMut, Env, MessageInfo, Response, Uint128};
+use cosmwasm_std::{attr, Decimal, Env, MessageInfo, Uint128};
+use ibc_alias::{DepsMut, Response};
 use ibc_interface::core::{RebalanceMsg, RebalanceTradeMsg};
 
 use crate::{

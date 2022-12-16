@@ -23,6 +23,8 @@ cw2 = "1.0.0"
 thiserror = { version = "1.0.37" }
 
 osmosis-std = "0.13.1"
+osmo-bindings = { git = "https://github.com/osmosis-labs/bindings", rev = "531cf7b" }
+ibc-alias = { path = "../../packages/alias" }
 ibc-interface = { path = "../../packages/interface" }
 
 [dev-dependencies]

@@ -25,6 +25,7 @@ hex = "0.4.3"
 thiserror = { version = "1.0.37" }
 
 osmosis-std = "0.13.1"
+ibc-alias = { path = "../../packages/alias" }
 ibc-interface = { path = "../../packages/interface" }
 
 [dev-dependencies]

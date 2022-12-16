@@ -21,6 +21,9 @@ pub enum ContractError {
     #[error("{0}")]
     ParseReplyError(#[from] cw_utils::ParseReplyError),
 
+    #[error("{0}")]
+    CheckedFromRatioError(#[from] cosmwasm_std::CheckedFromRatioError),
+
     #[error("Paused")]
     Paused {},
 
@@ -35,41 +38,4 @@ pub enum ContractError {
 
     #[error("Trade amount exceeded")]
     TradeAmountExceeded {},
-
-    #[error("Trade strategy not set")]
-    TradeStrategyNotSet {},
-
-    #[error("Trade simulation failed")]
-    TradeSimulationFailed {},
-
-    #[error("Trade no allocation")]
-    TradeNoAllocation {},
-
-    #[error("Trade cooldown not finished")]
-    TradeCooldownNotFinished {},
-
-    #[error("Rebalance info not found or not initialized")]
-    RebalanceInfoNotFound {},
-
-    #[error("Rebalance already finished")]
-    RebalanceAlreadyFinished {},
-
-    #[error("Rebalance already on going")]
-    RebalanceAlreadyOnGoing {},
-
-    #[error("Rebalance condition fulfilled")]
-    RebalanceConditionFulfilled {},
-
-    #[error("Rebalance ran out of allocation")]
-    RebalanceRanOutOfAllocation {},
-
-    #[error("Rebalance validation failed. reason: {reason:?}")]
-    RebalanceValidationFailed { reason: String },
-
-    #[error("Received funds mismatched (denom: {denom:?} => required: {required:?}, received: {received:?})")]
-    MismatchedFunds {
-        denom: String,
-        required: Uint128,
-        received: Uint128,
-    },
 }

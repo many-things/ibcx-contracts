@@ -1,8 +1,9 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{coin, Addr, CosmosMsg, Order, QuerierWrapper, StdResult, Uint128};
+use cosmwasm_std::{coin, Addr, Order, StdResult, Uint128};
+use ibc_alias::{CosmosMsg, QuerierWrapper};
+use osmo_bindings::{OsmosisQuery, SwapAmount, SwapResponse};
 use osmosis_std::types::osmosis::gamm::v1beta1::{
-    MsgSwapExactAmountIn, MsgSwapExactAmountOut, QuerySwapExactAmountInRequest,
-    QuerySwapExactAmountOutRequest, SwapAmountInRoute, SwapAmountOutRoute,
+    MsgSwapExactAmountIn, MsgSwapExactAmountOut, SwapAmountInRoute, SwapAmountOutRoute,
 };
 
 #[cw_serde]
@@ -46,15 +47,17 @@ impl SwapRoutes {
         token_in: &str,
         token_in_amount: Uint128,
     ) -> StdResult<Uint128> {
-        querier.query(
-            &QuerySwapExactAmountInRequest {
-                sender: sender.to_string(),
-                routes: self.clone().into(),
-                token_in: coin(token_in_amount.u128(), token_in).to_string(),
-                pool_id: self.0[0].pool_id,
-            }
+        let resp: SwapResponse = querier.query(
+            &OsmosisQuery::estimate_swap(
+                sender,
+                self.0.first().unwrap().pool_id,
+                token_in,
+                &self.0.last().unwrap().token_denom,
+                SwapAmount::In(token_in_amount),
+            )
             .into(),
-        )
+        )?;
+        Ok(resp.amount.as_out())
     }
 
     pub fn sim_swap_exact_out(
@@ -64,15 +67,17 @@ impl SwapRoutes {
         token_out: &str,
         token_out_amount: Uint128,
     ) -> StdResult<Uint128> {
-        querier.query(
-            &QuerySwapExactAmountOutRequest {
-                sender: sender.to_string(),
-                routes: self.clone().into(),
-                token_out: coin(token_out_amount.u128(), token_out).to_string(),
-                pool_id: self.0[0].pool_id,
-            }
+        let resp: SwapResponse = querier.query(
+            &OsmosisQuery::estimate_swap(
+                sender,
+                self.0.first().unwrap().pool_id,
+                &self.0.last().unwrap().token_denom,
+                token_out,
+                SwapAmount::Out(token_out_amount),
+            )
             .into(),
-        )
+        )?;
+        Ok(resp.amount.as_in())
     }
 
     pub fn msg_swap_exact_in(

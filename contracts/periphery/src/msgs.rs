@@ -1,16 +1,31 @@
 use std::collections::BTreeMap;
 
-use cosmwasm_std::{coin, Addr, BankMsg, Coin, CosmosMsg, QuerierWrapper, Uint128};
+use cosmwasm_std::{coin, Addr, BankMsg, Coin, Uint128};
+use ibc_alias::{CosmosMsg, QuerierWrapper};
 use ibc_interface::types::SwapRoutes;
 
 use crate::error::ContractError;
 
-pub fn make_mint_swap_msgs(
+pub fn make_mint_swap_exact_in_msgs(
     querier: &QuerierWrapper,
     contract: &Addr,
     sender: &Addr,
     reserve_denom: String,
-    swap_info: BTreeMap<String, SwapRoutes>,
+    swap_info: BTreeMap<(String, String), SwapRoutes>,
+    desired: BTreeMap<String, Uint128>,
+    min_output: &Coin,
+) -> Result<(Vec<CosmosMsg>, Uint128), ContractError> {
+    let mut swap_msgs: Vec<CosmosMsg> = Vec::new();
+    let mut simulated_total_spend_amount = Uint128::zero();
+    Ok(Default::default())
+}
+
+pub fn make_mint_swap_exact_out_msgs(
+    querier: &QuerierWrapper,
+    contract: &Addr,
+    sender: &Addr,
+    reserve_denom: String,
+    swap_info: BTreeMap<(String, String), SwapRoutes>,
     desired: BTreeMap<String, Uint128>,
     max_input: &Coin,
 ) -> Result<(Vec<CosmosMsg>, Uint128), ContractError> {
@@ -24,7 +39,9 @@ pub fn make_mint_swap_msgs(
             continue;
         }
 
-        let swap_info = swap_info.get(&denom).unwrap();
+        let swap_info = swap_info
+            .get(&(reserve_denom.clone(), denom.clone()))
+            .unwrap();
 
         let simulated_token_in = swap_info.sim_swap_exact_out(querier, contract, &denom, want)?;
 
@@ -54,7 +71,7 @@ pub fn make_burn_swap_msgs(
     querier: &QuerierWrapper,
     contract: &Addr,
     sender: &Addr,
-    swap_info: BTreeMap<String, SwapRoutes>,
+    swap_info: BTreeMap<(String, String), SwapRoutes>,
     expected: BTreeMap<String, Uint128>,
     min_output: &Coin,
 ) -> Result<(Vec<CosmosMsg>, Uint128), ContractError> {
@@ -62,7 +79,9 @@ pub fn make_burn_swap_msgs(
     let mut simulated_total_receive_amount = Uint128::zero();
 
     for (denom, expected) in expected {
-        let swap_info = swap_info.get(&denom).unwrap();
+        let swap_info = swap_info
+            .get(&(min_output.denom.clone(), denom.clone()))
+            .unwrap();
 
         let simulated_token_out =
             swap_info.sim_swap_exact_in(querier, contract, &denom, expected)?;

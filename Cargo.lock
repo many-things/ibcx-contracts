@@ -486,10 +486,19 @@ dependencies = [
  "cw-utils",
  "cw2 1.0.0",
  "hex",
+ "ibc-alias",
  "ibc-interface",
  "osmosis-std",
  "sha2 0.10.6",
  "thiserror",
+]
+
+[[package]]
+name = "ibc-alias"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-std",
+ "osmo-bindings",
 ]
 
 [[package]]
@@ -503,7 +512,9 @@ dependencies = [
  "cw-storage-plus 1.0.1",
  "cw-utils",
  "cw2 1.0.0",
+ "ibc-alias",
  "ibc-interface",
+ "osmo-bindings",
  "osmosis-std",
  "thiserror",
 ]
@@ -519,6 +530,7 @@ dependencies = [
  "cw-storage-plus 1.0.1",
  "cw-utils",
  "cw2 1.0.0",
+ "ibc-alias",
  "ibc-interface",
  "osmosis-std",
  "thiserror",
@@ -534,6 +546,8 @@ dependencies = [
  "cw-multi-test",
  "cw-storage-plus 1.0.1",
  "cw2 1.0.0",
+ "ibc-alias",
+ "osmo-bindings",
  "osmosis-std",
  "thiserror",
 ]
@@ -549,6 +563,7 @@ dependencies = [
  "cw-storage-plus 1.0.1",
  "cw-utils",
  "cw2 1.0.0",
+ "ibc-alias",
  "ibc-interface",
  "osmosis-std",
  "thiserror",
@@ -617,6 +632,17 @@ name = "opaque-debug"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
+
+[[package]]
+name = "osmo-bindings"
+version = "0.7.0"
+source = "git+https://github.com/osmosis-labs/bindings?rev=531cf7b#531cf7bd58d90ce4681de84556cc9bda428aec68"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "schemars",
+ "serde",
+]
 
 [[package]]
 name = "osmosis-std"

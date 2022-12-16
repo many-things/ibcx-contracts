@@ -1,8 +1,9 @@
 use cosmwasm_std::{
-    attr, coin, entry_point, to_binary, BankMsg, Binary, Deps, DepsMut, Env, MessageInfo, Order,
-    Reply, Response, StdResult, SubMsg,
+    attr, coin, entry_point, to_binary, BankMsg, Env, MessageInfo, Order, QueryResponse, Reply,
+    StdResult,
 };
 use cw_storage_plus::Bound;
+use ibc_alias::{Deps, DepsMut, Response, SubMsg};
 use ibc_interface::{
     faucet::{
         Action, ExecuteMsg, GetLastTokenIdResponse, GetRoleResponse, GetTokenResponse,
@@ -242,7 +243,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
 }
 
 #[entry_point]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, ContractError> {
     use QueryMsg::*;
 
     match msg {
