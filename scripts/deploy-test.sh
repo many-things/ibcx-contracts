@@ -7,6 +7,7 @@ MNEMONIC=${SIGNER_MNEMONIC:-"notice oak worry limit wrap speak medal online pref
 
 SIGNER="deployer-test"
 beaker key set "$SIGNER" "$MNEMONIC" -y
+(echo "y"; echo "$MNEMONIC") | $DAEMON keys add --recover "$SIGNER"
 
 function check {
     if [ -z "$1" ]
@@ -40,16 +41,74 @@ beaker wasm deploy \
     ibc-faucet
 
 DENOMS=("utatom" "utosmo" "utevmos" "utjuno" "utscrt" "utstars" "utakt" "utregen" "utstrd" "utumee")
+# DENOMS=("utatom" "utosmo")
 WEIGHTS=("33.35" "20.24" "12.65" "8.83" "6.97" "4.76" "4.29" "3.37" "2.84" "2.69")
+
+DECIMAL=1000000
+PRICES=(11.6405 1 0.4366 1.6 0.8002 0.0359 0.2715 0.2275 0.3528 0.0079) # in OSMO
+
 STATES=$([ "$NETWORK" = "local" ] && echo "state.local.json" || echo "state.json")
 FAUCET_ADDR=$(cat $(pwd)/.beaker/$STATES | jq -r '.'$NETWORK'["ibc-faucet"].addresses.default')
+RESERVE_DENOM="factory/$FAUCET_ADDR/utosmo"
 
+# CREATE & MINT
 for denom in "${DENOMS[@]}"; do
+    echo "=========== CREATING $denom ==========="
     beaker wasm execute ibc-faucet \
         --raw $(printf "{\"create\":{\"denom\":\"$denom\",\"config\":{\"unmanaged\":{}}}}") \
         --network $NETWORK \
         --funds $TOKENFACTORY_FEE \
         $SIGNER_FLAG
+    
+    L_MINT_MSG=$(printf "{\"mint\":{\"denom\":\"$denom\",\"amount\":\""$(echo "10^30" | bc)"\"}}")
+    beaker wasm execute ibc-faucet \
+        --raw $L_MINT_MSG \
+        --network $NETWORK \
+        $SIGNER_FLAG
+done
+
+# CREATE POOLS
+for i in "${!DENOMS[@]}"; do
+    L_TARGET_DENOM="factory/$FAUCET_ADDR/${DENOMS[$i]}"
+    if [ "$L_TARGET_DENOM" = "$RESERVE_DENOM" ]; then
+        continue
+    fi
+
+    L_PRICE=$(printf "%d" "$(echo '1000/'${PRICES[$i]}'' | bc)")
+    L_WEIGHTS=$(echo "$L_PRICE$L_TARGET_DENOM,1000$RESERVE_DENOM")
+    L_RESERVE_DEPOSIT=$(echo "$(($DECIMAL * $DECIMAL))$RESERVE_DENOM")
+    L_TARGET_DEPOSIT=$(printf "%d$L_TARGET_DENOM" "$(echo ''$DECIMAL' / '${PRICES[$i]}' * '$DECIMAL'' | bc)")
+    L_DEPOSITS=$(echo "$L_TARGET_DEPOSIT,$L_RESERVE_DEPOSIT")
+    echo "$RESERVE_DENOM::$L_TARGET_DENOM =>"
+    echo "==== DEPOSITS : $L_DEPOSITS"
+    echo "==== WEIGHTS  : $L_WEIGHTS"
+
+    L_POOL_CONFIG=$(
+        cat $(pwd)/scripts/pool_config.json | \
+        jq -c '.weights = "'$L_WEIGHTS'"' | \
+        jq -c '."initial-deposit" = "'$L_DEPOSITS'"'
+    )
+    
+    echo "$L_POOL_CONFIG" > $(pwd)/scripts/pool_config.json
+
+    L_POOL_ID=$(
+        $DAEMON tx gamm create-pool \
+            --pool-file $(pwd)/scripts/pool_config.json \
+            --from $SIGNER \
+            --node $NODE \
+            --chain-id $CHAIN_ID \
+            --yes --output=json -b "block" | \
+        jq -r '.logs[0].events[4].attributes[0].value'
+    )
+    echo "==== POOL_ID  : $L_POOL_ID"
+
+    ## GAUGE CREATION
+    # $DAEMON tx incentives create-gauge "gamm/pool/$POOL_ID" "1000000uosmo" \
+    #     --epochs 10 \
+    #     --from $SIGNER \
+    #     --chain-id $CHAIN_ID \
+    #     --node $NODE \
+    #     --yes --output=json -b "block"
 done
 
 echo "============ Deploying IBC Compat ============"

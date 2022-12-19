@@ -3,5 +3,9 @@
   "compat": "",
   "denom": "uibc",
   "reserve_denom": "uosmo",
-  "initial_assets": []
+  "initial_assets": [],
+  "fee_strategy": {
+    "burn": "0.15",
+    "stream": "0.55"
+  }
 }

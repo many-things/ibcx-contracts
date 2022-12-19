@@ -1,36 +1,45 @@
 {
   "testnet": {
     "ibc-faucet": {
-      "code_id": 4500,
+      "code_id": 4782,
       "addresses": {
-        "default": "osmo1pnujldn2wuzlfglptx4ceu7aljhxm2dnjy03q2k947cpmdel53sqfyakul"
+        "default": "osmo1t6syrltzluc08awhh7a6v2sgup0vxx46vde0nxatgy6g68eva0lqzv9pw6"
       },
       "proposal": {
         "store_code": null
       }
     },
     "ibc-core": {
-      "code_id": 4598,
+      "code_id": 4784,
       "addresses": {
-        "default": "osmo1qsxmeayz5h00d75gtkevzpmne9rnc37fn5sw9eyxvueq9mm3z9hslch5rh"
+        "default": "osmo17weg5z93w0dkgrl6kfw55r65pts64haclmcc6h7kr65jypyvgl6q9crphx"
       },
       "proposal": {
         "store_code": null
       }
     },
     "ibc-periphery": {
-      "code_id": 4600,
+      "code_id": 4785,
       "addresses": {
-        "default": "osmo1vusdzjh90vxrvszdnut004dsymhcusmhcjncv7s6khnt3dyn5nzqxht272"
+        "default": "osmo1kdm7druk3hzuda72xpzfjdkpd8sjmcc07gm9jrapc62wgjwlwkysmt94un"
       },
       "proposal": {
         "store_code": null
       }
     },
     "ibc-airdrop": {
-      "code_id": 4503,
+      "code_id": 4786,
       "addresses": {
-        "default": "osmo140tyvw6sk399ysa4whrtkzeysec6vl5jpvh8kpem24tzvmjdwq8qsmevfl"
+        "default": "osmo1uglyssqcl2x6p4kejwkldrfxnvnmxjg496dkw54nxrga9l5nhmhsvwtn5l"
+      },
+      "proposal": {
+        "store_code": null
+      }
+    },
+    "ibc-compat": {
+      "code_id": 4783,
+      "addresses": {
+        "default": "osmo12wpgmw4drswx733j30uymzt5dux9xjangz78d8gqjh0rh0m3tcwq9yxy97"
       },
       "proposal": {
         "store_code": null
