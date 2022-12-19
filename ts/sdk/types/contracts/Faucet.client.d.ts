@@ -5,81 +5,94 @@
 */
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { AirdropId, Uint128, RangeOrder, AirdropIdOptional, CheckQualificationResponse, GetAirdropResponse, GetClaimResponse, LatestAirdropResponse, ListAirdropsResponse, ListClaimsResponse } from "./Faucet.types";
+import { TokenCreationConfig, Uint128, Action, RangeOrder, GetLastTokenIdResponse, GetRoleResponse, GetTokenResponse, ListAliasesResponse, ListRolesResponse, ListTokensResponse } from "./Faucet.types";
 export interface FaucetReadOnlyInterface {
     contractAddress: string;
-    getAirdrop: ({ id }: {
-        id: AirdropId;
-    }) => Promise<GetAirdropResponse>;
-    listAirdrops: ({ limit, order, startAfter }: {
-        limit?: number;
-        order?: RangeOrder;
-        startAfter: AirdropIdOptional;
-    }) => Promise<ListAirdropsResponse>;
-    latestAirdropId: () => Promise<LatestAirdropResponse>;
-    getClaim: ({ account, id }: {
-        account: string;
-        id: AirdropId;
-    }) => Promise<GetClaimResponse>;
-    listClaims: ({ id, limit, order, startAfter }: {
-        id: AirdropId;
+    listAliases: ({ limit, order, startAfter }: {
         limit?: number;
         order?: RangeOrder;
         startAfter?: string;
-    }) => Promise<ListClaimsResponse>;
-    checkQualification: ({ amount, beneficiary, id, merkleProof }: {
-        amount: Uint128;
-        beneficiary: string;
-        id: AirdropId;
-        merkleProof: string[];
-    }) => Promise<CheckQualificationResponse>;
+    }) => Promise<ListAliasesResponse>;
+    getToken: ({ denom }: {
+        denom: string;
+    }) => Promise<GetTokenResponse>;
+    listTokens: ({ limit, order, startAfter }: {
+        limit?: number;
+        order?: RangeOrder;
+        startAfter?: number;
+    }) => Promise<ListTokensResponse>;
+    getLastTokenId: () => Promise<GetLastTokenIdResponse>;
+    getRole: ({ account, denom }: {
+        account: string;
+        denom: string;
+    }) => Promise<GetRoleResponse>;
+    listRoles: ({ denom, limit, order, startAfter }: {
+        denom: string;
+        limit?: number;
+        order?: RangeOrder;
+        startAfter?: string[][];
+    }) => Promise<ListRolesResponse>;
 }
 export declare class FaucetQueryClient implements FaucetReadOnlyInterface {
     client: CosmWasmClient;
     contractAddress: string;
     constructor(client: CosmWasmClient, contractAddress: string);
-    getAirdrop: ({ id }: {
-        id: AirdropId;
-    }) => Promise<GetAirdropResponse>;
-    listAirdrops: ({ limit, order, startAfter }: {
-        limit?: number;
-        order?: RangeOrder;
-        startAfter: AirdropIdOptional;
-    }) => Promise<ListAirdropsResponse>;
-    latestAirdropId: () => Promise<LatestAirdropResponse>;
-    getClaim: ({ account, id }: {
-        account: string;
-        id: AirdropId;
-    }) => Promise<GetClaimResponse>;
-    listClaims: ({ id, limit, order, startAfter }: {
-        id: AirdropId;
+    listAliases: ({ limit, order, startAfter }: {
         limit?: number;
         order?: RangeOrder;
         startAfter?: string;
-    }) => Promise<ListClaimsResponse>;
-    checkQualification: ({ amount, beneficiary, id, merkleProof }: {
-        amount: Uint128;
-        beneficiary: string;
-        id: AirdropId;
-        merkleProof: string[];
-    }) => Promise<CheckQualificationResponse>;
+    }) => Promise<ListAliasesResponse>;
+    getToken: ({ denom }: {
+        denom: string;
+    }) => Promise<GetTokenResponse>;
+    listTokens: ({ limit, order, startAfter }: {
+        limit?: number;
+        order?: RangeOrder;
+        startAfter?: number;
+    }) => Promise<ListTokensResponse>;
+    getLastTokenId: () => Promise<GetLastTokenIdResponse>;
+    getRole: ({ account, denom }: {
+        account: string;
+        denom: string;
+    }) => Promise<GetRoleResponse>;
+    listRoles: ({ denom, limit, order, startAfter }: {
+        denom: string;
+        limit?: number;
+        order?: RangeOrder;
+        startAfter?: string[][];
+    }) => Promise<ListRolesResponse>;
 }
 export interface FaucetInterface extends FaucetReadOnlyInterface {
     contractAddress: string;
     sender: string;
-    regsiter: ({ denom, label, merkleRoot }: {
+    create: ({ config, denom }: {
+        config: TokenCreationConfig;
         denom: string;
-        label?: string;
-        merkleRoot: string;
     }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
-    fund: ({ id }: {
-        id: AirdropId;
-    }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
-    claim: ({ amount, beneficiary, id, merkleProof }: {
+    mint: ({ amount, denom }: {
         amount: Uint128;
-        beneficiary?: string;
-        id: AirdropId;
-        merkleProof: string[];
+        denom: string;
+    }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+    burn: ({ denom }: {
+        denom: string;
+    }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+    grant: ({ action, denom, grantee }: {
+        action: Action;
+        denom: string;
+        grantee: string;
+    }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+    revoke: ({ action, denom, revokee }: {
+        action: Action;
+        denom: string;
+        revokee: string;
+    }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+    release: ({ action, denom }: {
+        action: Action;
+        denom: string;
+    }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+    block: ({ action, denom }: {
+        action: Action;
+        denom: string;
     }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
 export declare class FaucetClient extends FaucetQueryClient implements FaucetInterface {
@@ -87,19 +100,34 @@ export declare class FaucetClient extends FaucetQueryClient implements FaucetInt
     sender: string;
     contractAddress: string;
     constructor(client: SigningCosmWasmClient, sender: string, contractAddress: string);
-    regsiter: ({ denom, label, merkleRoot }: {
+    create: ({ config, denom }: {
+        config: TokenCreationConfig;
         denom: string;
-        label?: string;
-        merkleRoot: string;
     }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
-    fund: ({ id }: {
-        id: AirdropId;
-    }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
-    claim: ({ amount, beneficiary, id, merkleProof }: {
+    mint: ({ amount, denom }: {
         amount: Uint128;
-        beneficiary?: string;
-        id: AirdropId;
-        merkleProof: string[];
+        denom: string;
+    }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+    burn: ({ denom }: {
+        denom: string;
+    }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+    grant: ({ action, denom, grantee }: {
+        action: Action;
+        denom: string;
+        grantee: string;
+    }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+    revoke: ({ action, denom, revokee }: {
+        action: Action;
+        denom: string;
+        revokee: string;
+    }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+    release: ({ action, denom }: {
+        action: Action;
+        denom: string;
+    }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+    block: ({ action, denom }: {
+        action: Action;
+        denom: string;
     }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
 //# sourceMappingURL=Faucet.client.d.ts.map

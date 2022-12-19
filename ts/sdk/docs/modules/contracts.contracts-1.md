@@ -9,6 +9,7 @@
 ### Variables
 
 - [Airdrop](contracts.contracts-1.md#airdrop)
+- [Compat](contracts.contracts-1.md#compat)
 - [Core](contracts.contracts-1.md#core)
 - [Faucet](contracts.contracts-1.md#faucet)
 - [Periphery](contracts.contracts-1.md#periphery)
@@ -28,7 +29,24 @@
 
 #### Defined in
 
-[contracts/index.ts:16](https://github.com/many-things/ibc-contracts/blob/b2862bf/ts/sdk/src/contracts/index.ts#L16)
+[contracts/index.ts:18](https://github.com/many-things/ibc-contracts/blob/0514997/ts/sdk/src/contracts/index.ts#L18)
+
+___
+
+### Compat
+
+• `Const` **Compat**: `Object`
+
+#### Type declaration
+
+| Name | Type |
+| :------ | :------ |
+| `CompatClient` | { `constructor`: (`client`: `SigningCosmWasmClient`, `sender`: `string`, `contractAddress`: `string`) => [`CompatClient`](contracts.contracts-1.md#compatclient) ; `client`: `SigningCosmWasmClient` ; `contractAddress`: `string` ; `sender`: `string` ; `estimateSwapExactAmountIn`: (`__namedParameters`: { `amount`: `Coin` ; `routes`: `SwapRoutes` ; `sender`: `string`  }) => `Promise`<`string`\> ; `estimateSwapExactAmountOut`: (`__namedParameters`: { `amount`: `Coin` ; `routes`: `SwapRoutes` ; `sender`: `string`  }) => `Promise`<`string`\> ; `switchQueryMode`: (`fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\>  } |
+| `CompatQueryClient` | { `constructor`: (`client`: `CosmWasmClient`, `contractAddress`: `string`) => [`CompatQueryClient`](contracts.contracts-1.md#compatqueryclient) ; `client`: `CosmWasmClient` ; `contractAddress`: `string` ; `estimateSwapExactAmountIn`: (`__namedParameters`: { `amount`: `Coin` ; `routes`: `SwapRoutes` ; `sender`: `string`  }) => `Promise`<`string`\> ; `estimateSwapExactAmountOut`: (`__namedParameters`: { `amount`: `Coin` ; `routes`: `SwapRoutes` ; `sender`: `string`  }) => `Promise`<`string`\>  } |
+
+#### Defined in
+
+[contracts/index.ts:21](https://github.com/many-things/ibc-contracts/blob/0514997/ts/sdk/src/contracts/index.ts#L21)
 
 ___
 
@@ -45,7 +63,7 @@ ___
 
 #### Defined in
 
-[contracts/index.ts:19](https://github.com/many-things/ibc-contracts/blob/b2862bf/ts/sdk/src/contracts/index.ts#L19)
+[contracts/index.ts:24](https://github.com/many-things/ibc-contracts/blob/0514997/ts/sdk/src/contracts/index.ts#L24)
 
 ___
 
@@ -57,12 +75,12 @@ ___
 
 | Name | Type |
 | :------ | :------ |
-| `FaucetClient` | { `constructor`: (`client`: `SigningCosmWasmClient`, `sender`: `string`, `contractAddress`: `string`) => [`FaucetClient`](contracts.contracts-1.md#faucetclient) ; `client`: `SigningCosmWasmClient` ; `contractAddress`: `string` ; `sender`: `string` ; `checkQualification`: (`__namedParameters`: { `amount`: `string` ; `beneficiary`: `string` ; `id`: `AirdropId` ; `merkleProof`: `string`[]  }) => `Promise`<`boolean`\> ; `claim`: (`__namedParameters`: { `amount`: `string` ; `beneficiary?`: `string` ; `id`: `AirdropId` ; `merkleProof`: `string`[]  }, `fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\> ; `fund`: (`__namedParameters`: { `id`: `AirdropId`  }, `fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\> ; `getAirdrop`: (`__namedParameters`: { `id`: `AirdropId`  }) => `Promise`<`GetAirdropResponse`\> ; `getClaim`: (`__namedParameters`: { `account`: `string` ; `id`: `AirdropId`  }) => `Promise`<`GetClaimResponse`\> ; `latestAirdropId`: () => `Promise`<`number`\> ; `listAirdrops`: (`__namedParameters`: { `limit?`: `number` ; `order?`: `RangeOrder` ; `startAfter`: `AirdropIdOptional`  }) => `Promise`<`ListAirdropsResponse`\> ; `listClaims`: (`__namedParameters`: { `id`: `AirdropId` ; `limit?`: `number` ; `order?`: `RangeOrder` ; `startAfter?`: `string`  }) => `Promise`<`ListClaimsResponse`\> ; `regsiter`: (`__namedParameters`: { `denom`: `string` ; `label?`: `string` ; `merkleRoot`: `string`  }, `fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\>  } |
-| `FaucetQueryClient` | { `constructor`: (`client`: `CosmWasmClient`, `contractAddress`: `string`) => [`FaucetQueryClient`](contracts.contracts-1.md#faucetqueryclient) ; `client`: `CosmWasmClient` ; `contractAddress`: `string` ; `checkQualification`: (`__namedParameters`: { `amount`: `string` ; `beneficiary`: `string` ; `id`: `AirdropId` ; `merkleProof`: `string`[]  }) => `Promise`<`boolean`\> ; `getAirdrop`: (`__namedParameters`: { `id`: `AirdropId`  }) => `Promise`<`GetAirdropResponse`\> ; `getClaim`: (`__namedParameters`: { `account`: `string` ; `id`: `AirdropId`  }) => `Promise`<`GetClaimResponse`\> ; `latestAirdropId`: () => `Promise`<`number`\> ; `listAirdrops`: (`__namedParameters`: { `limit?`: `number` ; `order?`: `RangeOrder` ; `startAfter`: `AirdropIdOptional`  }) => `Promise`<`ListAirdropsResponse`\> ; `listClaims`: (`__namedParameters`: { `id`: `AirdropId` ; `limit?`: `number` ; `order?`: `RangeOrder` ; `startAfter?`: `string`  }) => `Promise`<`ListClaimsResponse`\>  } |
+| `FaucetClient` | { `constructor`: (`client`: `SigningCosmWasmClient`, `sender`: `string`, `contractAddress`: `string`) => [`FaucetClient`](contracts.contracts-1.md#faucetclient) ; `client`: `SigningCosmWasmClient` ; `contractAddress`: `string` ; `sender`: `string` ; `block`: (`__namedParameters`: { `action`: `Action` ; `denom`: `string`  }, `fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\> ; `burn`: (`__namedParameters`: { `denom`: `string`  }, `fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\> ; `create`: (`__namedParameters`: { `config`: `TokenCreationConfig` ; `denom`: `string`  }, `fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\> ; `getLastTokenId`: () => `Promise`<`number`\> ; `getRole`: (`__namedParameters`: { `account`: `string` ; `denom`: `string`  }) => `Promise`<`GetRoleResponse`\> ; `getToken`: (`__namedParameters`: { `denom`: `string`  }) => `Promise`<`GetTokenResponse`\> ; `grant`: (`__namedParameters`: { `action`: `Action` ; `denom`: `string` ; `grantee`: `string`  }, `fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\> ; `listAliases`: (`__namedParameters`: { `limit?`: `number` ; `order?`: `RangeOrder` ; `startAfter?`: `string`  }) => `Promise`<`ListAliasesResponse`\> ; `listRoles`: (`__namedParameters`: { `denom`: `string` ; `limit?`: `number` ; `order?`: `RangeOrder` ; `startAfter?`: `string`[][]  }) => `Promise`<`ListRolesResponse`\> ; `listTokens`: (`__namedParameters`: { `limit?`: `number` ; `order?`: `RangeOrder` ; `startAfter?`: `number`  }) => `Promise`<`ListTokensResponse`\> ; `mint`: (`__namedParameters`: { `amount`: `string` ; `denom`: `string`  }, `fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\> ; `release`: (`__namedParameters`: { `action`: `Action` ; `denom`: `string`  }, `fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\> ; `revoke`: (`__namedParameters`: { `action`: `Action` ; `denom`: `string` ; `revokee`: `string`  }, `fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\>  } |
+| `FaucetQueryClient` | { `constructor`: (`client`: `CosmWasmClient`, `contractAddress`: `string`) => [`FaucetQueryClient`](contracts.contracts-1.md#faucetqueryclient) ; `client`: `CosmWasmClient` ; `contractAddress`: `string` ; `getLastTokenId`: () => `Promise`<`number`\> ; `getRole`: (`__namedParameters`: { `account`: `string` ; `denom`: `string`  }) => `Promise`<`GetRoleResponse`\> ; `getToken`: (`__namedParameters`: { `denom`: `string`  }) => `Promise`<`GetTokenResponse`\> ; `listAliases`: (`__namedParameters`: { `limit?`: `number` ; `order?`: `RangeOrder` ; `startAfter?`: `string`  }) => `Promise`<`ListAliasesResponse`\> ; `listRoles`: (`__namedParameters`: { `denom`: `string` ; `limit?`: `number` ; `order?`: `RangeOrder` ; `startAfter?`: `string`[][]  }) => `Promise`<`ListRolesResponse`\> ; `listTokens`: (`__namedParameters`: { `limit?`: `number` ; `order?`: `RangeOrder` ; `startAfter?`: `number`  }) => `Promise`<`ListTokensResponse`\>  } |
 
 #### Defined in
 
-[contracts/index.ts:22](https://github.com/many-things/ibc-contracts/blob/b2862bf/ts/sdk/src/contracts/index.ts#L22)
+[contracts/index.ts:27](https://github.com/many-things/ibc-contracts/blob/0514997/ts/sdk/src/contracts/index.ts#L27)
 
 ___
 
@@ -74,8 +92,8 @@ ___
 
 | Name | Type |
 | :------ | :------ |
-| `PeripheryClient` | { `constructor`: (`client`: `SigningCosmWasmClient`, `sender`: `string`, `contractAddress`: `string`) => [`PeripheryClient`](contracts.contracts-1.md#peripheryclient) ; `client`: `SigningCosmWasmClient` ; `contractAddress`: `string` ; `sender`: `string` ; `burnExactAmountIn`: (`__namedParameters`: { `coreAddr`: `string` ; `minOutputAmount`: `string` ; `outputAsset`: `string` ; `swapInfo`: `string`[][]  }, `fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\> ; `mintExactAmountOut`: (`__namedParameters`: { `coreAddr`: `string` ; `inputAsset`: `string` ; `outputAmount`: `string` ; `swapInfo`: `string`[][]  }, `fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\>  } |
+| `PeripheryClient` | { `constructor`: (`client`: `SigningCosmWasmClient`, `sender`: `string`, `contractAddress`: `string`) => [`PeripheryClient`](contracts.contracts-1.md#peripheryclient) ; `client`: `SigningCosmWasmClient` ; `contractAddress`: `string` ; `sender`: `string` ; `burnExactAmountIn`: (`__namedParameters`: { `coreAddr`: `string` ; `minOutputAmount`: `string` ; `outputAsset`: `string` ; `swapInfo`: `RouteKey`[][]  }, `fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\> ; `mintExactAmountOut`: (`__namedParameters`: { `coreAddr`: `string` ; `inputAsset`: `string` ; `outputAmount`: `string` ; `swapInfo`: `RouteKey`[][]  }, `fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\>  } |
 
 #### Defined in
 
-[contracts/index.ts:25](https://github.com/many-things/ibc-contracts/blob/b2862bf/ts/sdk/src/contracts/index.ts#L25)
+[contracts/index.ts:30](https://github.com/many-things/ibc-contracts/blob/0514997/ts/sdk/src/contracts/index.ts#L30)

@@ -6,83 +6,98 @@
 export interface InstantiateMsg {
 }
 export type ExecuteMsg = {
-    regsiter: {
+    create: {
+        config: TokenCreationConfig;
         denom: string;
-        label?: string | null;
-        merkle_root: string;
     };
 } | {
-    fund: {
-        id: AirdropId;
-    };
-} | {
-    claim: {
+    mint: {
         amount: Uint128;
-        beneficiary?: string | null;
-        id: AirdropId;
-        merkle_proof: string[];
+        denom: string;
+    };
+} | {
+    burn: {
+        denom: string;
+    };
+} | {
+    grant: {
+        action: Action;
+        denom: string;
+        grantee: string;
+    };
+} | {
+    revoke: {
+        action: Action;
+        denom: string;
+        revokee: string;
+    };
+} | {
+    release: {
+        action: Action;
+        denom: string;
+    };
+} | {
+    block: {
+        action: Action;
+        denom: string;
     };
 };
-export type AirdropId = {
-    id: number;
+export type TokenCreationConfig = {
+    managed: {
+        admin: string;
+    };
 } | {
-    label: string;
+    unmanaged: {};
 };
 export type Uint128 = string;
+export type Action = "mint" | "burn";
 export type QueryMsg = {
-    get_airdrop: {
-        id: AirdropId;
-    };
-} | {
-    list_airdrops: {
-        limit?: number | null;
-        order?: RangeOrder | null;
-        start_after: AirdropIdOptional;
-    };
-} | {
-    latest_airdrop_id: {};
-} | {
-    get_claim: {
-        account: string;
-        id: AirdropId;
-    };
-} | {
-    list_claims: {
-        id: AirdropId;
+    list_aliases: {
         limit?: number | null;
         order?: RangeOrder | null;
         start_after?: string | null;
     };
 } | {
-    check_qualification: {
-        amount: Uint128;
-        beneficiary: string;
-        id: AirdropId;
-        merkle_proof: string[];
+    get_token: {
+        denom: string;
+    };
+} | {
+    list_tokens: {
+        limit?: number | null;
+        order?: RangeOrder | null;
+        start_after?: number | null;
+    };
+} | {
+    get_last_token_id: {};
+} | {
+    get_role: {
+        account: string;
+        denom: string;
+    };
+} | {
+    list_roles: {
+        denom: string;
+        limit?: number | null;
+        order?: RangeOrder | null;
+        start_after?: [string, string] | null;
     };
 };
 export type RangeOrder = "asc" | "desc";
-export type AirdropIdOptional = {
-    id: number | null;
-} | {
-    label: string | null;
-};
 export interface MigrateMsg {
 }
-export type CheckQualificationResponse = boolean;
-export interface GetAirdropResponse {
+export type GetLastTokenIdResponse = number;
+export interface GetRoleResponse {
+    account: string;
     denom: string;
+    roles: [Action, boolean][];
+}
+export interface GetTokenResponse {
+    config: TokenCreationConfig;
+    denom_r: string;
+    denom_v: string;
     id: number;
-    label?: string | null;
-    total_amount: Uint128;
-    total_claimed: Uint128;
 }
-export type Addr = string;
-export interface GetClaimResponse {
-    account: Addr;
-    amount: Uint128;
-}
-export type LatestAirdropResponse = number;
-export type ListAirdropsResponse = GetAirdropResponse[];
-export type ListClaimsResponse = GetClaimResponse[];
+export type ListAliasesResponse = [string, number][];
+export type ListRolesResponse = [string, string, boolean][];
+export type ListTokensResponse = GetTokenResponse[];
 //# sourceMappingURL=Faucet.types.d.ts.map

@@ -6,53 +6,51 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { InstantiateMsg, ExecuteMsg, AirdropId, Uint128, QueryMsg, RangeOrder, AirdropIdOptional, MigrateMsg, CheckQualificationResponse, GetAirdropResponse, Addr, GetClaimResponse, LatestAirdropResponse, ListAirdropsResponse, ListClaimsResponse } from "./Faucet.types";
+import { InstantiateMsg, ExecuteMsg, TokenCreationConfig, Uint128, Action, QueryMsg, RangeOrder, MigrateMsg, GetLastTokenIdResponse, GetRoleResponse, GetTokenResponse, ListAliasesResponse, ListRolesResponse, ListTokensResponse } from "./Faucet.types";
 export interface FaucetReadOnlyInterface {
   contractAddress: string;
-  getAirdrop: ({
-    id
-  }: {
-    id: AirdropId;
-  }) => Promise<GetAirdropResponse>;
-  listAirdrops: ({
+  listAliases: ({
     limit,
     order,
     startAfter
   }: {
-    limit?: number;
-    order?: RangeOrder;
-    startAfter: AirdropIdOptional;
-  }) => Promise<ListAirdropsResponse>;
-  latestAirdropId: () => Promise<LatestAirdropResponse>;
-  getClaim: ({
-    account,
-    id
-  }: {
-    account: string;
-    id: AirdropId;
-  }) => Promise<GetClaimResponse>;
-  listClaims: ({
-    id,
-    limit,
-    order,
-    startAfter
-  }: {
-    id: AirdropId;
     limit?: number;
     order?: RangeOrder;
     startAfter?: string;
-  }) => Promise<ListClaimsResponse>;
-  checkQualification: ({
-    amount,
-    beneficiary,
-    id,
-    merkleProof
+  }) => Promise<ListAliasesResponse>;
+  getToken: ({
+    denom
   }: {
-    amount: Uint128;
-    beneficiary: string;
-    id: AirdropId;
-    merkleProof: string[];
-  }) => Promise<CheckQualificationResponse>;
+    denom: string;
+  }) => Promise<GetTokenResponse>;
+  listTokens: ({
+    limit,
+    order,
+    startAfter
+  }: {
+    limit?: number;
+    order?: RangeOrder;
+    startAfter?: number;
+  }) => Promise<ListTokensResponse>;
+  getLastTokenId: () => Promise<GetLastTokenIdResponse>;
+  getRole: ({
+    account,
+    denom
+  }: {
+    account: string;
+    denom: string;
+  }) => Promise<GetRoleResponse>;
+  listRoles: ({
+    denom,
+    limit,
+    order,
+    startAfter
+  }: {
+    denom: string;
+    limit?: number;
+    order?: RangeOrder;
+    startAfter?: string[][];
+  }) => Promise<ListRolesResponse>;
 }
 export class FaucetQueryClient implements FaucetReadOnlyInterface {
   client: CosmWasmClient;
@@ -61,98 +59,95 @@ export class FaucetQueryClient implements FaucetReadOnlyInterface {
   constructor(client: CosmWasmClient, contractAddress: string) {
     this.client = client;
     this.contractAddress = contractAddress;
-    this.getAirdrop = this.getAirdrop.bind(this);
-    this.listAirdrops = this.listAirdrops.bind(this);
-    this.latestAirdropId = this.latestAirdropId.bind(this);
-    this.getClaim = this.getClaim.bind(this);
-    this.listClaims = this.listClaims.bind(this);
-    this.checkQualification = this.checkQualification.bind(this);
+    this.listAliases = this.listAliases.bind(this);
+    this.getToken = this.getToken.bind(this);
+    this.listTokens = this.listTokens.bind(this);
+    this.getLastTokenId = this.getLastTokenId.bind(this);
+    this.getRole = this.getRole.bind(this);
+    this.listRoles = this.listRoles.bind(this);
   }
 
-  getAirdrop = async ({
-    id
-  }: {
-    id: AirdropId;
-  }): Promise<GetAirdropResponse> => {
-    return this.client.queryContractSmart(this.contractAddress, {
-      get_airdrop: {
-        id
-      }
-    });
-  };
-  listAirdrops = async ({
+  listAliases = async ({
     limit,
     order,
     startAfter
   }: {
-    limit?: number;
-    order?: RangeOrder;
-    startAfter: AirdropIdOptional;
-  }): Promise<ListAirdropsResponse> => {
-    return this.client.queryContractSmart(this.contractAddress, {
-      list_airdrops: {
-        limit,
-        order,
-        start_after: startAfter
-      }
-    });
-  };
-  latestAirdropId = async (): Promise<LatestAirdropResponse> => {
-    return this.client.queryContractSmart(this.contractAddress, {
-      latest_airdrop_id: {}
-    });
-  };
-  getClaim = async ({
-    account,
-    id
-  }: {
-    account: string;
-    id: AirdropId;
-  }): Promise<GetClaimResponse> => {
-    return this.client.queryContractSmart(this.contractAddress, {
-      get_claim: {
-        account,
-        id
-      }
-    });
-  };
-  listClaims = async ({
-    id,
-    limit,
-    order,
-    startAfter
-  }: {
-    id: AirdropId;
     limit?: number;
     order?: RangeOrder;
     startAfter?: string;
-  }): Promise<ListClaimsResponse> => {
+  }): Promise<ListAliasesResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
-      list_claims: {
-        id,
+      list_aliases: {
         limit,
         order,
         start_after: startAfter
       }
     });
   };
-  checkQualification = async ({
-    amount,
-    beneficiary,
-    id,
-    merkleProof
+  getToken = async ({
+    denom
   }: {
-    amount: Uint128;
-    beneficiary: string;
-    id: AirdropId;
-    merkleProof: string[];
-  }): Promise<CheckQualificationResponse> => {
+    denom: string;
+  }): Promise<GetTokenResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
-      check_qualification: {
-        amount,
-        beneficiary,
-        id,
-        merkle_proof: merkleProof
+      get_token: {
+        denom
+      }
+    });
+  };
+  listTokens = async ({
+    limit,
+    order,
+    startAfter
+  }: {
+    limit?: number;
+    order?: RangeOrder;
+    startAfter?: number;
+  }): Promise<ListTokensResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      list_tokens: {
+        limit,
+        order,
+        start_after: startAfter
+      }
+    });
+  };
+  getLastTokenId = async (): Promise<GetLastTokenIdResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      get_last_token_id: {}
+    });
+  };
+  getRole = async ({
+    account,
+    denom
+  }: {
+    account: string;
+    denom: string;
+  }): Promise<GetRoleResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      get_role: {
+        account,
+        denom
+      }
+    });
+  };
+  listRoles = async ({
+    denom,
+    limit,
+    order,
+    startAfter
+  }: {
+    denom: string;
+    limit?: number;
+    order?: RangeOrder;
+    startAfter?: string[][];
+  }): Promise<ListRolesResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      list_roles: {
+        denom,
+        limit,
+        order,
+        start_after: startAfter
       }
     });
   };
@@ -160,30 +155,56 @@ export class FaucetQueryClient implements FaucetReadOnlyInterface {
 export interface FaucetInterface extends FaucetReadOnlyInterface {
   contractAddress: string;
   sender: string;
-  regsiter: ({
-    denom,
-    label,
-    merkleRoot
+  create: ({
+    config,
+    denom
   }: {
+    config: TokenCreationConfig;
     denom: string;
-    label?: string;
-    merkleRoot: string;
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
-  fund: ({
-    id
-  }: {
-    id: AirdropId;
-  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
-  claim: ({
+  mint: ({
     amount,
-    beneficiary,
-    id,
-    merkleProof
+    denom
   }: {
     amount: Uint128;
-    beneficiary?: string;
-    id: AirdropId;
-    merkleProof: string[];
+    denom: string;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  burn: ({
+    denom
+  }: {
+    denom: string;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  grant: ({
+    action,
+    denom,
+    grantee
+  }: {
+    action: Action;
+    denom: string;
+    grantee: string;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  revoke: ({
+    action,
+    denom,
+    revokee
+  }: {
+    action: Action;
+    denom: string;
+    revokee: string;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  release: ({
+    action,
+    denom
+  }: {
+    action: Action;
+    denom: string;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  block: ({
+    action,
+    denom
+  }: {
+    action: Action;
+    denom: string;
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
 export class FaucetClient extends FaucetQueryClient implements FaucetInterface {
@@ -196,56 +217,113 @@ export class FaucetClient extends FaucetQueryClient implements FaucetInterface {
     this.client = client;
     this.sender = sender;
     this.contractAddress = contractAddress;
-    this.regsiter = this.regsiter.bind(this);
-    this.fund = this.fund.bind(this);
-    this.claim = this.claim.bind(this);
+    this.create = this.create.bind(this);
+    this.mint = this.mint.bind(this);
+    this.burn = this.burn.bind(this);
+    this.grant = this.grant.bind(this);
+    this.revoke = this.revoke.bind(this);
+    this.release = this.release.bind(this);
+    this.block = this.block.bind(this);
   }
 
-  regsiter = async ({
-    denom,
-    label,
-    merkleRoot
+  create = async ({
+    config,
+    denom
   }: {
+    config: TokenCreationConfig;
     denom: string;
-    label?: string;
-    merkleRoot: string;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
-      regsiter: {
-        denom,
-        label,
-        merkle_root: merkleRoot
+      create: {
+        config,
+        denom
       }
     }, fee, memo, funds);
   };
-  fund = async ({
-    id
-  }: {
-    id: AirdropId;
-  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
-    return await this.client.execute(this.sender, this.contractAddress, {
-      fund: {
-        id
-      }
-    }, fee, memo, funds);
-  };
-  claim = async ({
+  mint = async ({
     amount,
-    beneficiary,
-    id,
-    merkleProof
+    denom
   }: {
     amount: Uint128;
-    beneficiary?: string;
-    id: AirdropId;
-    merkleProof: string[];
+    denom: string;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
-      claim: {
+      mint: {
         amount,
-        beneficiary,
-        id,
-        merkle_proof: merkleProof
+        denom
+      }
+    }, fee, memo, funds);
+  };
+  burn = async ({
+    denom
+  }: {
+    denom: string;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      burn: {
+        denom
+      }
+    }, fee, memo, funds);
+  };
+  grant = async ({
+    action,
+    denom,
+    grantee
+  }: {
+    action: Action;
+    denom: string;
+    grantee: string;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      grant: {
+        action,
+        denom,
+        grantee
+      }
+    }, fee, memo, funds);
+  };
+  revoke = async ({
+    action,
+    denom,
+    revokee
+  }: {
+    action: Action;
+    denom: string;
+    revokee: string;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      revoke: {
+        action,
+        denom,
+        revokee
+      }
+    }, fee, memo, funds);
+  };
+  release = async ({
+    action,
+    denom
+  }: {
+    action: Action;
+    denom: string;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      release: {
+        action,
+        denom
+      }
+    }, fee, memo, funds);
+  };
+  block = async ({
+    action,
+    denom
+  }: {
+    action: Action;
+    denom: string;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      block: {
+        action,
+        denom
       }
     }, fee, memo, funds);
   };

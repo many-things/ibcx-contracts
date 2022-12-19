@@ -10,17 +10,18 @@ export type ExecuteMsg = {
         core_addr: string;
         input_asset: string;
         output_amount: Uint128;
-        swap_info: [string, SwapRoutes][];
+        swap_info: [RouteKey, SwapRoutes][];
     };
 } | {
     burn_exact_amount_in: {
         core_addr: string;
         min_output_amount: Uint128;
         output_asset: string;
-        swap_info: [string, SwapRoutes][];
+        swap_info: [RouteKey, SwapRoutes][];
     };
 };
 export type Uint128 = string;
+export type RouteKey = [string, string];
 export type SwapRoutes = SwapRoute[];
 export interface SwapRoute {
     pool_id: number;

@@ -6,6 +6,7 @@
 
 export type Decimal = string;
 export interface InstantiateMsg {
+  compat: string;
   denom: string;
   gov: string;
   initial_assets: [string, Decimal][];
@@ -95,6 +96,7 @@ export interface Coin {
 }
 export type Addr = string;
 export interface GetConfigResponse {
+  compat: Addr;
   denom: string;
   gov: Addr;
   reserve_denom: string;
