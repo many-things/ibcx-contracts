@@ -7,5 +7,9 @@ cd osmosis
 [ ! -f $DAEMON ] && make build
 
 echo "y\n" | HOME=$HOME make localnet-init
-HOME=$HOME make localnet-startd
+
+[ -z $BACKGROUND] && \
+    HOME=$HOME make localnet-start || \
+    HOME=$HOME make localnet-startd
+
 cd ..

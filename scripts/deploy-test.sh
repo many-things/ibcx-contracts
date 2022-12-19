@@ -39,7 +39,8 @@ beaker wasm deploy \
     $OPTIMIZE_FLAG \
     ibc-faucet
 
-DENOMS=("uaaa" "ubbb" "uccc" "ureserve")
+DENOMS=("utatom" "utosmo" "utevmos" "utjuno" "utscrt" "utstars" "utakt" "utregen" "utstrd" "utumee")
+WEIGHTS=("33.35" "20.24" "12.65" "8.83" "6.97" "4.76" "4.29" "3.37" "2.84" "2.69")
 STATES=$([ "$NETWORK" = "local" ] && echo "state.local.json" || echo "state.json")
 FAUCET_ADDR=$(cat $(pwd)/.beaker/$STATES | jq -r '.'$NETWORK'["ibc-faucet"].addresses.default')
 
@@ -51,15 +52,35 @@ for denom in "${DENOMS[@]}"; do
         $SIGNER_FLAG
 done
 
+echo "============ Deploying IBC Compat ============"
+COMPAT_INIT_MSG=$(
+    cat $(pwd)/scripts/$NETWORK/ibc_compat.json | \
+    jq -c '.gov = "'$GOV'"'
+)
+beaker wasm deploy \
+    --raw $COMPAT_INIT_MSG \
+    --network $NETWORK \
+    --admin "signer" \
+    --funds $TOKENFACTORY_FEE \
+    $SIGNER_FLAG \
+    $OPTIMIZE_FLAG \
+    ibc-compat
+COMPAT_ADDR=$(cat $(pwd)/.beaker/$STATES | jq -r '.'$NETWORK'["ibc-compat"].addresses.default')
+
 echo "============ Deploying IBC Core ============"
 CORE_INIT_MSG=$(
     cat $(pwd)/scripts/$NETWORK/ibc_core.json | \
     jq -c '.gov = "'$GOV'"' | \
-    jq -c '.reserve_denom = "ureserve"' | \
-    jq -c '.initial_assets += [{"denom":"factory/'$FAUCET_ADDR'/uaaa","amount":"100"}]' | \
-    jq -c '.initial_assets += [{"denom":"factory/'$FAUCET_ADDR'/ubbb","amount":"1000"}]' | \
-    jq -c '.initial_assets += [{"denom":"factory/'$FAUCET_ADDR'/uccc","amount":"10000"}]'
+    jq -c '.compat = "'$COMPAT_ADDR'"' | \
+    jq -c '.reserve_denom = "utosmo"'
 )
+
+for i in "${!DENOMS[@]}"; do
+    CORE_INIT_MSG=$(echo "$CORE_INIT_MSG" | jq -c '.initial_assets += [["factory/'$FAUCET_ADDR'/'${DENOMS[$i]}'","'${WEIGHTS[$i]}'"]]')
+done
+
+echo "$CORE_INIT_MSG"
+
 beaker wasm deploy \
     --raw $CORE_INIT_MSG \
     --network $NETWORK \

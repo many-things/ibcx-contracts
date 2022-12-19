@@ -14,6 +14,9 @@ deploy-testnet:
 localnet-start:
 	./scripts/localnet-start.sh
 
+localnet-startd:
+	BACKGROUND=1 ./scripts/localnet-start.sh
+
 localnet-stop:
 	./scripts/localnet-stop.sh
 
