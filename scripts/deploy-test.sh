@@ -79,8 +79,6 @@ for i in "${!DENOMS[@]}"; do
     CORE_INIT_MSG=$(echo "$CORE_INIT_MSG" | jq -c '.initial_assets += [["factory/'$FAUCET_ADDR'/'${DENOMS[$i]}'","'${WEIGHTS[$i]}'"]]')
 done
 
-echo "$CORE_INIT_MSG"
-
 beaker wasm deploy \
     --raw $CORE_INIT_MSG \
     --network $NETWORK \
