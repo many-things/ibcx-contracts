@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use cosmwasm_std::{attr, coin, Env, MessageInfo, Uint128};
 use cosmwasm_std::{DepsMut, Response};
+use ibc_interface::periphery::RouteKey;
 use ibc_interface::{core, helpers::IbcCore, types::SwapRoutes};
 
 use crate::{
@@ -16,10 +17,13 @@ pub fn mint_exact_amount_out(
     core_addr: String,
     output_amount: Uint128,
     input_asset: String,
-    swap_info: Vec<((String, String), SwapRoutes)>,
+    swap_info: Vec<(RouteKey, SwapRoutes)>,
 ) -> Result<Response, ContractError> {
     // pre-transform swap_info
-    let swap_info = swap_info.into_iter().collect::<BTreeMap<_, _>>();
+    let swap_info = swap_info
+        .into_iter()
+        .map(|(RouteKey((from, to)), routes)| ((from, to), routes))
+        .collect::<BTreeMap<_, _>>();
 
     // query to core contract
     let core = IbcCore(deps.api.addr_validate(&core_addr)?);
@@ -81,10 +85,13 @@ pub fn burn_exact_amount_in(
     core_addr: String,
     output_asset: String,
     min_output_amount: Uint128,
-    swap_info: Vec<((String, String), SwapRoutes)>,
+    swap_info: Vec<(RouteKey, SwapRoutes)>,
 ) -> Result<Response, ContractError> {
     // pre-transform swap_info
-    let swap_info = swap_info.into_iter().collect::<BTreeMap<_, _>>();
+    let swap_info = swap_info
+        .into_iter()
+        .map(|(RouteKey((from, to)), routes)| ((from, to), routes))
+        .collect::<BTreeMap<_, _>>();
 
     // query to core contract
     let core = IbcCore(deps.api.addr_validate(&core_addr)?);

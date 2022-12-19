@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use cosmwasm_std::{attr, coin, entry_point, to_binary, Coin, Env, MessageInfo, QueryResponse};
 use cosmwasm_std::{Deps, DepsMut, Response};
+use ibc_interface::periphery::RouteKey;
 use ibc_interface::{
     helpers::IbcCore,
     periphery::{
@@ -84,7 +85,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
             swap_info,
         } => {
             // pre-transform swap_info
-            let swap_info = swap_info.into_iter().collect::<BTreeMap<_, _>>();
+            let swap_info = swap_info
+                .into_iter()
+                .map(|(RouteKey((from, to)), routes)| ((from, to), routes))
+                .collect::<BTreeMap<_, _>>();
 
             // query to core contract
             let core = IbcCore(deps.api.addr_validate(&core_addr)?);
@@ -131,7 +135,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
             swap_info,
         } => {
             // pre-transform swap_info
-            let swap_info = swap_info.into_iter().collect::<BTreeMap<_, _>>();
+            let swap_info = swap_info
+                .into_iter()
+                .map(|(RouteKey((from, to)), routes)| ((from, to), routes))
+                .collect::<BTreeMap<_, _>>();
 
             // query to core contract
             let core = IbcCore(deps.api.addr_validate(&core_addr)?);
