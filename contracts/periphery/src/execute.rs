@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use cosmwasm_std::{attr, coin, Env, MessageInfo, Uint128};
-use ibc_alias::{DepsMut, Response};
+use cosmwasm_std::{DepsMut, Response};
 use ibc_interface::{core, helpers::IbcCore, types::SwapRoutes};
 
 use crate::{
@@ -44,9 +44,9 @@ pub fn mint_exact_amount_out(
 
     let (swap_msgs, _) = make_mint_swap_exact_out_msgs(
         &deps.querier,
+        &core_config,
         &env.contract.address,
         &info.sender,
-        core_config.reserve_denom,
         swap_info,
         desired,
         &max_input,
@@ -104,11 +104,12 @@ pub fn burn_exact_amount_in(
 
     let burn_msg = core.call_with_funds(
         core::ExecuteMsg::Burn {},
-        vec![coin(input.amount.u128(), core_config.reserve_denom)],
+        vec![coin(input.amount.u128(), &core_config.reserve_denom)],
     )?;
 
     let (swap_msgs, _) = make_burn_swap_msgs(
         &deps.querier,
+        &core_config,
         &env.contract.address,
         &info.sender,
         swap_info,

@@ -6,6 +6,7 @@ use crate::types::SwapRoutes;
 #[cw_serde]
 pub struct InstantiateMsg {
     pub gov: String,
+    pub compat: String,
     pub denom: String,
     pub reserve_denom: String,
     pub initial_assets: Vec<(String, Decimal)>,
@@ -92,6 +93,7 @@ pub enum QueryMsg {
 #[cw_serde]
 pub struct GetConfigResponse {
     pub gov: Addr,
+    pub compat: Addr,
     pub denom: String,
     pub reserve_denom: String,
 }

@@ -2,8 +2,8 @@ use cosmwasm_std::{
     attr, coin, entry_point, to_binary, BankMsg, Env, MessageInfo, Order, QueryResponse, Reply,
     StdResult,
 };
+use cosmwasm_std::{Deps, DepsMut, Response, SubMsg};
 use cw_storage_plus::Bound;
-use ibc_alias::{Deps, DepsMut, Response, SubMsg};
 use ibc_interface::{
     faucet::{
         Action, ExecuteMsg, GetLastTokenIdResponse, GetRoleResponse, GetTokenResponse,

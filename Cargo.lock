@@ -486,7 +486,6 @@ dependencies = [
  "cw-utils",
  "cw2 1.0.0",
  "hex",
- "ibc-alias",
  "ibc-interface",
  "osmosis-std",
  "sha2 0.10.6",
@@ -494,11 +493,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "ibc-alias"
+name = "ibc-compat"
 version = "0.1.0"
 dependencies = [
+ "cosmwasm-schema",
  "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus 1.0.1",
+ "cw-utils",
+ "cw2 1.0.0",
+ "ibc-interface",
  "osmo-bindings",
+ "osmosis-std",
+ "thiserror",
 ]
 
 [[package]]
@@ -512,9 +520,7 @@ dependencies = [
  "cw-storage-plus 1.0.1",
  "cw-utils",
  "cw2 1.0.0",
- "ibc-alias",
  "ibc-interface",
- "osmo-bindings",
  "osmosis-std",
  "thiserror",
 ]
@@ -530,7 +536,6 @@ dependencies = [
  "cw-storage-plus 1.0.1",
  "cw-utils",
  "cw2 1.0.0",
- "ibc-alias",
  "ibc-interface",
  "osmosis-std",
  "thiserror",
@@ -546,8 +551,6 @@ dependencies = [
  "cw-multi-test",
  "cw-storage-plus 1.0.1",
  "cw2 1.0.0",
- "ibc-alias",
- "osmo-bindings",
  "osmosis-std",
  "thiserror",
 ]
@@ -563,7 +566,6 @@ dependencies = [
  "cw-storage-plus 1.0.1",
  "cw-utils",
  "cw2 1.0.0",
- "ibc-alias",
  "ibc-interface",
  "osmosis-std",
  "thiserror",

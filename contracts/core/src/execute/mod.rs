@@ -2,7 +2,7 @@ mod gov;
 mod rebalance;
 
 use cosmwasm_std::{attr, coin, BankMsg, Env, MessageInfo, Uint128};
-use ibc_alias::{DepsMut, Response};
+use cosmwasm_std::{DepsMut, Response};
 use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgBurn, MsgMint};
 
 use crate::{
@@ -101,14 +101,13 @@ pub fn burn(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, Cont
 
 #[cfg(test)]
 mod test {
-    use std::{marker::PhantomData, str::FromStr};
+    use std::str::FromStr;
 
     use cosmwasm_std::{
         coin,
-        testing::{mock_env, mock_info, MockApi, MockQuerier, MockStorage},
-        Addr, Decimal, OwnedDeps, Storage, SubMsg,
+        testing::{mock_dependencies_with_balances, mock_env, mock_info},
+        Addr, Decimal, Storage, SubMsg,
     };
-    use osmo_bindings::OsmosisQuery;
 
     use super::*;
     use crate::state::{PauseInfo, Token, ASSETS, PAUSED};
@@ -156,15 +155,10 @@ mod test {
 
         let max = 10000000000000000;
         let balances = vec![coin(max, "uaaa"), coin(max, "ubbb"), coin(max, "uccc")];
-        let mut deps = OwnedDeps {
-            storage: MockStorage::default(),
-            api: MockApi::default(),
-            querier: MockQuerier::<OsmosisQuery>::new(&[
-                (alice.as_str(), balances.as_slice()),
-                (bob.as_str(), balances.as_slice()),
-            ]),
-            custom_query_type: PhantomData,
-        };
+        let mut deps = mock_dependencies_with_balances(&[
+            (alice.as_str(), balances.as_slice()),
+            (bob.as_str(), balances.as_slice()),
+        ]);
         let env = mock_env();
         let now = env.block.time.seconds();
 

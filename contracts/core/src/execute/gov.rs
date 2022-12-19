@@ -1,5 +1,5 @@
 use cosmwasm_std::{attr, Env, MessageInfo, Uint128};
-use ibc_alias::{DepsMut, Response};
+use cosmwasm_std::{DepsMut, Response};
 use ibc_interface::{core::GovMsg, types::SwapRoutes};
 
 use crate::{
@@ -133,13 +133,10 @@ fn update_trade_info(
 
 #[cfg(test)]
 mod test {
-    use std::marker::PhantomData;
-
     use cosmwasm_std::{
-        testing::{mock_env, mock_info, MockApi, MockQuerier, MockStorage},
-        Addr, Decimal, OwnedDeps, StdError,
+        testing::{mock_dependencies, mock_env, mock_info},
+        Addr, Decimal, StdError,
     };
-    use osmo_bindings::OsmosisQuery;
 
     use crate::state::{PauseInfo, Token};
 
@@ -147,12 +144,7 @@ mod test {
 
     #[test]
     fn test_pause() {
-        let mut deps = OwnedDeps {
-            storage: MockStorage::default(),
-            api: MockApi::default(),
-            querier: MockQuerier::<OsmosisQuery>::new(&[]),
-            custom_query_type: PhantomData,
-        };
+        let mut deps = mock_dependencies();
         let env = mock_env();
         let now = env.block.time.seconds();
 
@@ -205,12 +197,7 @@ mod test {
 
     #[test]
     fn test_release() {
-        let mut deps = OwnedDeps {
-            storage: MockStorage::default(),
-            api: MockApi::default(),
-            querier: MockQuerier::<OsmosisQuery>::new(&[]),
-            custom_query_type: PhantomData,
-        };
+        let mut deps = mock_dependencies();
         let env = mock_env();
         let now = env.block.time.seconds();
 
@@ -268,12 +255,7 @@ mod test {
 
     #[test]
     fn test_update_reserve_denom() {
-        let mut deps = OwnedDeps {
-            storage: MockStorage::default(),
-            api: MockApi::default(),
-            querier: MockQuerier::<OsmosisQuery>::new(&[]),
-            custom_query_type: PhantomData,
-        };
+        let mut deps = mock_dependencies();
         let env = mock_env();
 
         let gov = Addr::unchecked("gov");

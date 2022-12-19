@@ -1,10 +1,11 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{coin, Addr, Order, StdResult, Uint128};
-use ibc_alias::{CosmosMsg, QuerierWrapper};
-use osmo_bindings::{OsmosisQuery, SwapAmount, SwapResponse};
+use cosmwasm_std::{coin, Addr, Coin, Order, StdResult, Uint128};
+use cosmwasm_std::{CosmosMsg, QuerierWrapper};
 use osmosis_std::types::osmosis::gamm::v1beta1::{
     MsgSwapExactAmountIn, MsgSwapExactAmountOut, SwapAmountInRoute, SwapAmountOutRoute,
 };
+
+use crate::compat;
 
 #[cw_serde]
 pub struct SwapRoute {
@@ -43,41 +44,39 @@ impl SwapRoutes {
     pub fn sim_swap_exact_in(
         &self,
         querier: &QuerierWrapper,
+        compat: &Addr,
         sender: &Addr,
-        token_in: &str,
-        token_in_amount: Uint128,
+        token_in: Coin,
     ) -> StdResult<Uint128> {
-        let resp: SwapResponse = querier.query(
-            &OsmosisQuery::estimate_swap(
-                sender,
-                self.0.first().unwrap().pool_id,
-                token_in,
-                &self.0.last().unwrap().token_denom,
-                SwapAmount::In(token_in_amount),
+        querier
+            .query_wasm_smart::<compat::AmountResponse>(
+                compat,
+                &compat::QueryMsg::EstimateSwapExactAmountIn {
+                    sender: sender.to_string(),
+                    amount: token_in,
+                    routes: self.clone(),
+                },
             )
-            .into(),
-        )?;
-        Ok(resp.amount.as_out())
+            .map(|v| v.0)
     }
 
     pub fn sim_swap_exact_out(
         &self,
         querier: &QuerierWrapper,
+        compat: &Addr,
         sender: &Addr,
-        token_out: &str,
-        token_out_amount: Uint128,
+        token_out: Coin,
     ) -> StdResult<Uint128> {
-        let resp: SwapResponse = querier.query(
-            &OsmosisQuery::estimate_swap(
-                sender,
-                self.0.first().unwrap().pool_id,
-                &self.0.last().unwrap().token_denom,
-                token_out,
-                SwapAmount::Out(token_out_amount),
+        querier
+            .query_wasm_smart::<compat::AmountResponse>(
+                compat,
+                &compat::QueryMsg::EstimateSwapExactAmountOut {
+                    sender: sender.to_string(),
+                    amount: token_out,
+                    routes: self.clone(),
+                },
             )
-            .into(),
-        )?;
-        Ok(resp.amount.as_in())
+            .map(|v| v.0)
     }
 
     pub fn msg_swap_exact_in(

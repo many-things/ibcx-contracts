@@ -1,12 +1,12 @@
-use cosmwasm_std::{attr, Decimal, Env, MessageInfo, Uint128};
-use ibc_alias::{DepsMut, Response};
+use cosmwasm_std::{attr, coin, Decimal, Env, MessageInfo, Uint128};
+use cosmwasm_std::{DepsMut, Response};
 use ibc_interface::core::{RebalanceMsg, RebalanceTradeMsg};
 
 use crate::{
     error::ContractError,
     state::{
-        get_assets, Rebalance, ASSETS, GOV, LATEST_REBALANCE_ID, REBALANCES, RESERVE_BUFFER,
-        RESERVE_DENOM, TOKEN, TRADE_INFOS,
+        get_assets, Rebalance, ASSETS, COMPAT, GOV, LATEST_REBALANCE_ID, REBALANCES,
+        RESERVE_BUFFER, RESERVE_DENOM, TOKEN, TRADE_INFOS,
     },
 };
 
@@ -197,11 +197,12 @@ fn deflate(
     }
 
     // simulate
+    let compat = COMPAT.load(deps.storage)?;
     let amount_in = trade_info.routes.sim_swap_exact_out(
         &deps.querier,
+        &compat,
         &env.contract.address,
-        &denom,
-        amount,
+        coin(amount.u128(), &denom),
     )?;
     if max_amount_in < amount_in {
         return Err(ContractError::OverSlippageAllowance {});
@@ -289,11 +290,12 @@ fn inflate(
     }
 
     // simulate
+    let compat = COMPAT.load(deps.storage)?;
     let amount_out = trade_info.routes.sim_swap_exact_in(
         &deps.querier,
+        &compat,
         &env.contract.address,
-        &denom,
-        amount,
+        coin(amount.u128(), &denom),
     )?;
     if min_amount_out < amount_out {
         return Err(ContractError::OverSlippageAllowance {});

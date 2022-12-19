@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use cosmwasm_std::{attr, coin, entry_point, to_binary, Coin, Env, MessageInfo, QueryResponse};
-use ibc_alias::{Deps, DepsMut, Response};
+use cosmwasm_std::{Deps, DepsMut, Response};
 use ibc_interface::{
     helpers::IbcCore,
     periphery::{
@@ -107,9 +107,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
 
             let (_, refund) = make_mint_swap_exact_out_msgs(
                 &deps.querier,
+                &core_config,
                 &env.contract.address,
                 &env.contract.address,
-                core_config.reserve_denom,
                 swap_info,
                 desired,
                 &input_asset,
@@ -150,6 +150,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
 
             let (_, receive) = make_burn_swap_msgs(
                 &deps.querier,
+                &core_config,
                 &env.contract.address,
                 &env.contract.address,
                 swap_info,

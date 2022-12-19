@@ -1,10 +1,10 @@
 use cosmwasm_std::{attr, entry_point, Reply};
+use cosmwasm_std::{Deps, DepsMut, Response, SubMsg};
 use cosmwasm_std::{Env, MessageInfo, QueryResponse, Uint128};
-use ibc_alias::{Deps, DepsMut, Response, SubMsg};
 use ibc_interface::core::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgCreateDenom, MsgCreateDenomResponse};
 
-use crate::state::{set_assets, Token, GOV, TOKEN};
+use crate::state::{set_assets, Token, COMPAT, GOV, TOKEN};
 use crate::REPLY_ID_DENOM_CREATION;
 use crate::{error::ContractError, state::PAUSED, CONTRACT_NAME, CONTRACT_VERSION};
 
@@ -27,6 +27,7 @@ pub fn instantiate(
     )?;
 
     GOV.save(deps.storage, &deps.api.addr_validate(&msg.gov)?)?;
+    COMPAT.save(deps.storage, &deps.api.addr_validate(&msg.compat)?)?;
     PAUSED.save(deps.storage, &Default::default())?;
     set_assets(deps.storage, msg.initial_assets)?;
 

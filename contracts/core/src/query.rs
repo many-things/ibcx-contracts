@@ -1,5 +1,4 @@
-use cosmwasm_std::{to_binary, Coin, Env, QueryResponse, Uint128};
-use ibc_alias::Deps;
+use cosmwasm_std::{to_binary, Coin, Deps, Env, QueryResponse, Uint128};
 use ibc_interface::core::{
     GetConfigResponse, GetPauseInfoResponse, GetPortfolioResponse, SimulateBurnResponse,
     SimulateMintResponse,
@@ -7,15 +6,17 @@ use ibc_interface::core::{
 
 use crate::{
     error::ContractError,
-    state::{assert_assets, get_assets, get_redeem_amounts, GOV, PAUSED, TOKEN},
+    state::{assert_assets, get_assets, get_redeem_amounts, COMPAT, GOV, PAUSED, TOKEN},
 };
 
 pub fn config(deps: Deps, _env: Env) -> Result<QueryResponse, ContractError> {
     let gov = GOV.load(deps.storage)?;
+    let compat = COMPAT.load(deps.storage)?;
     let token = TOKEN.load(deps.storage)?;
 
     Ok(to_binary(&GetConfigResponse {
         gov,
+        compat,
         denom: token.denom,
         reserve_denom: token.reserve_denom,
     })?)

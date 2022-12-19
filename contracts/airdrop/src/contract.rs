@@ -2,8 +2,8 @@ use cosmwasm_std::{
     attr, coins, entry_point, to_binary, Addr, BankMsg, Env, MessageInfo, Order, QueryResponse,
     StdResult, Uint128,
 };
+use cosmwasm_std::{Deps, DepsMut, Response};
 use cw_storage_plus::Bound;
-use ibc_alias::{Deps, DepsMut, Response};
 use ibc_interface::{
     airdrop::{
         AirdropId, AirdropIdOptional, CheckQualificationResponse, ExecuteMsg, GetAirdropResponse,

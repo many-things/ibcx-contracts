@@ -1,16 +1,16 @@
 use std::collections::BTreeMap;
 
 use cosmwasm_std::{coin, Addr, BankMsg, Coin, Uint128};
-use ibc_alias::{CosmosMsg, QuerierWrapper};
-use ibc_interface::types::SwapRoutes;
+use cosmwasm_std::{CosmosMsg, QuerierWrapper};
+use ibc_interface::{core, types::SwapRoutes};
 
 use crate::error::ContractError;
 
 pub fn make_mint_swap_exact_out_msgs(
     querier: &QuerierWrapper,
+    config: &core::GetConfigResponse,
     contract: &Addr,
     sender: &Addr,
-    reserve_denom: String,
     swap_info: BTreeMap<(String, String), SwapRoutes>,
     desired: BTreeMap<String, Uint128>,
     max_input: &Coin,
@@ -19,17 +19,22 @@ pub fn make_mint_swap_exact_out_msgs(
     let mut simulated_total_spend_amount = Uint128::zero();
 
     for (denom, want) in desired {
-        if denom == reserve_denom {
+        if denom == config.reserve_denom {
             // skip swap for reserve denom
             simulated_total_spend_amount += want;
             continue;
         }
 
         let swap_info = swap_info
-            .get(&(reserve_denom.clone(), denom.clone()))
+            .get(&(config.reserve_denom.clone(), denom.clone()))
             .unwrap();
 
-        let simulated_token_in = swap_info.sim_swap_exact_out(querier, contract, &denom, want)?;
+        let simulated_token_in = swap_info.sim_swap_exact_out(
+            querier,
+            &config.compat,
+            contract,
+            coin(want.u128(), &denom),
+        )?;
 
         simulated_total_spend_amount += simulated_token_in;
 
@@ -55,6 +60,7 @@ pub fn make_mint_swap_exact_out_msgs(
 
 pub fn make_burn_swap_msgs(
     querier: &QuerierWrapper,
+    config: &core::GetConfigResponse,
     contract: &Addr,
     sender: &Addr,
     swap_info: BTreeMap<(String, String), SwapRoutes>,
@@ -69,8 +75,12 @@ pub fn make_burn_swap_msgs(
             .get(&(min_output.denom.clone(), denom.clone()))
             .unwrap();
 
-        let simulated_token_out =
-            swap_info.sim_swap_exact_in(querier, contract, &denom, expected)?;
+        let simulated_token_out = swap_info.sim_swap_exact_in(
+            querier,
+            &config.compat,
+            contract,
+            coin(expected.u128(), &denom),
+        )?;
 
         simulated_total_receive_amount += simulated_token_out;
 
