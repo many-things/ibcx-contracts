@@ -7,9 +7,15 @@ export type Decimal = string;
 export interface InstantiateMsg {
     compat: string;
     denom: string;
+    fee_strategy: Fee;
     gov: string;
     initial_assets: [string, Decimal][];
     reserve_denom: string;
+}
+export interface Fee {
+    burn?: Decimal | null;
+    mint?: Decimal | null;
+    stream?: Decimal | null;
 }
 export type ExecuteMsg = {
     mint: {
@@ -97,6 +103,7 @@ export type Addr = string;
 export interface GetConfigResponse {
     compat: Addr;
     denom: string;
+    fee_strategy: Fee;
     gov: Addr;
     reserve_denom: string;
 }
