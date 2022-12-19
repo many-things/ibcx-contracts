@@ -41,12 +41,6 @@ pub fn execute(
     use ExecuteMsg::*;
 
     match msg {
-        MintExactAmountIn {
-            core_addr,
-            input_asset,
-            min_output_amount,
-            swap_info,
-        } => todo!(),
         MintExactAmountOut {
             core_addr,
             output_amount,
@@ -75,11 +69,6 @@ pub fn execute(
             min_output_amount,
             swap_info,
         ),
-        BurnExactAmountOut {
-            core_addr,
-            output_amount,
-            swap_info,
-        } => todo!(),
     }
 }
 

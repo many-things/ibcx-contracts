@@ -6,20 +6,6 @@ use ibc_interface::types::SwapRoutes;
 
 use crate::error::ContractError;
 
-pub fn make_mint_swap_exact_in_msgs(
-    querier: &QuerierWrapper,
-    contract: &Addr,
-    sender: &Addr,
-    reserve_denom: String,
-    swap_info: BTreeMap<(String, String), SwapRoutes>,
-    desired: BTreeMap<String, Uint128>,
-    min_output: &Coin,
-) -> Result<(Vec<CosmosMsg>, Uint128), ContractError> {
-    let mut swap_msgs: Vec<CosmosMsg> = Vec::new();
-    let mut simulated_total_spend_amount = Uint128::zero();
-    Ok(Default::default())
-}
-
 pub fn make_mint_swap_exact_out_msgs(
     querier: &QuerierWrapper,
     contract: &Addr,
