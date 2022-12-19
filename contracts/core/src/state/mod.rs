@@ -4,6 +4,7 @@ mod rebalance;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Env, StdResult, Storage, Uint128};
 use cw_storage_plus::Item;
+use ibc_interface::core::Fee;
 
 use crate::error::ContractError;
 
@@ -19,6 +20,9 @@ pub const GOV: Item<Addr> = Item::new(GOV_KEY);
 
 pub const COMPAT_KEY: &str = "compat";
 pub const COMPAT: Item<Addr> = Item::new(COMPAT_KEY);
+
+pub const FEE_KEY: &str = "fee";
+pub const FEE: Item<Fee> = Item::new(FEE_KEY);
 
 pub const TOKEN_KEY: &str = "token";
 pub const TOKEN: Item<Token> = Item::new(TOKEN_KEY);

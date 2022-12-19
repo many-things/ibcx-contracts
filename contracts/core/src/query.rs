@@ -6,19 +6,21 @@ use ibc_interface::core::{
 
 use crate::{
     error::ContractError,
-    state::{assert_assets, get_assets, get_redeem_amounts, COMPAT, GOV, PAUSED, TOKEN},
+    state::{assert_assets, get_assets, get_redeem_amounts, COMPAT, FEE, GOV, PAUSED, TOKEN},
 };
 
 pub fn config(deps: Deps, _env: Env) -> Result<QueryResponse, ContractError> {
     let gov = GOV.load(deps.storage)?;
     let compat = COMPAT.load(deps.storage)?;
     let token = TOKEN.load(deps.storage)?;
+    let fee = FEE.load(deps.storage)?;
 
     Ok(to_binary(&GetConfigResponse {
         gov,
         compat,
         denom: token.denom,
         reserve_denom: token.reserve_denom,
+        fee_strategy: fee,
     })?)
 }
 
