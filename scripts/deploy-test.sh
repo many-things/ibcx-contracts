@@ -72,7 +72,7 @@ CORE_INIT_MSG=$(
     cat $(pwd)/scripts/$NETWORK/ibc_core.json | \
     jq -c '.gov = "'$GOV'"' | \
     jq -c '.compat = "'$COMPAT_ADDR'"' | \
-    jq -c '.reserve_denom = "utosmo"'
+    jq -c '.reserve_denom = "factory/'$FAUCET_ADDR'/utosmo"'
 )
 
 for i in "${!DENOMS[@]}"; do
