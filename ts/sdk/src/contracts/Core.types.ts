@@ -39,6 +39,14 @@ export type GovMsg = {
 } | {
   release: {};
 } | {
+  update_gov: {
+    new_gov: string;
+  };
+} | {
+  update_compat: {
+    new_compat: string;
+  };
+} | {
   update_reserve_denom: {
     new_denom: string;
   };
