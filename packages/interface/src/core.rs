@@ -28,6 +28,12 @@ pub enum GovMsg {
     },
     Release {},
 
+    UpdateGov {
+        new_gov: String,
+    },
+    UpdateCompat {
+        new_compat: String,
+    },
     UpdateReserveDenom {
         new_denom: String,
     },

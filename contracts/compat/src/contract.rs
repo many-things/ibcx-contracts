@@ -1,12 +1,13 @@
 use std::str::FromStr;
 
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     attr, entry_point, to_binary, Env, MessageInfo, QueryResponse, Response, StdError, StdResult,
     Uint128,
 };
 use cosmwasm_std::{Deps, DepsMut};
 use ibc_interface::compat::{AmountResponse, ExecuteMsg, InstantiateMsg, QueryMode, QueryMsg};
-use osmo_bindings::{OsmosisQuery, SwapAmount, SwapResponse};
+use osmo_bindings::{OsmosisQuery, SwapAmount};
 use osmosis_std::types::osmosis::gamm::v1beta1::{
     QuerySwapExactAmountInRequest, QuerySwapExactAmountInResponse, QuerySwapExactAmountOutRequest,
     QuerySwapExactAmountOutResponse,
@@ -63,6 +64,13 @@ pub fn execute(
     }
 }
 
+#[cw_serde]
+pub struct SwapResponse {
+    // If you query with SwapAmount::Input, this is SwapAmount::Output
+    // If you query with SwapAmount::Output, this is SwapAmount::Input
+    pub swap_amount: SwapAmount,
+}
+
 #[entry_point]
 pub fn query(deps: Deps<OsmosisQuery>, _env: Env, msg: QueryMsg) -> StdResult<QueryResponse> {
     use QueryMsg::*;
@@ -101,7 +109,7 @@ pub fn query(deps: Deps<OsmosisQuery>, _env: Env, msg: QueryMsg) -> StdResult<Qu
                         .into(),
                     )?;
 
-                    resp.amount.as_out()
+                    resp.swap_amount.as_out()
                 }
             };
 
@@ -140,7 +148,7 @@ pub fn query(deps: Deps<OsmosisQuery>, _env: Env, msg: QueryMsg) -> StdResult<Qu
                         .into(),
                     )?;
 
-                    resp.amount.as_in()
+                    resp.swap_amount.as_in()
                 }
             };
 
