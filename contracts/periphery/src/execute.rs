@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use cosmwasm_std::{attr, coin, Env, MessageInfo, Uint128};
 use cosmwasm_std::{DepsMut, Response};
 use ibc_interface::periphery::RouteKey;
@@ -19,32 +17,18 @@ pub fn mint_exact_amount_out(
     input_asset: String,
     swap_info: Vec<(RouteKey, SwapRoutes)>,
 ) -> Result<Response, ContractError> {
-    // pre-transform swap_info
-    let swap_info = swap_info
-        .into_iter()
-        .map(|(RouteKey((from, to)), routes)| ((from, to), routes))
-        .collect::<BTreeMap<_, _>>();
-
     // query to core contract
     let core = IbcCore(deps.api.addr_validate(&core_addr)?);
     let core_config = core.get_config(&deps.querier)?;
-    let core_portfolio = core.get_portfolio(&deps.querier)?;
 
     // input & output
     let max_input_amount = cw_utils::must_pay(&info, &input_asset)?;
     let max_input = coin(max_input_amount.u128(), &input_asset);
     let output = coin(output_amount.u128(), &core_config.denom);
 
-    let desired = core_portfolio
-        .assets
-        .into_iter()
-        .map(|c| (c.denom, c.amount * output.amount))
-        .collect::<BTreeMap<_, _>>();
-
-    let funds = desired
-        .iter()
-        .map(|(denom, want)| coin(want.u128(), denom))
-        .collect();
+    let desired = core
+        .simulate_burn(&deps.querier, output.amount)?
+        .redeem_amount;
 
     let (swap_msgs, _) = make_mint_swap_exact_out_msgs(
         &deps.querier,
@@ -52,7 +36,7 @@ pub fn mint_exact_amount_out(
         &env.contract.address,
         &info.sender,
         swap_info,
-        desired,
+        desired.clone(),
         &max_input,
     )?;
 
@@ -62,7 +46,7 @@ pub fn mint_exact_amount_out(
             receiver: Some(info.sender.to_string()),
             refund_to: Some(info.sender.to_string()),
         },
-        funds,
+        desired,
     )?;
 
     let resp = Response::new()
@@ -87,31 +71,22 @@ pub fn burn_exact_amount_in(
     min_output_amount: Uint128,
     swap_info: Vec<(RouteKey, SwapRoutes)>,
 ) -> Result<Response, ContractError> {
-    // pre-transform swap_info
-    let swap_info = swap_info
-        .into_iter()
-        .map(|(RouteKey((from, to)), routes)| ((from, to), routes))
-        .collect::<BTreeMap<_, _>>();
-
     // query to core contract
     let core = IbcCore(deps.api.addr_validate(&core_addr)?);
     let core_config = core.get_config(&deps.querier)?;
-    let core_portfolio = core.get_portfolio(&deps.querier)?;
 
     // input & output
     let input_amount = cw_utils::must_pay(&info, &core_config.denom)?;
     let input = coin(input_amount.u128(), &core_config.denom);
     let min_output = coin(min_output_amount.u128(), output_asset);
 
-    let expected = core_portfolio
-        .assets
-        .into_iter()
-        .map(|c| (c.denom, c.amount * input.amount))
-        .collect::<BTreeMap<_, _>>();
+    let expected = core
+        .simulate_burn(&deps.querier, input_amount)?
+        .redeem_amount;
 
     let burn_msg = core.call_with_funds(
         core::ExecuteMsg::Burn {},
-        vec![coin(input.amount.u128(), &core_config.reserve_denom)],
+        vec![coin(input.amount.u128(), &core_config.denom)],
     )?;
 
     let (swap_msgs, _) = make_burn_swap_msgs(

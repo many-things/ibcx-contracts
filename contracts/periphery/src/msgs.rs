@@ -1,7 +1,6 @@
-use std::collections::BTreeMap;
-
 use cosmwasm_std::{coin, Addr, BankMsg, Coin, Uint128};
 use cosmwasm_std::{CosmosMsg, QuerierWrapper};
+use ibc_interface::periphery::RouteKey;
 use ibc_interface::{core, types::SwapRoutes};
 
 use crate::error::ContractError;
@@ -11,22 +10,27 @@ pub fn make_mint_swap_exact_out_msgs(
     compat: &Addr,
     contract: &Addr,
     sender: &Addr,
-    swap_info: BTreeMap<(String, String), SwapRoutes>,
-    desired: BTreeMap<String, Uint128>,
+    swap_info: Vec<(RouteKey, SwapRoutes)>,
+    desired: Vec<Coin>,
     max_input: &Coin,
 ) -> Result<(Vec<CosmosMsg>, Uint128), ContractError> {
     let mut swap_msgs: Vec<CosmosMsg> = Vec::new();
     let mut simulated_total_spend_amount = Uint128::zero();
 
-    for (denom, want) in desired {
+    for Coin {
+        denom,
+        amount: want,
+    } in desired
+    {
         if denom == max_input.denom {
             // skip swap for reserve denom
             simulated_total_spend_amount += want;
             continue;
         }
 
-        let swap_info = swap_info
-            .get(&(max_input.denom.clone(), denom.clone()))
+        let (_, swap_info) = swap_info
+            .iter()
+            .find(|(RouteKey((from, to)), _)| from == &max_input.denom && to == &denom)
             .unwrap();
 
         let simulated_token_in =
@@ -59,16 +63,21 @@ pub fn make_burn_swap_msgs(
     config: &core::GetConfigResponse,
     contract: &Addr,
     sender: &Addr,
-    swap_info: BTreeMap<(String, String), SwapRoutes>,
-    expected: BTreeMap<String, Uint128>,
+    swap_info: Vec<(RouteKey, SwapRoutes)>,
+    expected: Vec<Coin>,
     min_output: &Coin,
 ) -> Result<(Vec<CosmosMsg>, Uint128), ContractError> {
     let mut swap_msgs: Vec<CosmosMsg> = Vec::new();
     let mut simulated_total_receive_amount = Uint128::zero();
 
-    for (denom, expected) in expected {
-        let swap_info = swap_info
-            .get(&(min_output.denom.clone(), denom.clone()))
+    for Coin {
+        denom,
+        amount: expected,
+    } in expected
+    {
+        let (_, swap_info) = swap_info
+            .iter()
+            .find(|(RouteKey((from, to)), _)| from == &min_output.denom && to == &denom)
             .unwrap();
 
         let simulated_token_out = swap_info.sim_swap_exact_in(

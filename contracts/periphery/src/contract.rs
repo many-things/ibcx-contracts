@@ -1,8 +1,5 @@
-use std::collections::BTreeMap;
-
-use cosmwasm_std::{attr, coin, entry_point, to_binary, Coin, Env, MessageInfo, QueryResponse};
+use cosmwasm_std::{attr, coin, entry_point, to_binary, Env, MessageInfo, QueryResponse};
 use cosmwasm_std::{Deps, DepsMut, Response};
-use ibc_interface::periphery::RouteKey;
 use ibc_interface::{
     helpers::IbcCore,
     periphery::{
@@ -84,12 +81,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
             input_asset,
             swap_info,
         } => {
-            // pre-transform swap_info
-            let swap_info = swap_info
-                .into_iter()
-                .map(|(RouteKey((from, to)), routes)| ((from, to), routes))
-                .collect::<BTreeMap<_, _>>();
-
             // query to core contract
             let core = IbcCore(deps.api.addr_validate(&core_addr)?);
             let core_config = core.get_config(&deps.querier)?;
@@ -99,15 +90,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
 
             let desired = core
                 .simulate_burn(&deps.querier, output.amount)?
-                .redeem_amount
-                .into_iter()
-                .map(|Coin { denom, amount }| (denom, amount))
-                .collect::<BTreeMap<_, _>>();
-
-            let funds = desired
-                .iter()
-                .map(|(denom, want)| coin(want.u128(), denom))
-                .collect();
+                .redeem_amount;
 
             let (_, refund) = make_mint_swap_exact_out_msgs(
                 &deps.querier,
@@ -115,11 +98,11 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
                 &env.contract.address,
                 &env.contract.address,
                 swap_info,
-                desired,
+                desired.clone(),
                 &input_asset,
             )?;
 
-            let sim_resp = core.simulate_mint(&deps.querier, output_amount, funds)?;
+            let sim_resp = core.simulate_mint(&deps.querier, output_amount, desired)?;
 
             Ok(to_binary(&SimulateMintExactAmountOutResponse {
                 mint_amount: sim_resp.mint_amount,
@@ -134,12 +117,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
             min_output_amount,
             swap_info,
         } => {
-            // pre-transform swap_info
-            let swap_info = swap_info
-                .into_iter()
-                .map(|(RouteKey((from, to)), routes)| ((from, to), routes))
-                .collect::<BTreeMap<_, _>>();
-
             // query to core contract
             let core = IbcCore(deps.api.addr_validate(&core_addr)?);
             let core_config = core.get_config(&deps.querier)?;
@@ -148,12 +125,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
             let min_output = coin(min_output_amount.u128(), &output_asset);
 
             let sim_resp = core.simulate_burn(&deps.querier, input_amount)?;
-            let expected = sim_resp
-                .redeem_amount
-                .clone()
-                .into_iter()
-                .map(|Coin { denom, amount }| (denom, amount))
-                .collect::<BTreeMap<_, _>>();
+            let expected = sim_resp.redeem_amount.clone();
 
             let (_, receive) = make_burn_swap_msgs(
                 &deps.querier,
