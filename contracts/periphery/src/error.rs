@@ -38,4 +38,7 @@ pub enum ContractError {
 
     #[error("Trade amount exceeded")]
     TradeAmountExceeded {},
+
+    #[error("Swap route not found. from:{from:?}, to:{to:?}")]
+    SwapRouteNotFound { from: String, to: String },
 }
