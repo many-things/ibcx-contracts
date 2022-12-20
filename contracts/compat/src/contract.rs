@@ -161,7 +161,6 @@ pub fn query(deps: Deps<OsmosisQuery>, _env: Env, msg: QueryMsg) -> StdResult<Qu
                             denom_out: v.token_denom,
                         })
                         .collect::<Vec<_>>();
-                    route.reverse();
                     let first = route.remove(0);
                     let first_out = route
                         .first()
