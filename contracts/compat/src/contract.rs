@@ -106,23 +106,18 @@ pub fn query(deps: Deps<OsmosisQuery>, _env: Env, msg: QueryMsg) -> StdResult<Qu
                 QueryMode::Binding => {
                     let mut route = routes
                         .0
-                        .clone()
                         .into_iter()
                         .map(|v| Step {
                             pool_id: v.pool_id,
                             denom_out: v.token_denom,
                         })
                         .collect::<Vec<_>>();
-                    route.remove(0);
+                    let first = route.remove(0);
 
                     let resp: SwapResponse = deps.querier.query(
                         &OsmosisQuery::EstimateSwap {
                             sender,
-                            first: Swap::new(
-                                routes.0.first().unwrap().pool_id,
-                                amount.denom,
-                                &routes.0.last().unwrap().token_denom,
-                            ),
+                            first: Swap::new(first.pool_id, amount.denom, &first.denom_out),
                             route,
                             amount: SwapAmount::In(amount.amount),
                         }
@@ -160,23 +155,32 @@ pub fn query(deps: Deps<OsmosisQuery>, _env: Env, msg: QueryMsg) -> StdResult<Qu
                 QueryMode::Binding => {
                     let mut route = routes
                         .0
-                        .clone()
                         .into_iter()
                         .map(|v| Step {
                             pool_id: v.pool_id,
                             denom_out: v.token_denom,
                         })
                         .collect::<Vec<_>>();
-                    route.remove(0);
+                    route.reverse();
+                    let first = route.remove(0);
+                    let first_out = route
+                        .first()
+                        .map(|v| v.denom_out.clone())
+                        .unwrap_or_else(|| amount.denom.clone());
+
+                    // shift denoms
+                    for i in 0..route.len() {
+                        if i == route.len() - 1 {
+                            route[i].denom_out = amount.denom.clone();
+                        } else {
+                            route[i].denom_out = route[i + 1].denom_out.clone();
+                        }
+                    }
 
                     let resp: SwapResponse = deps.querier.query(
                         &OsmosisQuery::EstimateSwap {
                             sender,
-                            first: Swap::new(
-                                routes.0.first().unwrap().pool_id,
-                                &routes.0.first().unwrap().token_denom,
-                                amount.denom,
-                            ),
+                            first: Swap::new(first.pool_id, first.denom_out, first_out),
                             route,
                             amount: SwapAmount::Out(amount.amount),
                         }
