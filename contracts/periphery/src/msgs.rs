@@ -28,13 +28,23 @@ pub fn make_mint_swap_exact_out_msgs(
             continue;
         }
 
-        let (_, swap_info) = swap_info
+        let (_, mut swap_info) = swap_info
             .iter()
             .find(|(RouteKey((from, to)), _)| from == &max_input.denom && to == &denom)
             .ok_or(ContractError::SwapRouteNotFound {
                 from: max_input.denom.clone(),
                 to: denom.clone(),
-            })?;
+            })?
+            .clone();
+
+        // shift denoms
+        for i in (0..swap_info.0.len()).rev() {
+            if i == 0 {
+                swap_info.0[0].token_denom = max_input.denom.clone();
+            } else {
+                swap_info.0[i].token_denom = swap_info.0[i - 1].token_denom.clone();
+            }
+        }
 
         let simulated_token_in =
             swap_info.sim_swap_exact_out(querier, compat, contract, coin(want.u128(), &denom))?;
