@@ -9,7 +9,7 @@ use cosmwasm_std::{Deps, DepsMut};
 use ibc_interface::compat::{
     AmountResponse, ExecuteMsg, InstantiateMsg, QueryMode, QueryModeResponse, QueryMsg,
 };
-use osmo_bindings::{OsmosisQuery, SwapAmount};
+use osmo_bindings::{OsmosisQuery, Swap, SwapAmount};
 use osmosis_std::types::osmosis::gamm::v1beta1::{
     QuerySwapExactAmountInRequest, QuerySwapExactAmountInResponse, QuerySwapExactAmountOutRequest,
     QuerySwapExactAmountOutResponse,
@@ -85,8 +85,9 @@ pub fn query(deps: Deps<OsmosisQuery>, _env: Env, msg: QueryMsg) -> StdResult<Qu
             sender,
             amount,
             routes,
+            mode,
         } => {
-            let mode = QUERY_MODE.load(deps.storage)?;
+            let mode = mode.unwrap_or(QUERY_MODE.load(deps.storage)?);
 
             let token_out_amount = match mode {
                 QueryMode::Stargate => {
@@ -104,13 +105,16 @@ pub fn query(deps: Deps<OsmosisQuery>, _env: Env, msg: QueryMsg) -> StdResult<Qu
                 }
                 QueryMode::Binding => {
                     let resp: SwapResponse = deps.querier.query(
-                        &OsmosisQuery::estimate_swap(
+                        &OsmosisQuery::EstimateSwap {
                             sender,
-                            routes.0.first().unwrap().pool_id,
-                            amount.denom,
-                            &routes.0.last().unwrap().token_denom,
-                            SwapAmount::In(amount.amount),
-                        )
+                            first: Swap::new(
+                                routes.0.first().unwrap().pool_id,
+                                amount.denom,
+                                &routes.0.last().unwrap().token_denom,
+                            ),
+                            route: routes.0.into(),
+                            amount: SwapAmount::In(amount.amount),
+                        }
                         .into(),
                     )?;
 
@@ -124,8 +128,9 @@ pub fn query(deps: Deps<OsmosisQuery>, _env: Env, msg: QueryMsg) -> StdResult<Qu
             sender,
             amount,
             routes,
+            mode,
         } => {
-            let mode = QUERY_MODE.load(deps.storage)?;
+            let mode = mode.unwrap_or(QUERY_MODE.load(deps.storage)?);
 
             let token_in_amount = match mode {
                 QueryMode::Stargate => {
@@ -143,13 +148,16 @@ pub fn query(deps: Deps<OsmosisQuery>, _env: Env, msg: QueryMsg) -> StdResult<Qu
                 }
                 QueryMode::Binding => {
                     let resp: SwapResponse = deps.querier.query(
-                        &OsmosisQuery::estimate_swap(
+                        &OsmosisQuery::EstimateSwap {
                             sender,
-                            routes.0.first().unwrap().pool_id,
-                            &routes.0.last().unwrap().token_denom,
-                            amount.denom,
-                            SwapAmount::Out(amount.amount),
-                        )
+                            first: Swap::new(
+                                routes.0.first().unwrap().pool_id,
+                                &routes.0.first().unwrap().token_denom,
+                                amount.denom,
+                            ),
+                            route: routes.0.into(),
+                            amount: SwapAmount::Out(amount.amount),
+                        }
                         .into(),
                     )?;
 

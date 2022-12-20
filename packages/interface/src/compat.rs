@@ -42,12 +42,14 @@ pub enum QueryMsg {
         sender: String,
         amount: Coin,
         routes: SwapRoutes,
+        mode: Option<QueryMode>,
     },
     #[returns(AmountResponse)]
     EstimateSwapExactAmountOut {
         sender: String,
         amount: Coin,
         routes: SwapRoutes,
+        mode: Option<QueryMode>,
     },
 }
 

@@ -93,15 +93,15 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
             // query to core contract
             let core = IbcCore(deps.api.addr_validate(&core_addr)?);
             let core_config = core.get_config(&deps.querier)?;
-            let core_portfolio = core.get_portfolio(&deps.querier)?;
 
             // input & output
             let output = coin(output_amount.u128(), &core_config.denom);
 
-            let desired = core_portfolio
-                .assets
+            let desired = core
+                .simulate_burn(&deps.querier, output.amount)?
+                .redeem_amount
                 .into_iter()
-                .map(|Coin { denom, amount }| (denom, amount * output.amount))
+                .map(|Coin { denom, amount }| (denom, amount))
                 .collect::<BTreeMap<_, _>>();
 
             let funds = desired
@@ -143,16 +143,16 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
             // query to core contract
             let core = IbcCore(deps.api.addr_validate(&core_addr)?);
             let core_config = core.get_config(&deps.querier)?;
-            let core_portfolio = core.get_portfolio(&deps.querier)?;
 
             // input & output
-            let input = coin(input_amount.u128(), &core_config.denom);
             let min_output = coin(min_output_amount.u128(), &output_asset);
 
-            let expected = core_portfolio
-                .assets
+            let sim_resp = core.simulate_burn(&deps.querier, input_amount)?;
+            let expected = sim_resp
+                .redeem_amount
+                .clone()
                 .into_iter()
-                .map(|Coin { denom, amount }| (denom, amount * input.amount))
+                .map(|Coin { denom, amount }| (denom, amount))
                 .collect::<BTreeMap<_, _>>();
 
             let (_, receive) = make_burn_swap_msgs(
@@ -164,8 +164,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
                 expected,
                 &min_output,
             )?;
-
-            let sim_resp = core.simulate_burn(&deps.querier, input_amount)?;
 
             Ok(to_binary(&SimulateBurnExactAmountInResponse {
                 burn_amount: sim_resp.burn_amount,
