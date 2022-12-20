@@ -104,6 +104,17 @@ pub fn query(deps: Deps<OsmosisQuery>, _env: Env, msg: QueryMsg) -> StdResult<Qu
                     Uint128::from_str(&resp.token_out_amount)?
                 }
                 QueryMode::Binding => {
+                    let mut route = routes
+                        .0
+                        .clone()
+                        .into_iter()
+                        .map(|v| Step {
+                            pool_id: v.pool_id,
+                            denom_out: v.token_denom,
+                        })
+                        .collect::<Vec<_>>();
+                    route.remove(0);
+
                     let resp: SwapResponse = deps.querier.query(
                         &OsmosisQuery::EstimateSwap {
                             sender,
@@ -112,14 +123,7 @@ pub fn query(deps: Deps<OsmosisQuery>, _env: Env, msg: QueryMsg) -> StdResult<Qu
                                 amount.denom,
                                 &routes.0.last().unwrap().token_denom,
                             ),
-                            route: routes
-                                .0
-                                .into_iter()
-                                .map(|v| Step {
-                                    pool_id: v.pool_id,
-                                    denom_out: v.token_denom,
-                                })
-                                .collect(),
+                            route,
                             amount: SwapAmount::In(amount.amount),
                         }
                         .into(),
@@ -154,6 +158,17 @@ pub fn query(deps: Deps<OsmosisQuery>, _env: Env, msg: QueryMsg) -> StdResult<Qu
                     Uint128::from_str(&resp.token_in_amount)?
                 }
                 QueryMode::Binding => {
+                    let mut route = routes
+                        .0
+                        .clone()
+                        .into_iter()
+                        .map(|v| Step {
+                            pool_id: v.pool_id,
+                            denom_out: v.token_denom,
+                        })
+                        .collect::<Vec<_>>();
+                    route.remove(0);
+
                     let resp: SwapResponse = deps.querier.query(
                         &OsmosisQuery::EstimateSwap {
                             sender,
@@ -162,14 +177,7 @@ pub fn query(deps: Deps<OsmosisQuery>, _env: Env, msg: QueryMsg) -> StdResult<Qu
                                 &routes.0.first().unwrap().token_denom,
                                 amount.denom,
                             ),
-                            route: routes
-                                .0
-                                .into_iter()
-                                .map(|v| Step {
-                                    pool_id: v.pool_id,
-                                    denom_out: v.token_denom,
-                                })
-                                .collect(),
+                            route,
                             amount: SwapAmount::Out(amount.amount),
                         }
                         .into(),
