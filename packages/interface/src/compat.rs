@@ -34,6 +34,9 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
+    #[returns(QueryModeResponse)]
+    QueryMode {},
+
     #[returns(AmountResponse)]
     EstimateSwapExactAmountIn {
         sender: String,
@@ -46,6 +49,11 @@ pub enum QueryMsg {
         amount: Coin,
         routes: SwapRoutes,
     },
+}
+
+#[cw_serde]
+pub struct QueryModeResponse {
+    pub mode: QueryMode,
 }
 
 #[cw_serde]

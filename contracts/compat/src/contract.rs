@@ -6,7 +6,9 @@ use cosmwasm_std::{
     Uint128,
 };
 use cosmwasm_std::{Deps, DepsMut};
-use ibc_interface::compat::{AmountResponse, ExecuteMsg, InstantiateMsg, QueryMode, QueryMsg};
+use ibc_interface::compat::{
+    AmountResponse, ExecuteMsg, InstantiateMsg, QueryMode, QueryModeResponse, QueryMsg,
+};
 use osmo_bindings::{OsmosisQuery, SwapAmount};
 use osmosis_std::types::osmosis::gamm::v1beta1::{
     QuerySwapExactAmountInRequest, QuerySwapExactAmountInResponse, QuerySwapExactAmountOutRequest,
@@ -73,10 +75,13 @@ pub struct SwapResponse {
 
 #[entry_point]
 pub fn query(deps: Deps<OsmosisQuery>, _env: Env, msg: QueryMsg) -> StdResult<QueryResponse> {
-    use QueryMsg::*;
-
     match msg {
-        EstimateSwapExactAmountIn {
+        QueryMsg::QueryMode {} => {
+            let mode = QUERY_MODE.load(deps.storage)?;
+
+            to_binary(&QueryModeResponse { mode })
+        }
+        QueryMsg::EstimateSwapExactAmountIn {
             sender,
             amount,
             routes,
@@ -115,7 +120,7 @@ pub fn query(deps: Deps<OsmosisQuery>, _env: Env, msg: QueryMsg) -> StdResult<Qu
 
             to_binary(&AmountResponse(token_out_amount))
         }
-        EstimateSwapExactAmountOut {
+        QueryMsg::EstimateSwapExactAmountOut {
             sender,
             amount,
             routes,
