@@ -55,6 +55,7 @@ impl SwapRoutes {
                     sender: sender.to_string(),
                     amount: token_in,
                     routes: self.clone(),
+                    mode: None,
                 },
             )
             .map(|v| v.0)
@@ -74,6 +75,7 @@ impl SwapRoutes {
                     sender: sender.to_string(),
                     amount: token_out,
                     routes: self.clone(),
+                    mode: None,
                 },
             )
             .map(|v| v.0)
