@@ -10,7 +10,7 @@
       }
     },
     "ibc-core": {
-      "code_id": 4784,
+      "code_id": 4807,
       "addresses": {
         "default": "osmo17weg5z93w0dkgrl6kfw55r65pts64haclmcc6h7kr65jypyvgl6q9crphx"
       },
@@ -37,9 +37,9 @@
       }
     },
     "ibc-compat": {
-      "code_id": 4783,
+      "code_id": 4806,
       "addresses": {
-        "default": "osmo12wpgmw4drswx733j30uymzt5dux9xjangz78d8gqjh0rh0m3tcwq9yxy97"
+        "default": "osmo1vcg34x3gzkkfan3my5npw5agq4spzx6wd52axgy7mnx84g2khnjq9xmn3j"
       },
       "proposal": {
         "store_code": null
