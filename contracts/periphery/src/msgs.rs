@@ -8,7 +8,7 @@ use crate::error::ContractError;
 
 pub fn make_mint_swap_exact_out_msgs(
     querier: &QuerierWrapper,
-    config: &core::GetConfigResponse,
+    compat: &Addr,
     contract: &Addr,
     sender: &Addr,
     swap_info: BTreeMap<(String, String), SwapRoutes>,
@@ -19,22 +19,18 @@ pub fn make_mint_swap_exact_out_msgs(
     let mut simulated_total_spend_amount = Uint128::zero();
 
     for (denom, want) in desired {
-        if denom == config.reserve_denom {
+        if denom == max_input.denom {
             // skip swap for reserve denom
             simulated_total_spend_amount += want;
             continue;
         }
 
         let swap_info = swap_info
-            .get(&(config.reserve_denom.clone(), denom.clone()))
+            .get(&(max_input.denom.clone(), denom.clone()))
             .unwrap();
 
-        let simulated_token_in = swap_info.sim_swap_exact_out(
-            querier,
-            &config.compat,
-            contract,
-            coin(want.u128(), &denom),
-        )?;
+        let simulated_token_in =
+            swap_info.sim_swap_exact_out(querier, compat, contract, coin(want.u128(), &denom))?;
 
         simulated_total_spend_amount += simulated_token_in;
 

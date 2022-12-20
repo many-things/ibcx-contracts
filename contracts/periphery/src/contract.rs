@@ -111,7 +111,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
 
             let (_, refund) = make_mint_swap_exact_out_msgs(
                 &deps.querier,
-                &core_config,
+                &core_config.compat,
                 &env.contract.address,
                 &env.contract.address,
                 swap_info,
