@@ -60,3 +60,6 @@ pub struct QueryModeResponse {
 
 #[cw_serde]
 pub struct AmountResponse(pub Uint128);
+
+#[cw_serde]
+pub struct MigrateMsg {}

@@ -7,7 +7,7 @@ use cosmwasm_std::{
 };
 use cosmwasm_std::{Deps, DepsMut};
 use ibc_interface::compat::{
-    AmountResponse, ExecuteMsg, InstantiateMsg, QueryMode, QueryModeResponse, QueryMsg,
+    AmountResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMode, QueryModeResponse, QueryMsg,
 };
 use osmo_bindings::{OsmosisQuery, Step, Swap, SwapAmount};
 use osmosis_std::types::osmosis::gamm::v1beta1::{
@@ -182,4 +182,9 @@ pub fn query(deps: Deps<OsmosisQuery>, _env: Env, msg: QueryMsg) -> StdResult<Qu
             to_binary(&AmountResponse(token_in_amount))
         }
     }
+}
+
+#[entry_point]
+pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
+    Ok(Response::default())
 }
