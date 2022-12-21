@@ -81,11 +81,11 @@ pub fn burn_exact_amount_in(
     let min_output = coin(min_output_amount.u128(), output_asset);
 
     let expected = core
-        .simulate_burn(&deps.querier, input_amount)?
+        .simulate_burn(&deps.querier, input.amount)?
         .redeem_amount;
 
     let burn_msg = core.call_with_funds(
-        core::ExecuteMsg::Burn {},
+        core::ExecuteMsg::Burn { redeem_to: None },
         vec![coin(input.amount.u128(), &core_config.denom)],
     )?;
 
