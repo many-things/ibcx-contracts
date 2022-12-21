@@ -40,8 +40,8 @@ beaker wasm deploy \
     $OPTIMIZE_FLAG \
     ibc-faucet
 
-# DENOMS=("utatom" "utosmo" "utevmos" "utjuno" "utscrt" "utstars" "utakt" "utregen" "utstrd" "utumee")
-DENOMS=("utatom" "utosmo")
+DENOMS=("utatom" "utosmo" "utevmos" "utjuno" "utscrt" "utstars" "utakt" "utregen" "utstrd" "utumee")
+# DENOMS=("utatom" "utosmo")
 WEIGHTS=(33.35 20.24 12.65 8.83 6.97 4.76 4.29 3.37 2.84 2.69)
 
 DECIMAL=1000000
