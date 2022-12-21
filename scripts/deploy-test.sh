@@ -1,6 +1,7 @@
 #!/bin/bash
 
 GOV=${GOV:-"osmo1cyyzpxplxdzkeea7kwsydadg87357qnahakaks"}
+COLLECTOR=${COLLECTOR:-"osmo1cyyzpxplxdzkeea7kwsydadg87357qnahakaks"}
 BEAKER=${BEAKER:-"beaker"}
 DAEMON=${DAEMON:-"osmosisd"}
 MNEMONIC=${SIGNER_MNEMONIC:-"notice oak worry limit wrap speak medal online prefer cluster roof addict wrist behave treat actual wasp year salad speed social layer crew genius"}
@@ -133,7 +134,8 @@ echo "==== POOL_ID  : $L_POOL_ID"
 echo "============ Deploying IBC Compat ============"
 COMPAT_INIT_MSG=$(
     cat $(pwd)/scripts/$NETWORK/ibc_compat.json | \
-    jq -c '.gov = "'$GOV'"'
+    jq -c '.gov = "'$GOV'"' | \
+    jq -c '.fee.collector = "'$COLLECTOR'"'
 )
 beaker wasm deploy \
     --raw $COMPAT_INIT_MSG \
