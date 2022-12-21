@@ -60,7 +60,9 @@ fn init(
         return Err(ContractError::Unauthorized {});
     }
 
-    let rebalance_id = LATEST_REBALANCE_ID.load(deps.storage)?;
+    let rebalance_id = LATEST_REBALANCE_ID
+        .may_load(deps.storage)?
+        .unwrap_or_default();
     if let Some(r) = REBALANCES.may_load(deps.storage, rebalance_id)? {
         if !r.finalized {
             return Err(ContractError::RebalanceNotFinalized {});
