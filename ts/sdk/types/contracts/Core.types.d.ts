@@ -40,17 +40,13 @@ export type GovMsg = {
 } | {
     release: {};
 } | {
-    update_gov: {
-        new_gov: string;
-    };
+    update_gov: string;
 } | {
-    update_compat: {
-        new_compat: string;
-    };
+    update_compat: string;
 } | {
-    update_reserve_denom: {
-        new_denom: string;
-    };
+    update_fee_strategy: Fee;
+} | {
+    update_reserve_denom: string;
 } | {
     update_trade_info: {
         cooldown: number;
