@@ -76,9 +76,6 @@ pub fn execute(
 pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, ContractError> {
     match reply.id {
         REPLY_ID_BURN_EXACT_AMOUNT_IN => {
-            // validate
-            cw_utils::parse_reply_execute_data(reply)?;
-
             let context = CONTEXT.load(deps.storage)?;
             CONTEXT.remove(deps.storage);
 
