@@ -5,6 +5,7 @@ use crate::types::SwapRoutes;
 
 #[cw_serde]
 pub struct Fee {
+    pub collector: String,
     pub mint: Option<Decimal>,
     pub burn: Option<Decimal>,
     pub stream: Option<Decimal>,
