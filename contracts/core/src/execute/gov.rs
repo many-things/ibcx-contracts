@@ -1,7 +1,9 @@
 use cosmwasm_std::{attr, Env, MessageInfo, Uint128};
 use cosmwasm_std::{DepsMut, Response};
+use ibcx_interface::core::Fee;
 use ibcx_interface::{core::GovMsg, types::SwapRoutes};
 
+use crate::state::FEE;
 use crate::{
     error::ContractError,
     state::{TradeInfo, ASSETS, COMPAT, GOV, PAUSED, RESERVE_DENOM, TOKEN, TRADE_INFOS},
@@ -23,9 +25,10 @@ pub fn handle_msg(
         Pause { expires_at } => pause(deps, env, info, expires_at),
         Release {} => release(deps, env, info),
 
-        UpdateGov { new_gov } => update_gov(deps, info, new_gov),
-        UpdateCompat { new_compat } => update_compat(deps, info, new_compat),
-        UpdateReserveDenom { new_denom } => update_reserve_denom(deps, info, new_denom),
+        UpdateGov(new_gov) => update_gov(deps, info, new_gov),
+        UpdateCompat(new_compat) => update_compat(deps, info, new_compat),
+        UpdateFeeStrategy(new_fee) => update_fee(deps, info, new_fee),
+        UpdateReserveDenom(new_denom) => update_reserve_denom(deps, info, new_denom),
         UpdateTradeInfo {
             denom,
             routes,
@@ -108,6 +111,18 @@ fn update_compat(
         attr("method", "gov::update_compat"),
         attr("executor", info.sender),
         attr("new_compat", new_compat),
+    ]);
+
+    Ok(resp)
+}
+
+fn update_fee(deps: DepsMut, info: MessageInfo, new_fee: Fee) -> Result<Response, ContractError> {
+    FEE.save(deps.storage, &new_fee)?;
+
+    let resp = Response::new().add_attributes(vec![
+        attr("method", "gov::update_fee"),
+        attr("executor", info.sender),
+        attr("new_fee", format!("{:?}", new_fee)),
     ]);
 
     Ok(resp)
@@ -321,7 +336,7 @@ mod test {
                 deps,
                 env.clone(),
                 info,
-                GovMsg::UpdateReserveDenom { new_denom },
+                GovMsg::UpdateReserveDenom(new_denom),
             )
         };
 

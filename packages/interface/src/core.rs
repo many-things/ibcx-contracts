@@ -28,15 +28,10 @@ pub enum GovMsg {
     },
     Release {},
 
-    UpdateGov {
-        new_gov: String,
-    },
-    UpdateCompat {
-        new_compat: String,
-    },
-    UpdateReserveDenom {
-        new_denom: String,
-    },
+    UpdateGov(String),
+    UpdateCompat(String),
+    UpdateFeeStrategy(Fee),
+    UpdateReserveDenom(String),
     UpdateTradeInfo {
         denom: String,
         routes: SwapRoutes,
