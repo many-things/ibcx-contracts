@@ -1,5 +1,5 @@
 /*!
- * @many-things/ibcx-contracts-sdk v0.0.6
+ * @many-things/ibcx-contracts-sdk v0.0.7
  * (c) frostornge <frostornge@gmail.com>
  * Released under the MIT OR Apache-2.0 License.
  */
@@ -285,13 +285,21 @@ var _2 = /*#__PURE__*/Object.freeze({
 var CompatQueryClient = /** @class */ (function () {
     function CompatQueryClient(client, contractAddress) {
         var _this = this;
+        this.queryMode = function () { return __awaiter(_this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
+                        query_mode: {}
+                    })];
+            });
+        }); };
         this.estimateSwapExactAmountIn = function (_a) {
-            var amount = _a.amount, routes = _a.routes, sender = _a.sender;
+            var amount = _a.amount, mode = _a.mode, routes = _a.routes, sender = _a.sender;
             return __awaiter(_this, void 0, void 0, function () {
                 return __generator(this, function (_b) {
                     return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
                             estimate_swap_exact_amount_in: {
                                 amount: amount,
+                                mode: mode,
                                 routes: routes,
                                 sender: sender
                             }
@@ -300,12 +308,13 @@ var CompatQueryClient = /** @class */ (function () {
             });
         };
         this.estimateSwapExactAmountOut = function (_a) {
-            var amount = _a.amount, routes = _a.routes, sender = _a.sender;
+            var amount = _a.amount, mode = _a.mode, routes = _a.routes, sender = _a.sender;
             return __awaiter(_this, void 0, void 0, function () {
                 return __generator(this, function (_b) {
                     return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
                             estimate_swap_exact_amount_out: {
                                 amount: amount,
+                                mode: mode,
                                 routes: routes,
                                 sender: sender
                             }
@@ -315,6 +324,7 @@ var CompatQueryClient = /** @class */ (function () {
         };
         this.client = client;
         this.contractAddress = contractAddress;
+        this.queryMode = this.queryMode.bind(this);
         this.estimateSwapExactAmountIn = this.estimateSwapExactAmountIn.bind(this);
         this.estimateSwapExactAmountOut = this.estimateSwapExactAmountOut.bind(this);
     }

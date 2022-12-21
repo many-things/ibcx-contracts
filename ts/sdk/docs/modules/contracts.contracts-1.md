@@ -29,7 +29,7 @@
 
 #### Defined in
 
-[contracts/index.ts:18](https://github.com/many-things/ibc-contracts/blob/b66469d/ts/sdk/src/contracts/index.ts#L18)
+[contracts/index.ts:18](https://github.com/many-things/ibc-contracts/blob/6e5bbf6/ts/sdk/src/contracts/index.ts#L18)
 
 ___
 
@@ -41,12 +41,12 @@ ___
 
 | Name | Type |
 | :------ | :------ |
-| `CompatClient` | { `constructor`: (`client`: `SigningCosmWasmClient`, `sender`: `string`, `contractAddress`: `string`) => [`CompatClient`](contracts.contracts-1.md#compatclient) ; `client`: `SigningCosmWasmClient` ; `contractAddress`: `string` ; `sender`: `string` ; `estimateSwapExactAmountIn`: (`__namedParameters`: { `amount`: `Coin` ; `routes`: `SwapRoutes` ; `sender`: `string`  }) => `Promise`<`string`\> ; `estimateSwapExactAmountOut`: (`__namedParameters`: { `amount`: `Coin` ; `routes`: `SwapRoutes` ; `sender`: `string`  }) => `Promise`<`string`\> ; `switchQueryMode`: (`fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\>  } |
-| `CompatQueryClient` | { `constructor`: (`client`: `CosmWasmClient`, `contractAddress`: `string`) => [`CompatQueryClient`](contracts.contracts-1.md#compatqueryclient) ; `client`: `CosmWasmClient` ; `contractAddress`: `string` ; `estimateSwapExactAmountIn`: (`__namedParameters`: { `amount`: `Coin` ; `routes`: `SwapRoutes` ; `sender`: `string`  }) => `Promise`<`string`\> ; `estimateSwapExactAmountOut`: (`__namedParameters`: { `amount`: `Coin` ; `routes`: `SwapRoutes` ; `sender`: `string`  }) => `Promise`<`string`\>  } |
+| `CompatClient` | { `constructor`: (`client`: `SigningCosmWasmClient`, `sender`: `string`, `contractAddress`: `string`) => [`CompatClient`](contracts.contracts-1.md#compatclient) ; `client`: `SigningCosmWasmClient` ; `contractAddress`: `string` ; `sender`: `string` ; `estimateSwapExactAmountIn`: (`__namedParameters`: { `amount`: `Coin` ; `mode?`: `QueryMode` ; `routes`: `SwapRoutes` ; `sender`: `string`  }) => `Promise`<`string`\> ; `estimateSwapExactAmountOut`: (`__namedParameters`: { `amount`: `Coin` ; `mode?`: `QueryMode` ; `routes`: `SwapRoutes` ; `sender`: `string`  }) => `Promise`<`string`\> ; `queryMode`: () => `Promise`<`QueryModeResponse`\> ; `switchQueryMode`: (`fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\>  } |
+| `CompatQueryClient` | { `constructor`: (`client`: `CosmWasmClient`, `contractAddress`: `string`) => [`CompatQueryClient`](contracts.contracts-1.md#compatqueryclient) ; `client`: `CosmWasmClient` ; `contractAddress`: `string` ; `estimateSwapExactAmountIn`: (`__namedParameters`: { `amount`: `Coin` ; `mode?`: `QueryMode` ; `routes`: `SwapRoutes` ; `sender`: `string`  }) => `Promise`<`string`\> ; `estimateSwapExactAmountOut`: (`__namedParameters`: { `amount`: `Coin` ; `mode?`: `QueryMode` ; `routes`: `SwapRoutes` ; `sender`: `string`  }) => `Promise`<`string`\> ; `queryMode`: () => `Promise`<`QueryModeResponse`\>  } |
 
 #### Defined in
 
-[contracts/index.ts:21](https://github.com/many-things/ibc-contracts/blob/b66469d/ts/sdk/src/contracts/index.ts#L21)
+[contracts/index.ts:21](https://github.com/many-things/ibc-contracts/blob/6e5bbf6/ts/sdk/src/contracts/index.ts#L21)
 
 ___
 
@@ -63,7 +63,7 @@ ___
 
 #### Defined in
 
-[contracts/index.ts:24](https://github.com/many-things/ibc-contracts/blob/b66469d/ts/sdk/src/contracts/index.ts#L24)
+[contracts/index.ts:24](https://github.com/many-things/ibc-contracts/blob/6e5bbf6/ts/sdk/src/contracts/index.ts#L24)
 
 ___
 
@@ -80,7 +80,7 @@ ___
 
 #### Defined in
 
-[contracts/index.ts:27](https://github.com/many-things/ibc-contracts/blob/b66469d/ts/sdk/src/contracts/index.ts#L27)
+[contracts/index.ts:27](https://github.com/many-things/ibc-contracts/blob/6e5bbf6/ts/sdk/src/contracts/index.ts#L27)
 
 ___
 
@@ -96,4 +96,4 @@ ___
 
 #### Defined in
 
-[contracts/index.ts:30](https://github.com/many-things/ibc-contracts/blob/b66469d/ts/sdk/src/contracts/index.ts#L30)
+[contracts/index.ts:30](https://github.com/many-things/ibc-contracts/blob/6e5bbf6/ts/sdk/src/contracts/index.ts#L30)

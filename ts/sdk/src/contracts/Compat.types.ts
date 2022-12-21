@@ -13,14 +13,18 @@ export type ExecuteMsg = {
   switch_query_mode: QueryMode;
 };
 export type QueryMsg = {
+  query_mode: {};
+} | {
   estimate_swap_exact_amount_in: {
     amount: Coin;
+    mode?: QueryMode | null;
     routes: SwapRoutes;
     sender: string;
   };
 } | {
   estimate_swap_exact_amount_out: {
     amount: Coin;
+    mode?: QueryMode | null;
     routes: SwapRoutes;
     sender: string;
   };
@@ -37,3 +41,6 @@ export interface SwapRoute {
   token_denom: string;
 }
 export type AmountResponse = Uint128;
+export interface QueryModeResponse {
+  mode: QueryMode;
+}

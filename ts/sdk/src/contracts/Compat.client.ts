@@ -6,24 +6,29 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { StdFee } from "@cosmjs/amino";
-import { QueryMode, InstantiateMsg, ExecuteMsg, QueryMsg, Uint128, SwapRoutes, Coin, SwapRoute, AmountResponse } from "./Compat.types";
+import { QueryMode, InstantiateMsg, ExecuteMsg, QueryMsg, Uint128, SwapRoutes, Coin, SwapRoute, AmountResponse, QueryModeResponse } from "./Compat.types";
 export interface CompatReadOnlyInterface {
   contractAddress: string;
+  queryMode: () => Promise<QueryModeResponse>;
   estimateSwapExactAmountIn: ({
     amount,
+    mode,
     routes,
     sender
   }: {
     amount: Coin;
+    mode?: QueryMode;
     routes: SwapRoutes;
     sender: string;
   }) => Promise<AmountResponse>;
   estimateSwapExactAmountOut: ({
     amount,
+    mode,
     routes,
     sender
   }: {
     amount: Coin;
+    mode?: QueryMode;
     routes: SwapRoutes;
     sender: string;
   }) => Promise<AmountResponse>;
@@ -35,22 +40,31 @@ export class CompatQueryClient implements CompatReadOnlyInterface {
   constructor(client: CosmWasmClient, contractAddress: string) {
     this.client = client;
     this.contractAddress = contractAddress;
+    this.queryMode = this.queryMode.bind(this);
     this.estimateSwapExactAmountIn = this.estimateSwapExactAmountIn.bind(this);
     this.estimateSwapExactAmountOut = this.estimateSwapExactAmountOut.bind(this);
   }
 
+  queryMode = async (): Promise<QueryModeResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      query_mode: {}
+    });
+  };
   estimateSwapExactAmountIn = async ({
     amount,
+    mode,
     routes,
     sender
   }: {
     amount: Coin;
+    mode?: QueryMode;
     routes: SwapRoutes;
     sender: string;
   }): Promise<AmountResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
       estimate_swap_exact_amount_in: {
         amount,
+        mode,
         routes,
         sender
       }
@@ -58,16 +72,19 @@ export class CompatQueryClient implements CompatReadOnlyInterface {
   };
   estimateSwapExactAmountOut = async ({
     amount,
+    mode,
     routes,
     sender
   }: {
     amount: Coin;
+    mode?: QueryMode;
     routes: SwapRoutes;
     sender: string;
   }): Promise<AmountResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
       estimate_swap_exact_amount_out: {
         amount,
+        mode,
         routes,
         sender
       }

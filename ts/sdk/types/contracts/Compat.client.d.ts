@@ -5,16 +5,19 @@
 */
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { StdFee } from "@cosmjs/amino";
-import { SwapRoutes, Coin, AmountResponse } from "./Compat.types";
+import { QueryMode, SwapRoutes, Coin, AmountResponse, QueryModeResponse } from "./Compat.types";
 export interface CompatReadOnlyInterface {
     contractAddress: string;
-    estimateSwapExactAmountIn: ({ amount, routes, sender }: {
+    queryMode: () => Promise<QueryModeResponse>;
+    estimateSwapExactAmountIn: ({ amount, mode, routes, sender }: {
         amount: Coin;
+        mode?: QueryMode;
         routes: SwapRoutes;
         sender: string;
     }) => Promise<AmountResponse>;
-    estimateSwapExactAmountOut: ({ amount, routes, sender }: {
+    estimateSwapExactAmountOut: ({ amount, mode, routes, sender }: {
         amount: Coin;
+        mode?: QueryMode;
         routes: SwapRoutes;
         sender: string;
     }) => Promise<AmountResponse>;
@@ -23,13 +26,16 @@ export declare class CompatQueryClient implements CompatReadOnlyInterface {
     client: CosmWasmClient;
     contractAddress: string;
     constructor(client: CosmWasmClient, contractAddress: string);
-    estimateSwapExactAmountIn: ({ amount, routes, sender }: {
+    queryMode: () => Promise<QueryModeResponse>;
+    estimateSwapExactAmountIn: ({ amount, mode, routes, sender }: {
         amount: Coin;
+        mode?: QueryMode;
         routes: SwapRoutes;
         sender: string;
     }) => Promise<AmountResponse>;
-    estimateSwapExactAmountOut: ({ amount, routes, sender }: {
+    estimateSwapExactAmountOut: ({ amount, mode, routes, sender }: {
         amount: Coin;
+        mode?: QueryMode;
         routes: SwapRoutes;
         sender: string;
     }) => Promise<AmountResponse>;
