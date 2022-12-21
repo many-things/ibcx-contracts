@@ -8,6 +8,9 @@ import { StdFee } from "@cosmjs/amino";
 import { Uint128, Coin, GetConfigResponse, GetPauseInfoResponse, GetPortfolioResponse, SimulateBurnResponse, SimulateMintResponse } from "./Core.types";
 export interface CoreReadOnlyInterface {
     contractAddress: string;
+    getBalance: ({ account }: {
+        account: string;
+    }) => Promise<Uint128>;
     getConfig: () => Promise<GetConfigResponse>;
     getPauseInfo: () => Promise<GetPauseInfoResponse>;
     getPortfolio: () => Promise<GetPortfolioResponse>;
@@ -23,6 +26,9 @@ export declare class CoreQueryClient implements CoreReadOnlyInterface {
     client: CosmWasmClient;
     contractAddress: string;
     constructor(client: CosmWasmClient, contractAddress: string);
+    getBalance: ({ account }: {
+        account: string;
+    }) => Promise<Uint128>;
     getConfig: () => Promise<GetConfigResponse>;
     getPauseInfo: () => Promise<GetPauseInfoResponse>;
     getPortfolio: () => Promise<GetPortfolioResponse>;

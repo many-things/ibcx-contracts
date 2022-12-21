@@ -9,6 +9,11 @@ import { StdFee } from "@cosmjs/amino";
 import { Decimal, InstantiateMsg, Fee, ExecuteMsg, Uint128, GovMsg, SwapRoutes, RebalanceMsg, RebalanceTradeMsg, SwapRoute, QueryMsg, Coin, Addr, GetConfigResponse, GetPauseInfoResponse, GetPortfolioResponse, SimulateBurnResponse, SimulateMintResponse } from "./Core.types";
 export interface CoreReadOnlyInterface {
   contractAddress: string;
+  getBalance: ({
+    account
+  }: {
+    account: string;
+  }) => Promise<Uint128>;
   getConfig: () => Promise<GetConfigResponse>;
   getPauseInfo: () => Promise<GetPauseInfoResponse>;
   getPortfolio: () => Promise<GetPortfolioResponse>;
@@ -32,6 +37,7 @@ export class CoreQueryClient implements CoreReadOnlyInterface {
   constructor(client: CosmWasmClient, contractAddress: string) {
     this.client = client;
     this.contractAddress = contractAddress;
+    this.getBalance = this.getBalance.bind(this);
     this.getConfig = this.getConfig.bind(this);
     this.getPauseInfo = this.getPauseInfo.bind(this);
     this.getPortfolio = this.getPortfolio.bind(this);
@@ -39,6 +45,17 @@ export class CoreQueryClient implements CoreReadOnlyInterface {
     this.simulateBurn = this.simulateBurn.bind(this);
   }
 
+  getBalance = async ({
+    account
+  }: {
+    account: string;
+  }): Promise<Uint128> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      get_balance: {
+        account
+      }
+    });
+  };
   getConfig = async (): Promise<GetConfigResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
       get_config: {}

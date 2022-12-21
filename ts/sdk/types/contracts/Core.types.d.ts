@@ -89,6 +89,10 @@ export interface SwapRoute {
     token_denom: string;
 }
 export type QueryMsg = {
+    get_balance: {
+        account: string;
+    };
+} | {
     get_config: {};
 } | {
     get_pause_info: {};

@@ -1,5 +1,5 @@
 /*!
- * @many-things/ibcx-contracts-sdk v0.0.8
+ * @many-things/ibcx-contracts-sdk v0.0.9
  * (c) frostornge <frostornge@gmail.com>
  * Released under the MIT OR Apache-2.0 License.
  */
@@ -382,6 +382,18 @@
     var CoreQueryClient = /** @class */ (function () {
         function CoreQueryClient(client, contractAddress) {
             var _this = this;
+            this.getBalance = function (_a) {
+                var account = _a.account;
+                return __awaiter(_this, void 0, void 0, function () {
+                    return __generator(this, function (_b) {
+                        return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
+                                get_balance: {
+                                    account: account
+                                }
+                            })];
+                    });
+                });
+            };
             this.getConfig = function () { return __awaiter(_this, void 0, void 0, function () {
                 return __generator(this, function (_a) {
                     return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
@@ -430,6 +442,7 @@
             };
             this.client = client;
             this.contractAddress = contractAddress;
+            this.getBalance = this.getBalance.bind(this);
             this.getConfig = this.getConfig.bind(this);
             this.getPauseInfo = this.getPauseInfo.bind(this);
             this.getPortfolio = this.getPortfolio.bind(this);
