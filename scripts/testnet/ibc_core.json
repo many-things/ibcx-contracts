@@ -1,7 +1,7 @@
 {
   "gov": "",
   "compat": "",
-  "denom": "uibc",
+  "denom": "uibcx",
   "reserve_denom": "uosmo",
   "initial_assets": [],
   "fee_strategy": {
