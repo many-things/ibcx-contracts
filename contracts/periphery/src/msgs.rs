@@ -30,7 +30,7 @@ pub fn make_mint_swap_exact_out_msgs(
 
         let (_, swap_info) = swap_info
             .iter()
-            .find(|(RouteKey((from, to)), _)| from == &max_input.denom && to == &denom)
+            .find(|(RouteKey((from, to)), _)| from == &denom && to == &max_input.denom)
             .ok_or(ContractError::SwapRouteNotFound {
                 from: max_input.denom.clone(),
                 to: denom.clone(),
