@@ -1,5 +1,5 @@
 /*!
- * @many-things/ibcx-contracts-sdk v0.0.9
+ * @many-things/ibcx-contracts-sdk v0.0.10
  * (c) frostornge <frostornge@gmail.com>
  * Released under the MIT OR Apache-2.0 License.
  */
