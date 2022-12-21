@@ -1,4 +1,4 @@
-use cosmwasm_std::{attr, coin, entry_point, to_binary, Env, MessageInfo, QueryResponse};
+use cosmwasm_std::{attr, coin, entry_point, to_binary, Env, MessageInfo, QueryResponse, Reply};
 use cosmwasm_std::{Deps, DepsMut, Response};
 use ibc_interface::{
     helpers::IbcCore,
@@ -8,6 +8,8 @@ use ibc_interface::{
     },
 };
 
+use crate::state::{Context, CONTEXT};
+use crate::REPLY_ID_BURN_EXACT_AMOUNT_IN;
 use crate::{
     error::ContractError,
     execute,
@@ -67,6 +69,54 @@ pub fn execute(
             min_output_amount,
             swap_info,
         ),
+    }
+}
+
+#[entry_point]
+pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, ContractError> {
+    match reply.id {
+        REPLY_ID_BURN_EXACT_AMOUNT_IN => {
+            // validate
+            cw_utils::parse_reply_execute_data(reply)?;
+
+            let context = CONTEXT.load(deps.storage)?;
+            CONTEXT.remove(deps.storage);
+
+            match context {
+                Context::Burn {
+                    core,
+                    sender,
+                    min_output,
+                    redeem_amounts,
+                    swap_info,
+                    ..
+                } => {
+                    // query to core contract
+                    let core = IbcCore(core);
+                    let core_config = core.get_config(&deps.querier)?;
+
+                    let (swap_msgs, refunds) = make_burn_swap_msgs(
+                        &deps.querier,
+                        &core_config,
+                        &env.contract.address,
+                        &sender,
+                        swap_info,
+                        redeem_amounts,
+                        &min_output,
+                    )?;
+
+                    let resp = Response::new().add_messages(swap_msgs).add_attributes(vec![
+                        attr("method", "reply::burn_exact_amount_in"),
+                        attr("executor", sender),
+                        attr("refunds", refunds),
+                    ]);
+
+                    Ok(resp)
+                }
+                _ => Err(ContractError::InvalidContextType(context.kind())),
+            }
+        }
+        _ => Err(ContractError::InvalidReplyId(reply.id)),
     }
 }
 

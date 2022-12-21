@@ -1,12 +1,11 @@
-use cosmwasm_std::{attr, coin, Env, MessageInfo, Uint128};
+use cosmwasm_std::{attr, coin, Env, MessageInfo, SubMsg, Uint128};
 use cosmwasm_std::{DepsMut, Response};
 use ibc_interface::periphery::RouteKey;
 use ibc_interface::{core, helpers::IbcCore, types::SwapRoutes};
 
-use crate::{
-    error::ContractError,
-    msgs::{make_burn_swap_msgs, make_mint_swap_exact_out_msgs},
-};
+use crate::state::{Context, CONTEXT};
+use crate::REPLY_ID_BURN_EXACT_AMOUNT_IN;
+use crate::{error::ContractError, msgs::make_mint_swap_exact_out_msgs};
 
 pub fn mint_exact_amount_out(
     deps: DepsMut,
@@ -64,7 +63,7 @@ pub fn mint_exact_amount_out(
 
 pub fn burn_exact_amount_in(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     core_addr: String,
     output_asset: String,
@@ -89,19 +88,24 @@ pub fn burn_exact_amount_in(
         vec![coin(input.amount.u128(), &core_config.denom)],
     )?;
 
-    let (swap_msgs, _) = make_burn_swap_msgs(
-        &deps.querier,
-        &core_config,
-        &env.contract.address,
-        &info.sender,
-        swap_info,
-        expected,
-        &min_output,
+    // save to context
+    CONTEXT.save(
+        deps.storage,
+        &Context::Burn {
+            core: core.addr(),
+            sender: info.sender.clone(),
+            input: input.clone(),
+            min_output: min_output.clone(),
+            redeem_amounts: expected,
+            swap_info,
+        },
     )?;
 
     let resp = Response::new()
-        .add_message(burn_msg)
-        .add_messages(swap_msgs)
+        .add_submessage(SubMsg::reply_on_success(
+            burn_msg,
+            REPLY_ID_BURN_EXACT_AMOUNT_IN,
+        ))
         .add_attributes(vec![
             attr("method", "burn_exact_amount_in"),
             attr("executor", info.sender),

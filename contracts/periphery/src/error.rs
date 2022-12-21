@@ -30,11 +30,14 @@ pub enum ContractError {
     #[error("Not paused")]
     NotPaused {},
 
-    #[error("Invalid reply id")]
-    InvalidReplyId {},
+    #[error("Invalid reply id {0}")]
+    InvalidReplyId(u64),
 
     #[error("Invalid trade route")]
     InvalidTradeRoute {},
+
+    #[error("Invalid type of context {0}")]
+    InvalidContextType(String),
 
     #[error("Trade amount exceeded")]
     TradeAmountExceeded {},
