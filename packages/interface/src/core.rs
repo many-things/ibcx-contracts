@@ -106,12 +106,21 @@ pub enum QueryMsg {
 }
 
 #[cw_serde]
+pub struct FeeResponse {
+    pub collector: Addr,
+    pub mint: Option<Decimal>,
+    pub burn: Option<Decimal>,
+    pub stream: Option<Decimal>,
+    pub stream_last_collected_at: u64,
+}
+
+#[cw_serde]
 pub struct GetConfigResponse {
     pub gov: Addr,
     pub compat: Addr,
     pub denom: String,
     pub reserve_denom: String,
-    pub fee_strategy: Fee,
+    pub fee_strategy: FeeResponse,
 }
 
 #[cw_serde]

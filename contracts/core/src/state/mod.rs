@@ -2,9 +2,8 @@ mod assets;
 mod rebalance;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Env, StdResult, Storage, Uint128};
+use cosmwasm_std::{Addr, Decimal, Env, StdResult, Storage, Uint128};
 use cw_storage_plus::Item;
-use ibcx_interface::core::Fee;
 
 use crate::error::ContractError;
 
@@ -29,6 +28,22 @@ pub const TOKEN: Item<Token> = Item::new(TOKEN_KEY);
 
 pub const PAUSED_KEY: &str = "paused";
 pub const PAUSED: Item<PauseInfo> = Item::new(PAUSED_KEY);
+
+#[cw_serde]
+pub struct Fee {
+    pub collector: Addr,
+    pub mint: Option<Decimal>,
+    pub burn: Option<Decimal>,
+    pub stream: Option<Decimal>,
+    pub stream_last_collected_at: u64,
+}
+
+#[cw_serde]
+pub struct Token {
+    pub denom: String,
+    pub reserve_denom: String,
+    pub total_supply: Uint128,
+}
 
 #[cw_serde]
 #[derive(Default)]
@@ -66,11 +81,4 @@ impl PauseInfo {
 
         Ok(self)
     }
-}
-
-#[cw_serde]
-pub struct Token {
-    pub denom: String,
-    pub reserve_denom: String,
-    pub total_supply: Uint128,
 }

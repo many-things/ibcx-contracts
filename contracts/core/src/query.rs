@@ -1,7 +1,7 @@
 use cosmwasm_std::{to_binary, Coin, Deps, Env, QueryResponse, Uint128};
 use ibcx_interface::core::{
-    GetConfigResponse, GetPauseInfoResponse, GetPortfolioResponse, SimulateBurnResponse,
-    SimulateMintResponse,
+    FeeResponse, GetConfigResponse, GetPauseInfoResponse, GetPortfolioResponse,
+    SimulateBurnResponse, SimulateMintResponse,
 };
 
 use crate::{
@@ -28,7 +28,13 @@ pub fn config(deps: Deps, _env: Env) -> Result<QueryResponse, ContractError> {
         compat,
         denom: token.denom,
         reserve_denom: token.reserve_denom,
-        fee_strategy: fee,
+        fee_strategy: FeeResponse {
+            collector: fee.collector,
+            mint: fee.mint,
+            burn: fee.burn,
+            stream: fee.stream,
+            stream_last_collected_at: fee.stream_last_collected_at,
+        },
     })?)
 }
 

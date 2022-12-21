@@ -3,10 +3,9 @@ mod rebalance;
 
 use cosmwasm_std::{attr, coin, Addr, BankMsg, Coin, CosmosMsg, Env, MessageInfo, Uint128};
 use cosmwasm_std::{DepsMut, Response};
-use ibcx_interface::core::Fee;
 use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgBurn, MsgMint};
 
-use crate::state::FEE;
+use crate::state::{Fee, FEE};
 use crate::{
     error::ContractError,
     state::{assert_assets, get_redeem_amounts, PAUSED, TOKEN},
@@ -27,7 +26,7 @@ fn make_mint_msgs_with_fee_collection(
 
         msgs.push(
             BankMsg::Send {
-                to_address: fee.collector,
+                to_address: fee.collector.to_string(),
                 amount: vec![coin(fee_amount.u128(), &mint.denom)],
             }
             .into(),
@@ -68,7 +67,7 @@ fn make_burn_msgs_with_fee_collection(
 
         msgs.push(
             BankMsg::Send {
-                to_address: fee.collector,
+                to_address: fee.collector.to_string(),
                 amount: vec![coin(fee_amount.u128(), &burn.denom)],
             }
             .into(),
@@ -118,6 +117,7 @@ pub fn mint(
         .unwrap_or_else(|| info.sender.clone());
 
     let mut token = TOKEN.load(deps.storage)?;
+    // TODO: reflect streaming fee
     let refund = assert_assets(deps.storage, info.funds, amount)?;
 
     token.total_supply = token.total_supply.checked_add(amount)?;
@@ -165,6 +165,7 @@ pub fn burn(
     let received = cw_utils::must_pay(&info, &token.denom)?;
 
     let fee = FEE.load(deps.storage)?;
+    // TODO: reflect streaming fee
     let payback = get_redeem_amounts(
         deps.storage,
         fee.burn

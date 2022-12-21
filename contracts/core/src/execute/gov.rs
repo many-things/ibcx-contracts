@@ -117,7 +117,18 @@ fn update_compat(
 }
 
 fn update_fee(deps: DepsMut, info: MessageInfo, new_fee: Fee) -> Result<Response, ContractError> {
-    FEE.save(deps.storage, &new_fee)?;
+    let mut fee = FEE.load(deps.storage)?;
+
+    fee.collector = deps.api.addr_validate(&new_fee.collector)?;
+    fee.mint = new_fee.mint;
+    fee.burn = new_fee.burn;
+
+    if let Some(stream) = new_fee.stream {
+        fee.stream = Some(stream);
+        // TODO: update fee
+    }
+
+    FEE.save(deps.storage, &fee)?;
 
     let resp = Response::new().add_attributes(vec![
         attr("method", "gov::update_fee"),
