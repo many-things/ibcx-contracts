@@ -85,6 +85,12 @@ pub fn make_burn_swap_msgs(
         amount: expected,
     } in expected
     {
+        if min_output.denom == denom {
+            // skip swap for reserve denom
+            simulated_total_receive_amount += expected;
+            continue;
+        }
+
         let (_, swap_info) = swap_info
             .iter()
             .find(|(RouteKey((from, to)), _)| from == &min_output.denom && to == &denom)
