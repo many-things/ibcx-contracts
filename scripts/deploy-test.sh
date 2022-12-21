@@ -40,9 +40,9 @@ beaker wasm deploy \
     $OPTIMIZE_FLAG \
     ibc-faucet
 
-DENOMS=("utatom" "utosmo" "utevmos" "utjuno" "utscrt" "utstars" "utakt" "utregen" "utstrd" "utumee")
-# DENOMS=("utatom" "utosmo")
-WEIGHTS=("33.35" "20.24" "12.65" "8.83" "6.97" "4.76" "4.29" "3.37" "2.84" "2.69")
+# DENOMS=("utatom" "utosmo" "utevmos" "utjuno" "utscrt" "utstars" "utakt" "utregen" "utstrd" "utumee")
+DENOMS=("utatom" "utosmo")
+WEIGHTS=(33.35 20.24 12.65 8.83 6.97 4.76 4.29 3.37 2.84 2.69)
 
 DECIMAL=1000000
 PRICES=(11.6405 1 0.4366 1.6 0.8002 0.0359 0.2715 0.2275 0.3528 0.0079) # in OSMO
@@ -74,8 +74,7 @@ for i in "${!DENOMS[@]}"; do
         continue
     fi
 
-    L_PRICE=$(printf "%d" "$(echo '1000/'${PRICES[$i]}'' | bc)")
-    L_WEIGHTS=$(echo "$L_PRICE$L_TARGET_DENOM,1000$RESERVE_DENOM")
+    L_WEIGHTS=$(echo "1$L_TARGET_DENOM,1$RESERVE_DENOM")
     L_RESERVE_DEPOSIT=$(echo "$(($DECIMAL * $DECIMAL))$RESERVE_DENOM")
     L_TARGET_DEPOSIT=$(printf "%d$L_TARGET_DENOM" "$(echo ''$DECIMAL' / '${PRICES[$i]}' * '$DECIMAL'' | bc)")
     L_DEPOSITS=$(echo "$L_TARGET_DEPOSIT,$L_RESERVE_DEPOSIT")
@@ -111,6 +110,26 @@ for i in "${!DENOMS[@]}"; do
     #     --yes --output=json -b "block"
 done
 
+echo "Creating uosmo <-> utosmo pool"
+L_POOL_CONFIG=$(
+    cat $(pwd)/scripts/pool_config.json | \
+    jq -c '.weights = "1uosmo,1'$RESERVE_DENOM'"' | \
+    jq -c '."initial-deposit" = "1000000uosmo,10000000000000000'$RESERVE_DENOM'"'
+)
+
+echo "$L_POOL_CONFIG" > $(pwd)/scripts/pool_config.json
+
+L_POOL_ID=$(
+    $DAEMON tx gamm create-pool \
+        --pool-file $(pwd)/scripts/pool_config.json \
+        --from $SIGNER \
+        --node $NODE \
+        --chain-id $CHAIN_ID \
+        --yes --output=json -b "block" | \
+    jq -r '.logs[0].events[4].attributes[0].value'
+)
+echo "==== POOL_ID  : $L_POOL_ID"
+
 echo "============ Deploying IBC Compat ============"
 COMPAT_INIT_MSG=$(
     cat $(pwd)/scripts/$NETWORK/ibc_compat.json | \
@@ -135,7 +154,11 @@ CORE_INIT_MSG=$(
 )
 
 for i in "${!DENOMS[@]}"; do
-    CORE_INIT_MSG=$(echo "$CORE_INIT_MSG" | jq -c '.initial_assets += [["factory/'$FAUCET_ADDR'/'${DENOMS[$i]}'","'${WEIGHTS[$i]}'"]]')
+    L_WEIGHT=$(echo "${WEIGHTS[$i]} ${PRICES[$i]}" | awk '{print $1 / $2}')
+    CORE_INIT_MSG=$(
+        echo "$CORE_INIT_MSG" | \
+        jq -c '.initial_assets += [["factory/'$FAUCET_ADDR'/'${DENOMS[$i]}'","'$L_WEIGHT'"]]'
+    )
 done
 
 beaker wasm deploy \
