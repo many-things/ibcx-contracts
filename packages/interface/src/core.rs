@@ -79,7 +79,9 @@ pub enum ExecuteMsg {
         receiver: Option<String>,
         refund_to: Option<String>,
     }, // put some input tokens to tx payload
-    Burn {}, // pub some ibc tokens to tx payload
+    Burn {
+        redeem_to: Option<String>,
+    }, // pub some ibc tokens to tx payload
 
     Gov(GovMsg),
     Rebalance(RebalanceMsg),

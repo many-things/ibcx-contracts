@@ -61,7 +61,7 @@ pub fn execute(
             receiver,
             refund_to,
         } => execute::mint(deps, env, info, amount, receiver, refund_to),
-        Burn {} => execute::burn(deps, env, info),
+        Burn { redeem_to } => execute::burn(deps, env, info, redeem_to),
         Gov(msg) => execute::handle_gov_msg(deps, env, info, msg),
         Rebalance(msg) => execute::handle_rebalance_msg(deps, env, info, msg),
     }

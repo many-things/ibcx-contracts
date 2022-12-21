@@ -68,7 +68,12 @@ pub fn mint(
     Ok(resp)
 }
 
-pub fn burn(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+pub fn burn(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    redeem_to: Option<String>,
+) -> Result<Response, ContractError> {
     PAUSED
         .load(deps.storage)?
         .refresh(deps.storage, &env)?
@@ -81,13 +86,18 @@ pub fn burn(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, Cont
     token.total_supply = token.total_supply.checked_sub(received)?;
     TOKEN.save(deps.storage, &token)?;
 
+    let redeemer = redeem_to
+        .map(|v| deps.api.addr_validate(&v))
+        .transpose()?
+        .unwrap_or_else(|| info.sender.clone());
+
     let resp = Response::new()
         .add_message(MsgBurn {
             sender: env.contract.address.to_string(),
             amount: Some(coin(received.u128(), token.denom).into()),
         })
         .add_message(BankMsg::Send {
-            to_address: info.sender.to_string(),
+            to_address: redeemer.to_string(),
             amount: payback,
         })
         .add_attributes(vec![
