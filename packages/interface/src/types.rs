@@ -68,17 +68,15 @@ impl SwapRoutes {
         sender: &Addr,
         token_out: Coin,
     ) -> StdResult<Uint128> {
-        querier
-            .query_wasm_smart::<compat::AmountResponse>(
-                compat,
-                &compat::QueryMsg::EstimateSwapExactAmountOut {
-                    sender: sender.to_string(),
-                    amount: token_out,
-                    routes: self.clone(),
-                    mode: None,
-                },
-            )
-            .map(|v| v.0)
+        querier.query_wasm_smart(
+            compat,
+            &compat::QueryMsg::EstimateSwapExactAmountOut {
+                sender: sender.to_string(),
+                amount: token_out,
+                routes: self.clone(),
+                mode: None,
+            },
+        )
     }
 
     pub fn msg_swap_exact_in(

@@ -1,10 +1,10 @@
-use cosmwasm_std::StdError;
+use cosmwasm_std::Uint128;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ContractError {
     #[error("{0}")]
-    Std(#[from] StdError),
+    Std(#[from] cosmwasm_std::StdError),
 
     #[error("{0}")]
     OverflowError(#[from] cosmwasm_std::OverflowError),
@@ -41,4 +41,14 @@ pub enum ContractError {
 
     #[error("Swap route not found. from:{from:?}, to:{to:?}")]
     SwapRouteNotFound { from: String, to: String },
+
+    #[error(
+        "Simulate query error. err:{err:?}, input:{input:?}, output:{output:?}, amount:{amount:?}"
+    )]
+    SimulateQueryError {
+        err: String,
+        input: String,
+        output: String,
+        amount: Uint128,
+    },
 }

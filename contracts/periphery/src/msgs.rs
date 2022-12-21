@@ -28,7 +28,7 @@ pub fn make_mint_swap_exact_out_msgs(
             continue;
         }
 
-        let (_, mut swap_info) = swap_info
+        let (_, swap_info) = swap_info
             .iter()
             .find(|(RouteKey((from, to)), _)| from == &max_input.denom && to == &denom)
             .ok_or(ContractError::SwapRouteNotFound {
@@ -37,17 +37,14 @@ pub fn make_mint_swap_exact_out_msgs(
             })?
             .clone();
 
-        // shift denoms
-        for i in (0..swap_info.0.len()).rev() {
-            if i == 0 {
-                swap_info.0[0].token_denom = max_input.denom.clone();
-            } else {
-                swap_info.0[i].token_denom = swap_info.0[i - 1].token_denom.clone();
-            }
-        }
-
-        let simulated_token_in =
-            swap_info.sim_swap_exact_out(querier, compat, contract, coin(want.u128(), &denom))?;
+        let simulated_token_in = swap_info
+            .sim_swap_exact_out(querier, compat, contract, coin(want.u128(), &denom))
+            .map_err(|e| ContractError::SimulateQueryError {
+                err: e.to_string(),
+                input: max_input.denom.clone(),
+                output: denom.clone(),
+                amount: want,
+            })?;
 
         simulated_total_spend_amount += simulated_token_in;
 
@@ -96,12 +93,19 @@ pub fn make_burn_swap_msgs(
                 to: denom.clone(),
             })?;
 
-        let simulated_token_out = swap_info.sim_swap_exact_in(
-            querier,
-            &config.compat,
-            contract,
-            coin(expected.u128(), &denom),
-        )?;
+        let simulated_token_out = swap_info
+            .sim_swap_exact_in(
+                querier,
+                &config.compat,
+                contract,
+                coin(expected.u128(), &denom),
+            )
+            .map_err(|e| ContractError::SimulateQueryError {
+                err: e.to_string(),
+                input: min_output.denom.clone(),
+                output: denom.clone(),
+                amount: expected,
+            })?;
 
         simulated_total_receive_amount += simulated_token_out;
 
