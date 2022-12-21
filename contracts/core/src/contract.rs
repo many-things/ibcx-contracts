@@ -95,6 +95,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
     use QueryMsg::*;
 
     match msg {
+        GetBalance { account } => query::balance(deps, env, account),
         GetConfig {} => query::config(deps, env),
         GetPauseInfo {} => query::pause_info(deps, env),
         GetPortfolio {} => query::portfolio(deps, env),

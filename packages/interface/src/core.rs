@@ -90,6 +90,9 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
+    #[returns(Uint128)]
+    GetBalance { account: String },
+
     #[returns(GetConfigResponse)]
     GetConfig {},
 
