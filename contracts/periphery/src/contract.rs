@@ -1,6 +1,6 @@
 use cosmwasm_std::{attr, coin, entry_point, to_binary, Env, MessageInfo, QueryResponse, Reply};
 use cosmwasm_std::{Deps, DepsMut, Response};
-use ibc_interface::{
+use ibcx_interface::{
     helpers::IbcCore,
     periphery::{
         ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SimulateBurnExactAmountInResponse,

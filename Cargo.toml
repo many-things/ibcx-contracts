@@ -4,11 +4,23 @@ members = [
     "packages/*"
 ]
 
-[profile.release.package.ibc-core]
+[profile.release.package.ibcx-airdrop]
 codegen-units = 1
 incremental = false
 
-[profile.release.package.ibc-periphery]
+[profile.release.package.ibcx-compat]
+codegen-units = 1
+incremental = false
+
+[profile.release.package.ibcx-core]
+codegen-units = 1
+incremental = false
+
+[profile.release.package.ibcx-faucet]
+codegen-units = 1
+incremental = false
+
+[profile.release.package.ibcx-periphery]
 codegen-units = 1
 incremental = false
 

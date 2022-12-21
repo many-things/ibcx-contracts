@@ -1,7 +1,7 @@
 use cosmwasm_std::{attr, entry_point, Reply};
 use cosmwasm_std::{Deps, DepsMut, Response, SubMsg};
 use cosmwasm_std::{Env, MessageInfo, QueryResponse, Uint128};
-use ibc_interface::core::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use ibcx_interface::core::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgCreateDenom, MsgCreateDenomResponse};
 
 use crate::state::{set_assets, Token, COMPAT, FEE, GOV, TOKEN};

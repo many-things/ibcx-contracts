@@ -4,7 +4,7 @@ use cosmwasm_std::{
 };
 use cosmwasm_std::{Deps, DepsMut, Response};
 use cw_storage_plus::Bound;
-use ibc_interface::{
+use ibcx_interface::{
     airdrop::{
         AirdropId, AirdropIdOptional, CheckQualificationResponse, ExecuteMsg, GetAirdropResponse,
         GetClaimResponse, InstantiateMsg, LatestAirdropResponse, ListAirdropsResponse,

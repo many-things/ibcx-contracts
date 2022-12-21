@@ -6,7 +6,7 @@ use cosmwasm_std::{
     Uint128,
 };
 use cosmwasm_std::{Deps, DepsMut};
-use ibc_interface::compat::{
+use ibcx_interface::compat::{
     AmountResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMode, QueryModeResponse, QueryMsg,
 };
 use osmo_bindings::{OsmosisQuery, Step, Swap, SwapAmount};

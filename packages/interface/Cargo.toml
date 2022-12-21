@@ -1,5 +1,5 @@
 [package]
-name = "ibc-interface"
+name = "ibcx-interface"
 version = "0.1.0"
 authors = ["frostornge <frostornge@gmail.com>"]
 edition = "2021"

@@ -1,6 +1,6 @@
 use cosmwasm_schema::write_api;
 
-use ibc_interface::airdrop::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use ibcx_interface::airdrop::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 fn main() {
     write_api! {

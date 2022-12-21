@@ -4,7 +4,7 @@ mod rebalance;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Env, StdResult, Storage, Uint128};
 use cw_storage_plus::Item;
-use ibc_interface::core::Fee;
+use ibcx_interface::core::Fee;
 
 use crate::error::ContractError;
 

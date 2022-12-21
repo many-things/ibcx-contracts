@@ -475,7 +475,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ibc-airdrop"
+name = "ibcx-airdrop"
 version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
@@ -486,14 +486,14 @@ dependencies = [
  "cw-utils",
  "cw2 1.0.0",
  "hex",
- "ibc-interface",
+ "ibcx-interface",
  "osmosis-std",
  "sha2 0.10.6",
  "thiserror",
 ]
 
 [[package]]
-name = "ibc-compat"
+name = "ibcx-compat"
 version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
@@ -503,14 +503,14 @@ dependencies = [
  "cw-storage-plus 1.0.1",
  "cw-utils",
  "cw2 1.0.0",
- "ibc-interface",
+ "ibcx-interface",
  "osmo-bindings",
  "osmosis-std",
  "thiserror",
 ]
 
 [[package]]
-name = "ibc-core"
+name = "ibcx-core"
 version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
@@ -520,13 +520,13 @@ dependencies = [
  "cw-storage-plus 1.0.1",
  "cw-utils",
  "cw2 1.0.0",
- "ibc-interface",
+ "ibcx-interface",
  "osmosis-std",
  "thiserror",
 ]
 
 [[package]]
-name = "ibc-faucet"
+name = "ibcx-faucet"
 version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
@@ -536,13 +536,13 @@ dependencies = [
  "cw-storage-plus 1.0.1",
  "cw-utils",
  "cw2 1.0.0",
- "ibc-interface",
+ "ibcx-interface",
  "osmosis-std",
  "thiserror",
 ]
 
 [[package]]
-name = "ibc-interface"
+name = "ibcx-interface"
 version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
@@ -556,7 +556,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ibc-periphery"
+name = "ibcx-periphery"
 version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
@@ -566,7 +566,7 @@ dependencies = [
  "cw-storage-plus 1.0.1",
  "cw-utils",
  "cw2 1.0.0",
- "ibc-interface",
+ "ibcx-interface",
  "osmosis-std",
  "thiserror",
 ]

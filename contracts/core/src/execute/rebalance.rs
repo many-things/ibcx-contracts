@@ -1,6 +1,6 @@
 use cosmwasm_std::{attr, coin, Decimal, Env, MessageInfo, Uint128};
 use cosmwasm_std::{DepsMut, Response};
-use ibc_interface::core::{RebalanceMsg, RebalanceTradeMsg};
+use ibcx_interface::core::{RebalanceMsg, RebalanceTradeMsg};
 
 use crate::{
     error::ContractError,

@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use cosmwasm_std::{coin, Coin, Decimal, Order, StdResult, Storage, Uint128};
 use cw_storage_plus::Map;
-use ibc_interface::MAX_LIMIT;
+use ibcx_interface::MAX_LIMIT;
 
 use crate::error::ContractError;
 

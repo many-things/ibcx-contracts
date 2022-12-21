@@ -1,6 +1,6 @@
 use cosmwasm_schema::write_api;
 
-use ibc_interface::core::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use ibcx_interface::core::{ExecuteMsg, InstantiateMsg, QueryMsg};
 
 fn main() {
     write_api! {

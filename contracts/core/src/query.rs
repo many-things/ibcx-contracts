@@ -1,5 +1,5 @@
 use cosmwasm_std::{to_binary, Coin, Deps, Env, QueryResponse, Uint128};
-use ibc_interface::core::{
+use ibcx_interface::core::{
     GetConfigResponse, GetPauseInfoResponse, GetPortfolioResponse, SimulateBurnResponse,
     SimulateMintResponse,
 };

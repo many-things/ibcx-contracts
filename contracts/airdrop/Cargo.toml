@@ -1,5 +1,5 @@
 [package]
-name = "ibc-airdrop"
+name = "ibcx-airdrop"
 version = "0.1.0"
 authors = ["frostornge <frostornge@gmail.com>"]
 edition = "2021"
@@ -25,7 +25,7 @@ hex = "0.4.3"
 thiserror = { version = "1.0.37" }
 
 osmosis-std = "0.13.1"
-ibc-interface = { path = "../../packages/interface" }
+ibcx-interface = { path = "../../packages/interface" }
 
 [dev-dependencies]
 cw-multi-test = "0.16.1"

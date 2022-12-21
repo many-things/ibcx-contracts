@@ -4,7 +4,7 @@ use cosmwasm_std::{
 };
 use cosmwasm_std::{Deps, DepsMut, Response, SubMsg};
 use cw_storage_plus::Bound;
-use ibc_interface::{
+use ibcx_interface::{
     faucet::{
         Action, ExecuteMsg, GetLastTokenIdResponse, GetRoleResponse, GetTokenResponse,
         InstantiateMsg, ListAliasesResponse, ListRolesResponse, ListTokensResponse, MigrateMsg,

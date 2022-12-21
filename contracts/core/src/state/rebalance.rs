@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Uint128};
 use cw_storage_plus::{Item, Map};
-use ibc_interface::types::SwapRoutes;
+use ibcx_interface::types::SwapRoutes;
 
 use crate::error::ContractError;
 

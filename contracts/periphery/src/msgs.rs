@@ -1,7 +1,7 @@
 use cosmwasm_std::{coin, Addr, BankMsg, Coin, Uint128};
 use cosmwasm_std::{CosmosMsg, QuerierWrapper};
-use ibc_interface::periphery::RouteKey;
-use ibc_interface::{core, types::SwapRoutes};
+use ibcx_interface::periphery::RouteKey;
+use ibcx_interface::{core, types::SwapRoutes};
 
 use crate::error::ContractError;
 

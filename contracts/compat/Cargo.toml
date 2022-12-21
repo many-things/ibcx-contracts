@@ -1,5 +1,5 @@
 [package]
-name = "ibc-compat"
+name = "ibcx-compat"
 version = "0.1.0"
 authors = ["frostornge <frostornge@gmail.com>"]
 edition = "2021"
@@ -24,7 +24,7 @@ thiserror = { version = "1.0.37" }
 
 osmosis-std = "0.13.1"
 osmo-bindings = { git = "https://github.com/osmosis-labs/bindings", rev = "531cf7b" }
-ibc-interface = { path = "../../packages/interface" }
+ibcx-interface = { path = "../../packages/interface" }
 
 [dev-dependencies]
 cw-multi-test = "0.16.1"

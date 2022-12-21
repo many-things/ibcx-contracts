@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Coin};
 use cw_storage_plus::Item;
-use ibc_interface::{periphery::RouteKey, types::SwapRoutes};
+use ibcx_interface::{periphery::RouteKey, types::SwapRoutes};
 
 #[cw_serde]
 pub enum Context {

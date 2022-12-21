@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Storage};
 use cw_storage_plus::{Item, Map};
-use ibc_interface::faucet::Action;
+use ibcx_interface::faucet::Action;
 
 use crate::error::ContractError;
 

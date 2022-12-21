@@ -1,7 +1,7 @@
 use cosmwasm_std::{attr, coin, Env, MessageInfo, SubMsg, Uint128};
 use cosmwasm_std::{DepsMut, Response};
-use ibc_interface::periphery::RouteKey;
-use ibc_interface::{core, helpers::IbcCore, types::SwapRoutes};
+use ibcx_interface::periphery::RouteKey;
+use ibcx_interface::{core, helpers::IbcCore, types::SwapRoutes};
 
 use crate::state::{Context, CONTEXT};
 use crate::REPLY_ID_BURN_EXACT_AMOUNT_IN;
