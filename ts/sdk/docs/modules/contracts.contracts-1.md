@@ -29,7 +29,7 @@
 
 #### Defined in
 
-[contracts/index.ts:18](https://github.com/many-things/ibc-contracts/blob/6e5bbf6/ts/sdk/src/contracts/index.ts#L18)
+[contracts/index.ts:18](https://github.com/many-things/ibc-contracts/blob/ae28c2d/ts/sdk/src/contracts/index.ts#L18)
 
 ___
 
@@ -46,7 +46,7 @@ ___
 
 #### Defined in
 
-[contracts/index.ts:21](https://github.com/many-things/ibc-contracts/blob/6e5bbf6/ts/sdk/src/contracts/index.ts#L21)
+[contracts/index.ts:21](https://github.com/many-things/ibc-contracts/blob/ae28c2d/ts/sdk/src/contracts/index.ts#L21)
 
 ___
 
@@ -58,12 +58,12 @@ ___
 
 | Name | Type |
 | :------ | :------ |
-| `CoreClient` | { `constructor`: (`client`: `SigningCosmWasmClient`, `sender`: `string`, `contractAddress`: `string`) => [`CoreClient`](contracts.contracts-1.md#coreclient) ; `client`: `SigningCosmWasmClient` ; `contractAddress`: `string` ; `sender`: `string` ; `burn`: (`fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\> ; `getConfig`: () => `Promise`<`GetConfigResponse`\> ; `getPauseInfo`: () => `Promise`<`GetPauseInfoResponse`\> ; `getPortfolio`: () => `Promise`<`GetPortfolioResponse`\> ; `gov`: (`fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\> ; `mint`: (`__namedParameters`: { `amount`: `string` ; `receiver?`: `string` ; `refundTo?`: `string`  }, `fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\> ; `rebalance`: (`fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\> ; `simulateBurn`: (`__namedParameters`: { `amount`: `string`  }) => `Promise`<`SimulateBurnResponse`\> ; `simulateMint`: (`__namedParameters`: { `amount`: `string` ; `funds`: `Coin`[]  }) => `Promise`<`SimulateMintResponse`\>  } |
+| `CoreClient` | { `constructor`: (`client`: `SigningCosmWasmClient`, `sender`: `string`, `contractAddress`: `string`) => [`CoreClient`](contracts.contracts-1.md#coreclient) ; `client`: `SigningCosmWasmClient` ; `contractAddress`: `string` ; `sender`: `string` ; `burn`: (`__namedParameters`: { `redeemTo?`: `string`  }, `fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\> ; `getConfig`: () => `Promise`<`GetConfigResponse`\> ; `getPauseInfo`: () => `Promise`<`GetPauseInfoResponse`\> ; `getPortfolio`: () => `Promise`<`GetPortfolioResponse`\> ; `gov`: (`fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\> ; `mint`: (`__namedParameters`: { `amount`: `string` ; `receiver?`: `string` ; `refundTo?`: `string`  }, `fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\> ; `rebalance`: (`fee`: `number` \| `StdFee` \| ``"auto"``, `memo?`: `string`, `funds?`: `Coin`[]) => `Promise`<`ExecuteResult`\> ; `simulateBurn`: (`__namedParameters`: { `amount`: `string`  }) => `Promise`<`SimulateBurnResponse`\> ; `simulateMint`: (`__namedParameters`: { `amount`: `string` ; `funds`: `Coin`[]  }) => `Promise`<`SimulateMintResponse`\>  } |
 | `CoreQueryClient` | { `constructor`: (`client`: `CosmWasmClient`, `contractAddress`: `string`) => [`CoreQueryClient`](contracts.contracts-1.md#corequeryclient) ; `client`: `CosmWasmClient` ; `contractAddress`: `string` ; `getConfig`: () => `Promise`<`GetConfigResponse`\> ; `getPauseInfo`: () => `Promise`<`GetPauseInfoResponse`\> ; `getPortfolio`: () => `Promise`<`GetPortfolioResponse`\> ; `simulateBurn`: (`__namedParameters`: { `amount`: `string`  }) => `Promise`<`SimulateBurnResponse`\> ; `simulateMint`: (`__namedParameters`: { `amount`: `string` ; `funds`: `Coin`[]  }) => `Promise`<`SimulateMintResponse`\>  } |
 
 #### Defined in
 
-[contracts/index.ts:24](https://github.com/many-things/ibc-contracts/blob/6e5bbf6/ts/sdk/src/contracts/index.ts#L24)
+[contracts/index.ts:24](https://github.com/many-things/ibc-contracts/blob/ae28c2d/ts/sdk/src/contracts/index.ts#L24)
 
 ___
 
@@ -80,7 +80,7 @@ ___
 
 #### Defined in
 
-[contracts/index.ts:27](https://github.com/many-things/ibc-contracts/blob/6e5bbf6/ts/sdk/src/contracts/index.ts#L27)
+[contracts/index.ts:27](https://github.com/many-things/ibc-contracts/blob/ae28c2d/ts/sdk/src/contracts/index.ts#L27)
 
 ___
 
@@ -96,4 +96,4 @@ ___
 
 #### Defined in
 
-[contracts/index.ts:30](https://github.com/many-things/ibc-contracts/blob/6e5bbf6/ts/sdk/src/contracts/index.ts#L30)
+[contracts/index.ts:30](https://github.com/many-things/ibc-contracts/blob/ae28c2d/ts/sdk/src/contracts/index.ts#L30)

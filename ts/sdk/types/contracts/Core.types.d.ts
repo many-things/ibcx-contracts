@@ -24,7 +24,9 @@ export type ExecuteMsg = {
         refund_to?: string | null;
     };
 } | {
-    burn: {};
+    burn: {
+        redeem_to?: string | null;
+    };
 } | {
     gov: GovMsg;
 } | {

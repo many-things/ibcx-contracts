@@ -1,5 +1,5 @@
 /*!
- * @many-things/ibcx-contracts-sdk v0.0.7
+ * @many-things/ibcx-contracts-sdk v0.0.8
  * (c) frostornge <frostornge@gmail.com>
  * Released under the MIT OR Apache-2.0 License.
  */
@@ -460,15 +460,18 @@
                     });
                 });
             };
-            _this.burn = function (fee, memo, funds) {
+            _this.burn = function (_a, fee, memo, funds) {
+                var redeemTo = _a.redeemTo;
                 if (fee === void 0) { fee = "auto"; }
                 return __awaiter(_this, void 0, void 0, function () {
-                    return __generator(this, function (_a) {
-                        switch (_a.label) {
+                    return __generator(this, function (_b) {
+                        switch (_b.label) {
                             case 0: return [4 /*yield*/, this.client.execute(this.sender, this.contractAddress, {
-                                    burn: {}
+                                    burn: {
+                                        redeem_to: redeemTo
+                                    }
                                 }, fee, memo, funds)];
-                            case 1: return [2 /*return*/, _a.sent()];
+                            case 1: return [2 /*return*/, _b.sent()];
                         }
                     });
                 });

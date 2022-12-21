@@ -92,7 +92,11 @@ export interface CoreInterface extends CoreReadOnlyInterface {
     receiver?: string;
     refundTo?: string;
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
-  burn: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  burn: ({
+    redeemTo
+  }: {
+    redeemTo?: string;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
   gov: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
   rebalance: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
@@ -129,9 +133,15 @@ export class CoreClient extends CoreQueryClient implements CoreInterface {
       }
     }, fee, memo, funds);
   };
-  burn = async (fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+  burn = async ({
+    redeemTo
+  }: {
+    redeemTo?: string;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
-      burn: {}
+      burn: {
+        redeem_to: redeemTo
+      }
     }, fee, memo, funds);
   };
   gov = async (fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
