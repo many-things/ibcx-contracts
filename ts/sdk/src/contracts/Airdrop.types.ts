@@ -7,6 +7,7 @@
 export interface InstantiateMsg {}
 export type ExecuteMsg = {
   regsiter: {
+    bearer?: boolean | null;
     denom: string;
     label?: string | null;
     merkle_root: string;
@@ -19,6 +20,7 @@ export type ExecuteMsg = {
   claim: {
     amount: Uint128;
     beneficiary?: string | null;
+    claim_proof?: string | null;
     id: AirdropId;
     merkle_proof: string[];
   };
@@ -56,7 +58,8 @@ export type QueryMsg = {
 } | {
   check_qualification: {
     amount: Uint128;
-    beneficiary: string;
+    beneficiary?: string | null;
+    claim_proof?: string | null;
     id: AirdropId;
     merkle_proof: string[];
   };
@@ -70,6 +73,7 @@ export type AirdropIdOptional = {
 export interface MigrateMsg {}
 export type CheckQualificationResponse = boolean;
 export interface GetAirdropResponse {
+  bearer: boolean;
   denom: string;
   id: number;
   label?: string | null;

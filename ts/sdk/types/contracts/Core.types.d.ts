@@ -14,6 +14,7 @@ export interface InstantiateMsg {
 }
 export interface Fee {
     burn?: Decimal | null;
+    collector: string;
     mint?: Decimal | null;
     stream?: Decimal | null;
 }
@@ -113,9 +114,16 @@ export type Addr = string;
 export interface GetConfigResponse {
     compat: Addr;
     denom: string;
-    fee_strategy: Fee;
+    fee_strategy: FeeResponse;
     gov: Addr;
     reserve_denom: string;
+}
+export interface FeeResponse {
+    burn?: Decimal | null;
+    collector: Addr;
+    mint?: Decimal | null;
+    stream?: Decimal | null;
+    stream_last_collected_at: number;
 }
 export interface GetPauseInfoResponse {
     expires_at?: number | null;

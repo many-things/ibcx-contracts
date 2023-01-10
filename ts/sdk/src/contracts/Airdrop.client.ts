@@ -45,11 +45,13 @@ export interface AirdropReadOnlyInterface {
   checkQualification: ({
     amount,
     beneficiary,
+    claimProof,
     id,
     merkleProof
   }: {
     amount: Uint128;
-    beneficiary: string;
+    beneficiary?: string;
+    claimProof?: string;
     id: AirdropId;
     merkleProof: string[];
   }) => Promise<CheckQualificationResponse>;
@@ -139,11 +141,13 @@ export class AirdropQueryClient implements AirdropReadOnlyInterface {
   checkQualification = async ({
     amount,
     beneficiary,
+    claimProof,
     id,
     merkleProof
   }: {
     amount: Uint128;
-    beneficiary: string;
+    beneficiary?: string;
+    claimProof?: string;
     id: AirdropId;
     merkleProof: string[];
   }): Promise<CheckQualificationResponse> => {
@@ -151,6 +155,7 @@ export class AirdropQueryClient implements AirdropReadOnlyInterface {
       check_qualification: {
         amount,
         beneficiary,
+        claim_proof: claimProof,
         id,
         merkle_proof: merkleProof
       }
@@ -161,10 +166,12 @@ export interface AirdropInterface extends AirdropReadOnlyInterface {
   contractAddress: string;
   sender: string;
   regsiter: ({
+    bearer,
     denom,
     label,
     merkleRoot
   }: {
+    bearer?: boolean;
     denom: string;
     label?: string;
     merkleRoot: string;
@@ -177,11 +184,13 @@ export interface AirdropInterface extends AirdropReadOnlyInterface {
   claim: ({
     amount,
     beneficiary,
+    claimProof,
     id,
     merkleProof
   }: {
     amount: Uint128;
     beneficiary?: string;
+    claimProof?: string;
     id: AirdropId;
     merkleProof: string[];
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
@@ -202,16 +211,19 @@ export class AirdropClient extends AirdropQueryClient implements AirdropInterfac
   }
 
   regsiter = async ({
+    bearer,
     denom,
     label,
     merkleRoot
   }: {
+    bearer?: boolean;
     denom: string;
     label?: string;
     merkleRoot: string;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       regsiter: {
+        bearer,
         denom,
         label,
         merkle_root: merkleRoot
@@ -232,11 +244,13 @@ export class AirdropClient extends AirdropQueryClient implements AirdropInterfac
   claim = async ({
     amount,
     beneficiary,
+    claimProof,
     id,
     merkleProof
   }: {
     amount: Uint128;
     beneficiary?: string;
+    claimProof?: string;
     id: AirdropId;
     merkleProof: string[];
   }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
@@ -244,6 +258,7 @@ export class AirdropClient extends AirdropQueryClient implements AirdropInterfac
       claim: {
         amount,
         beneficiary,
+        claim_proof: claimProof,
         id,
         merkle_proof: merkleProof
       }

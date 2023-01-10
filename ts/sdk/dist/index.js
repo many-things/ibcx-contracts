@@ -168,13 +168,14 @@ var AirdropQueryClient = /** @class */ (function () {
             });
         };
         this.checkQualification = function (_a) {
-            var amount = _a.amount, beneficiary = _a.beneficiary, id = _a.id, merkleProof = _a.merkleProof;
+            var amount = _a.amount, beneficiary = _a.beneficiary, claimProof = _a.claimProof, id = _a.id, merkleProof = _a.merkleProof;
             return __awaiter(_this, void 0, void 0, function () {
                 return __generator(this, function (_b) {
                     return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
                             check_qualification: {
                                 amount: amount,
                                 beneficiary: beneficiary,
+                                claim_proof: claimProof,
                                 id: id,
                                 merkle_proof: merkleProof
                             }
@@ -198,13 +199,14 @@ var AirdropClient = /** @class */ (function (_super) {
     function AirdropClient(client, sender, contractAddress) {
         var _this = _super.call(this, client, contractAddress) || this;
         _this.regsiter = function (_a, fee, memo, funds) {
-            var denom = _a.denom, label = _a.label, merkleRoot = _a.merkleRoot;
+            var bearer = _a.bearer, denom = _a.denom, label = _a.label, merkleRoot = _a.merkleRoot;
             if (fee === void 0) { fee = "auto"; }
             return __awaiter(_this, void 0, void 0, function () {
                 return __generator(this, function (_b) {
                     switch (_b.label) {
                         case 0: return [4 /*yield*/, this.client.execute(this.sender, this.contractAddress, {
                                 regsiter: {
+                                    bearer: bearer,
                                     denom: denom,
                                     label: label,
                                     merkle_root: merkleRoot
@@ -232,7 +234,7 @@ var AirdropClient = /** @class */ (function (_super) {
             });
         };
         _this.claim = function (_a, fee, memo, funds) {
-            var amount = _a.amount, beneficiary = _a.beneficiary, id = _a.id, merkleProof = _a.merkleProof;
+            var amount = _a.amount, beneficiary = _a.beneficiary, claimProof = _a.claimProof, id = _a.id, merkleProof = _a.merkleProof;
             if (fee === void 0) { fee = "auto"; }
             return __awaiter(_this, void 0, void 0, function () {
                 return __generator(this, function (_b) {
@@ -241,6 +243,7 @@ var AirdropClient = /** @class */ (function (_super) {
                                 claim: {
                                     amount: amount,
                                     beneficiary: beneficiary,
+                                    claim_proof: claimProof,
                                     id: id,
                                     merkle_proof: merkleProof
                                 }
