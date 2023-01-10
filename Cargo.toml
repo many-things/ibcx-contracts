@@ -1,8 +1,5 @@
 [workspace]
-members = [
-    "contracts/*",
-    "packages/*"
-]
+members = ["contracts/*", "packages/*"]
 
 [profile.release.package.ibcx-airdrop]
 codegen-units = 1
