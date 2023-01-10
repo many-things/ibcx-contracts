@@ -24,6 +24,7 @@ pub enum ExecuteMsg {
         merkle_root: String,
         denom: String,
         label: Option<String>,
+        bearer: Option<bool>,
     },
 
     Fund {
@@ -34,6 +35,7 @@ pub enum ExecuteMsg {
         id: AirdropId,
         amount: Uint128,
         beneficiary: Option<String>,
+        claim_proof: Option<String>,
         merkle_proof: Vec<String>,
     },
 }
@@ -69,7 +71,8 @@ pub enum QueryMsg {
     CheckQualification {
         id: AirdropId,
         amount: Uint128,
-        beneficiary: String,
+        beneficiary: Option<String>,
+        claim_proof: Option<String>,
         merkle_proof: Vec<String>,
     },
 }
@@ -81,6 +84,7 @@ pub struct GetAirdropResponse {
     pub denom: String,
     pub total_amount: Uint128,
     pub total_claimed: Uint128,
+    pub bearer: bool,
 }
 
 #[cw_serde]

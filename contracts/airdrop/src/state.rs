@@ -8,6 +8,7 @@ pub struct Airdrop {
     pub denom: String,
     pub total_amount: Uint128,
     pub total_claimed: Uint128,
+    pub bearer: bool,
 }
 
 pub const LATEST_AIRDROP_KEY: &str = "latest_airdrop";

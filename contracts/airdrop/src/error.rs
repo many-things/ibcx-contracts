@@ -30,9 +30,12 @@ pub enum ContractError {
     #[error("Already claimed. id:{airdrop_id:?}, claimer:{claimer:?}")]
     AlreadyClaimed { airdrop_id: u64, claimer: Addr },
 
-    #[error("WrongLength")]
+    #[error("Wrong length")]
     WrongLength {},
 
-    #[error("InvalidProof")]
+    #[error("Invalid proof")]
     InvalidProof {},
+
+    #[error("Invalid arguments. arg:{arg:?}, reason:{reason:?}")]
+    InvalidArguments { arg: String, reason: String },
 }
