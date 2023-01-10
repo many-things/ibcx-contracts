@@ -8,7 +8,7 @@ cd osmosis
 
 echo "y\n" | HOME=$HOME make localnet-init
 
-[ -z $BACKGROUND] && \
+[ -z $BACKGROUND ] && \
     HOME=$HOME make localnet-start || \
     HOME=$HOME make localnet-startd
 
