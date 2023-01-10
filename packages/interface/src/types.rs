@@ -1,11 +1,13 @@
+use std::str::FromStr;
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{coin, Addr, Coin, Order, StdResult, Uint128};
 use cosmwasm_std::{CosmosMsg, QuerierWrapper};
 use osmosis_std::types::osmosis::gamm::v1beta1::{
-    MsgSwapExactAmountIn, MsgSwapExactAmountOut, SwapAmountInRoute, SwapAmountOutRoute,
+    MsgSwapExactAmountIn, MsgSwapExactAmountOut, QuerySwapExactAmountInRequest,
+    QuerySwapExactAmountInResponse, QuerySwapExactAmountOutRequest,
+    QuerySwapExactAmountOutResponse, SwapAmountInRoute, SwapAmountOutRoute,
 };
-
-use crate::compat;
 
 #[cw_serde]
 pub struct SwapRoute {
@@ -44,39 +46,39 @@ impl SwapRoutes {
     pub fn sim_swap_exact_in(
         &self,
         querier: &QuerierWrapper,
-        compat: &Addr,
         sender: &Addr,
         token_in: Coin,
     ) -> StdResult<Uint128> {
-        querier
-            .query_wasm_smart::<compat::AmountResponse>(
-                compat,
-                &compat::QueryMsg::EstimateSwapExactAmountIn {
-                    sender: sender.to_string(),
-                    amount: token_in,
-                    routes: self.clone(),
-                    mode: None,
-                },
-            )
-            .map(|v| v.0)
+        let resp: QuerySwapExactAmountInResponse = querier.query(
+            &QuerySwapExactAmountInRequest {
+                sender: sender.to_string(),
+                pool_id: self.0.first().unwrap().pool_id,
+                token_in: token_in.to_string(),
+                routes: self.clone().into(),
+            }
+            .into(),
+        )?;
+
+        Uint128::from_str(&resp.token_out_amount)
     }
 
     pub fn sim_swap_exact_out(
         &self,
         querier: &QuerierWrapper,
-        compat: &Addr,
         sender: &Addr,
         token_out: Coin,
     ) -> StdResult<Uint128> {
-        querier.query_wasm_smart(
-            compat,
-            &compat::QueryMsg::EstimateSwapExactAmountOut {
+        let resp: QuerySwapExactAmountOutResponse = querier.query(
+            &QuerySwapExactAmountOutRequest {
                 sender: sender.to_string(),
-                amount: token_out,
-                routes: self.clone(),
-                mode: None,
-            },
-        )
+                pool_id: self.0.first().unwrap().pool_id,
+                routes: self.clone().into(),
+                token_out: token_out.to_string(),
+            }
+            .into(),
+        )?;
+
+        Uint128::from_str(&resp.token_in_amount)
     }
 
     pub fn msg_swap_exact_in(

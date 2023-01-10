@@ -1,13 +1,12 @@
 use cosmwasm_std::{coin, Addr, BankMsg, Coin, Uint128};
 use cosmwasm_std::{CosmosMsg, QuerierWrapper};
 use ibcx_interface::periphery::RouteKey;
-use ibcx_interface::{core, types::SwapRoutes};
+use ibcx_interface::types::SwapRoutes;
 
 use crate::error::ContractError;
 
 pub fn make_mint_swap_exact_out_msgs(
     querier: &QuerierWrapper,
-    compat: &Addr,
     contract: &Addr,
     sender: &Addr,
     swap_info: Vec<(RouteKey, SwapRoutes)>,
@@ -38,7 +37,7 @@ pub fn make_mint_swap_exact_out_msgs(
             .clone();
 
         let simulated_token_in = swap_info
-            .sim_swap_exact_out(querier, compat, contract, coin(want.u128(), &denom))
+            .sim_swap_exact_out(querier, contract, coin(want.u128(), &denom))
             .map_err(|e| ContractError::SimulateQueryError {
                 err: e.to_string(),
                 input: max_input.denom.clone(),
@@ -70,7 +69,6 @@ pub fn make_mint_swap_exact_out_msgs(
 
 pub fn make_burn_swap_msgs(
     querier: &QuerierWrapper,
-    config: &core::GetConfigResponse,
     contract: &Addr,
     sender: &Addr,
     swap_info: Vec<(RouteKey, SwapRoutes)>,
@@ -100,12 +98,7 @@ pub fn make_burn_swap_msgs(
             })?;
 
         let simulated_token_out = swap_info
-            .sim_swap_exact_in(
-                querier,
-                &config.compat,
-                contract,
-                coin(expected.u128(), &denom),
-            )
+            .sim_swap_exact_in(querier, contract, coin(expected.u128(), &denom))
             .map_err(|e| ContractError::SimulateQueryError {
                 err: e.to_string(),
                 input: min_output.denom.clone(),

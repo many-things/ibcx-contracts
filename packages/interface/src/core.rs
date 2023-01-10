@@ -14,7 +14,6 @@ pub struct Fee {
 #[cw_serde]
 pub struct InstantiateMsg {
     pub gov: String,
-    pub compat: String,
     pub denom: String,
     pub reserve_denom: String,
     pub initial_assets: Vec<(String, Decimal)>,
@@ -30,7 +29,6 @@ pub enum GovMsg {
     Release {},
 
     UpdateGov(String),
-    UpdateCompat(String),
     UpdateFeeStrategy(Fee),
     UpdateReserveDenom(String),
     UpdateTradeInfo {
@@ -117,7 +115,6 @@ pub struct FeeResponse {
 #[cw_serde]
 pub struct GetConfigResponse {
     pub gov: Addr,
-    pub compat: Addr,
     pub denom: String,
     pub reserve_denom: String,
     pub fee_strategy: FeeResponse,

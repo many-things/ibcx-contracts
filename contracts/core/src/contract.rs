@@ -4,7 +4,7 @@ use cosmwasm_std::{Env, MessageInfo, QueryResponse, Uint128};
 use ibcx_interface::core::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgCreateDenom, MsgCreateDenomResponse};
 
-use crate::state::{set_assets, Fee, Token, COMPAT, FEE, GOV, TOKEN};
+use crate::state::{set_assets, Fee, Token, FEE, GOV, TOKEN};
 use crate::REPLY_ID_DENOM_CREATION;
 use crate::{error::ContractError, state::PAUSED, CONTRACT_NAME, CONTRACT_VERSION};
 
@@ -27,7 +27,6 @@ pub fn instantiate(
     )?;
 
     GOV.save(deps.storage, &deps.api.addr_validate(&msg.gov)?)?;
-    COMPAT.save(deps.storage, &deps.api.addr_validate(&msg.compat)?)?;
     FEE.save(
         deps.storage,
         &Fee {

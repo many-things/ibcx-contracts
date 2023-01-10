@@ -31,7 +31,6 @@ pub fn mint_exact_amount_out(
 
     let (swap_msgs, _) = make_mint_swap_exact_out_msgs(
         &deps.querier,
-        &core_config.compat,
         &env.contract.address,
         &info.sender,
         swap_info,

@@ -6,7 +6,7 @@ use ibcx_interface::{core::GovMsg, types::SwapRoutes};
 use crate::state::FEE;
 use crate::{
     error::ContractError,
-    state::{TradeInfo, ASSETS, COMPAT, GOV, PAUSED, RESERVE_DENOM, TOKEN, TRADE_INFOS},
+    state::{TradeInfo, ASSETS, GOV, PAUSED, RESERVE_DENOM, TOKEN, TRADE_INFOS},
 };
 
 pub fn handle_msg(
@@ -26,7 +26,6 @@ pub fn handle_msg(
         Release {} => release(deps, env, info),
 
         UpdateGov(new_gov) => update_gov(deps, info, new_gov),
-        UpdateCompat(new_compat) => update_compat(deps, info, new_compat),
         UpdateFeeStrategy(new_fee) => update_fee(deps, info, new_fee),
         UpdateReserveDenom(new_denom) => update_reserve_denom(deps, info, new_denom),
         UpdateTradeInfo {
@@ -95,22 +94,6 @@ fn update_gov(
         attr("method", "gov::update_gov"),
         attr("executor", info.sender),
         attr("new_gov", new_gov),
-    ]);
-
-    Ok(resp)
-}
-
-fn update_compat(
-    deps: DepsMut,
-    info: MessageInfo,
-    new_compat: String,
-) -> Result<Response, ContractError> {
-    COMPAT.save(deps.storage, &deps.api.addr_validate(&new_compat)?)?;
-
-    let resp = Response::new().add_attributes(vec![
-        attr("method", "gov::update_compat"),
-        attr("executor", info.sender),
-        attr("new_compat", new_compat),
     ]);
 
     Ok(resp)

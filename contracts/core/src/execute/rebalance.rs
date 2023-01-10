@@ -5,8 +5,8 @@ use ibcx_interface::core::{RebalanceMsg, RebalanceTradeMsg};
 use crate::{
     error::ContractError,
     state::{
-        get_assets, Rebalance, ASSETS, COMPAT, GOV, LATEST_REBALANCE_ID, REBALANCES,
-        RESERVE_BUFFER, RESERVE_DENOM, TOKEN, TRADE_INFOS,
+        get_assets, Rebalance, ASSETS, GOV, LATEST_REBALANCE_ID, REBALANCES, RESERVE_BUFFER,
+        RESERVE_DENOM, TOKEN, TRADE_INFOS,
     },
 };
 
@@ -199,10 +199,8 @@ fn deflate(
     }
 
     // simulate
-    let compat = COMPAT.load(deps.storage)?;
     let amount_in = trade_info.routes.sim_swap_exact_out(
         &deps.querier,
-        &compat,
         &env.contract.address,
         coin(amount.u128(), &denom),
     )?;
@@ -292,10 +290,8 @@ fn inflate(
     }
 
     // simulate
-    let compat = COMPAT.load(deps.storage)?;
     let amount_out = trade_info.routes.sim_swap_exact_in(
         &deps.querier,
-        &compat,
         &env.contract.address,
         coin(amount.u128(), &denom),
     )?;

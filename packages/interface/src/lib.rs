@@ -1,7 +1,6 @@
 pub mod helpers;
 
 pub mod airdrop;
-pub mod compat;
 pub mod core;
 pub mod faucet;
 pub mod periphery;

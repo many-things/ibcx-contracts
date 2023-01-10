@@ -81,20 +81,14 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, Contract
 
             match context {
                 Context::Burn {
-                    core,
                     sender,
                     min_output,
                     redeem_amounts,
                     swap_info,
                     ..
                 } => {
-                    // query to core contract
-                    let core = IbcCore(core);
-                    let core_config = core.get_config(&deps.querier)?;
-
                     let (swap_msgs, refunds) = make_burn_swap_msgs(
                         &deps.querier,
-                        &core_config,
                         &env.contract.address,
                         &sender,
                         swap_info,
@@ -141,7 +135,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
 
             let (_, refund) = make_mint_swap_exact_out_msgs(
                 &deps.querier,
-                &core_config.compat,
                 &env.contract.address,
                 &env.contract.address,
                 swap_info,
@@ -166,7 +159,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
         } => {
             // query to core contract
             let core = IbcCore(deps.api.addr_validate(&core_addr)?);
-            let core_config = core.get_config(&deps.querier)?;
 
             // input & output
             let min_output = coin(min_output_amount.u128(), &output_asset);
@@ -176,7 +168,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
 
             let (_, receive) = make_burn_swap_msgs(
                 &deps.querier,
-                &core_config,
                 &env.contract.address,
                 &env.contract.address,
                 swap_info,

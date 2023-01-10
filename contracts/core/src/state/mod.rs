@@ -17,9 +17,6 @@ pub const RESERVE_DENOM: &str = "reserve";
 pub const GOV_KEY: &str = "gov";
 pub const GOV: Item<Addr> = Item::new(GOV_KEY);
 
-pub const COMPAT_KEY: &str = "compat";
-pub const COMPAT: Item<Addr> = Item::new(COMPAT_KEY);
-
 pub const FEE_KEY: &str = "fee";
 pub const FEE: Item<Fee> = Item::new(FEE_KEY);
 
