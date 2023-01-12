@@ -1,0 +1,169 @@
+{
+  "airdropId": "0",
+  "proofs": [
+    {
+      "address": "osmo1cyyzpxplxdzkeea7kwsydadg87357qnahakaks",
+      "amount": "83576099",
+      "merkleRoot": "87696533e495ec288f64fbcfb5508f14ed33c07c076fe2cd9074456484fe9e5e",
+      "merkleProof": [
+        "09f8bc855765284a72a8635a45bd9f44883b7e9a1f6d801d412c41d8a285b1c0",
+        "7af343b691d61831c7532dccbf7fa476ce3a8269c5c93c834e7404976448869b",
+        "695956534ac375d1039af6583f60120d6d7cdd95c5ea7bd2953b80bb454c336b",
+        "28e923bb17fe7fb93b1bbfe7c1e75927ed39f20d978d62ece0f575e45e66d862"
+      ]
+    },
+    {
+      "address": "osmo14gs9zqh8m49yy9kscjqu9h72exyf295afg6kgk",
+      "amount": "14430018",
+      "merkleRoot": "87696533e495ec288f64fbcfb5508f14ed33c07c076fe2cd9074456484fe9e5e",
+      "merkleProof": [
+        "491299464da9d6421bb8249e344467314b47fd16efb4557c485f697163eaefd4",
+        "0dba2f2d7ac08e4123d0532a5a863950eff5313db27405f6d1d96e51a5539e64",
+        "8f9ec17796dbd1ff88697d073f6181e2f1ca620d054fd2d47350563ef43fc746",
+        "28e923bb17fe7fb93b1bbfe7c1e75927ed39f20d978d62ece0f575e45e66d862"
+      ]
+    },
+    {
+      "address": "osmo18s5lynnmx37hq4wlrw9gdn68sg2uxp5rgk26vv",
+      "amount": "53405648",
+      "merkleRoot": "87696533e495ec288f64fbcfb5508f14ed33c07c076fe2cd9074456484fe9e5e",
+      "merkleProof": [
+        "9797ff0f2550d322d8c6e72c910cb408c5f462e3eebb1cae0b7e57db5042818c",
+        "f6e12f4074e5ac4f6bef2d2b726be703129705ce8fc9ee46c6acf7686148786d",
+        "8f9ec17796dbd1ff88697d073f6181e2f1ca620d054fd2d47350563ef43fc746",
+        "28e923bb17fe7fb93b1bbfe7c1e75927ed39f20d978d62ece0f575e45e66d862"
+      ]
+    },
+    {
+      "address": "osmo1qwexv7c6sm95lwhzn9027vyu2ccneaqad4w8ka",
+      "amount": "37533340",
+      "merkleRoot": "87696533e495ec288f64fbcfb5508f14ed33c07c076fe2cd9074456484fe9e5e",
+      "merkleProof": [
+        "a19ff4c3c8ba3122bfd30bd3ae275dbbc3576118537c3823e0fbbdc29376b273",
+        "a869545b9b418fdb973c0b83903ee99e1b27dc2dce75d7e10d263787ee3c97c1",
+        "d31db3d17297d25ec12e293c46dc54c3069df14e883ec24f13666123c1499cf3",
+        "de5c3d495e15d29a7b8cf3b8fe8a8bc7602fa1e3122debaf1bd01314d81b1dea"
+      ]
+    },
+    {
+      "address": "osmo14hcxlnwlqtq75ttaxf674vk6mafspg8xwgnn53",
+      "amount": "43384809",
+      "merkleRoot": "87696533e495ec288f64fbcfb5508f14ed33c07c076fe2cd9074456484fe9e5e",
+      "merkleProof": [
+        "dc3e54a26664959df1a5da36fbd588b8ae6d2fde0ffa702779c5e2a77de9e24c",
+        "f214c46e12d58b532bf2ae8dfca95ac1a4c7336af8c44516e623fa2bbb23db6c",
+        "e3a3cf4d86e87086372e55c1d25882d20f99e0a6ac1cb87eaa286206b74b953c",
+        "de5c3d495e15d29a7b8cf3b8fe8a8bc7602fa1e3122debaf1bd01314d81b1dea"
+      ]
+    },
+    {
+      "address": "osmo12rr534cer5c0vj53eq4y32lcwguyy7nndt0u2t",
+      "amount": "81985770",
+      "merkleRoot": "87696533e495ec288f64fbcfb5508f14ed33c07c076fe2cd9074456484fe9e5e",
+      "merkleProof": [
+        "0f4d4ff9587b85aef9ae13e360472d796bb1f5d10a05ce45771fa36a0e394b39",
+        "9390fbba68357eb0e40f9d1e2adfec1fb534215198e09bd6fa87bf63c456fed2",
+        "695956534ac375d1039af6583f60120d6d7cdd95c5ea7bd2953b80bb454c336b",
+        "28e923bb17fe7fb93b1bbfe7c1e75927ed39f20d978d62ece0f575e45e66d862"
+      ]
+    },
+    {
+      "address": "osmo1nt33cjd5auzh36syym6azgc8tve0jlvklnq7jq",
+      "amount": "88932149",
+      "merkleRoot": "87696533e495ec288f64fbcfb5508f14ed33c07c076fe2cd9074456484fe9e5e",
+      "merkleProof": [
+        "a12dcc7560924da62f68311a32abd5b8f02cdaccdebe4718eb0dc9c4cdf94c02",
+        "626e575db80f35131fd4e1acaf879c424f381866b40957c9f0a025c79e226795",
+        "d31db3d17297d25ec12e293c46dc54c3069df14e883ec24f13666123c1499cf3",
+        "de5c3d495e15d29a7b8cf3b8fe8a8bc7602fa1e3122debaf1bd01314d81b1dea"
+      ]
+    },
+    {
+      "address": "osmo10qfrpash5g2vk3hppvu45x0g860czur8ff5yx0",
+      "amount": "58615478",
+      "merkleRoot": "87696533e495ec288f64fbcfb5508f14ed33c07c076fe2cd9074456484fe9e5e",
+      "merkleProof": [
+        "ed7f3949050b088d77a4560ec0a88760edd8e5d6033ea1910de7797c49d1d70f",
+        "f214c46e12d58b532bf2ae8dfca95ac1a4c7336af8c44516e623fa2bbb23db6c",
+        "e3a3cf4d86e87086372e55c1d25882d20f99e0a6ac1cb87eaa286206b74b953c",
+        "de5c3d495e15d29a7b8cf3b8fe8a8bc7602fa1e3122debaf1bd01314d81b1dea"
+      ]
+    },
+    {
+      "address": "osmo1f4tvsdukfwh6s9swrc24gkuz23tp8pd3e9r5fa",
+      "amount": "58741783",
+      "merkleRoot": "87696533e495ec288f64fbcfb5508f14ed33c07c076fe2cd9074456484fe9e5e",
+      "merkleProof": [
+        "11359afdc4f668aeea267a1f1c34a1772969c5a22886738ad6fdb26991a5108d",
+        "9390fbba68357eb0e40f9d1e2adfec1fb534215198e09bd6fa87bf63c456fed2",
+        "695956534ac375d1039af6583f60120d6d7cdd95c5ea7bd2953b80bb454c336b",
+        "28e923bb17fe7fb93b1bbfe7c1e75927ed39f20d978d62ece0f575e45e66d862"
+      ]
+    },
+    {
+      "address": "osmo1myv43sqgnj5sm4zl98ftl45af9cfzk7nhjxjqh",
+      "amount": "10228206",
+      "merkleRoot": "87696533e495ec288f64fbcfb5508f14ed33c07c076fe2cd9074456484fe9e5e",
+      "merkleProof": [
+        "747f27c3901c96d6c3c1dfb90aed408a78c26d72cb2b0263a79d897a1582b787",
+        "f6e12f4074e5ac4f6bef2d2b726be703129705ce8fc9ee46c6acf7686148786d",
+        "8f9ec17796dbd1ff88697d073f6181e2f1ca620d054fd2d47350563ef43fc746",
+        "28e923bb17fe7fb93b1bbfe7c1e75927ed39f20d978d62ece0f575e45e66d862"
+      ]
+    },
+    {
+      "address": "osmo1jllfytsz4dryxhz5tl7u73v29exsf80vz52ucc",
+      "amount": "52109504",
+      "merkleRoot": "87696533e495ec288f64fbcfb5508f14ed33c07c076fe2cd9074456484fe9e5e",
+      "merkleProof": [
+        "a03560284145c16c07de8a9116c2f5cf7d51cd84928b4ec9e1271fecee7259a4",
+        "626e575db80f35131fd4e1acaf879c424f381866b40957c9f0a025c79e226795",
+        "d31db3d17297d25ec12e293c46dc54c3069df14e883ec24f13666123c1499cf3",
+        "de5c3d495e15d29a7b8cf3b8fe8a8bc7602fa1e3122debaf1bd01314d81b1dea"
+      ]
+    },
+    {
+      "address": "osmo14lr70k43wdry3fxl5ykkh630jhas2nsp8re0e4",
+      "amount": "35873005",
+      "merkleRoot": "87696533e495ec288f64fbcfb5508f14ed33c07c076fe2cd9074456484fe9e5e",
+      "merkleProof": [
+        "4b23d3098b2c0fb86220ae4e68a724d29b1ebaf2302c089906ed05061497d920",
+        "0dba2f2d7ac08e4123d0532a5a863950eff5313db27405f6d1d96e51a5539e64",
+        "8f9ec17796dbd1ff88697d073f6181e2f1ca620d054fd2d47350563ef43fc746",
+        "28e923bb17fe7fb93b1bbfe7c1e75927ed39f20d978d62ece0f575e45e66d862"
+      ]
+    },
+    {
+      "address": "osmo10yaagy0faggta0085hkzr3ckq7p7z9996nrn0m",
+      "amount": "43904658",
+      "merkleRoot": "87696533e495ec288f64fbcfb5508f14ed33c07c076fe2cd9074456484fe9e5e",
+      "merkleProof": [
+        "bb416c8705248d135a5c5b1db2d61adf0fcd232b258b57f077fc3e389def4b8d",
+        "a869545b9b418fdb973c0b83903ee99e1b27dc2dce75d7e10d263787ee3c97c1",
+        "d31db3d17297d25ec12e293c46dc54c3069df14e883ec24f13666123c1499cf3",
+        "de5c3d495e15d29a7b8cf3b8fe8a8bc7602fa1e3122debaf1bd01314d81b1dea"
+      ]
+    },
+    {
+      "address": "osmo1phaxpevm5wecex2jyaqty2a4v02qj7qmlmzk5a",
+      "amount": "84794294",
+      "merkleRoot": "87696533e495ec288f64fbcfb5508f14ed33c07c076fe2cd9074456484fe9e5e",
+      "merkleProof": [
+        "02898441407b91279f1fd8de37dd214e970300f1f1040cbb933513dea3b75c15",
+        "7af343b691d61831c7532dccbf7fa476ce3a8269c5c93c834e7404976448869b",
+        "695956534ac375d1039af6583f60120d6d7cdd95c5ea7bd2953b80bb454c336b",
+        "28e923bb17fe7fb93b1bbfe7c1e75927ed39f20d978d62ece0f575e45e66d862"
+      ]
+    },
+    {
+      "address": "osmo12smx2wdlyttvyzvzg54y2vnqwq2qjateuf7thj",
+      "amount": "22816641",
+      "merkleRoot": "87696533e495ec288f64fbcfb5508f14ed33c07c076fe2cd9074456484fe9e5e",
+      "merkleProof": [
+        "d96108fe28f021ec3cf173966f4c42b36b405fbb147b060e0e034fdee78aca0d",
+        "e3a3cf4d86e87086372e55c1d25882d20f99e0a6ac1cb87eaa286206b74b953c",
+        "de5c3d495e15d29a7b8cf3b8fe8a8bc7602fa1e3122debaf1bd01314d81b1dea"
+      ]
+    }
+  ]
+}
