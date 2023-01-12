@@ -1,14 +1,14 @@
 use cosmwasm_std::{
-    attr, coins, entry_point, to_binary, BankMsg, Env, MessageInfo, Order, QueryResponse,
+    attr, coins, entry_point, to_binary, Addr, BankMsg, Env, MessageInfo, Order, QueryResponse,
     StdResult, Uint128,
 };
 use cosmwasm_std::{Deps, DepsMut, Response};
 use cw_storage_plus::Bound;
 use ibcx_interface::{
     airdrop::{
-        AirdropId, AirdropIdOptional, CheckQualificationResponse, ExecuteMsg, GetAirdropResponse,
-        GetClaimResponse, InstantiateMsg, LatestAirdropResponse, ListAirdropsResponse,
-        ListClaimsResponse, MigrateMsg, QueryMsg,
+        AirdropId, AirdropIdOptional, CheckQualificationResponse, ClaimProof, ClaimProofOptional,
+        ExecuteMsg, GetAirdropResponse, GetClaimResponse, InstantiateMsg, LatestAirdropResponse,
+        ListAirdropsResponse, ListClaimsResponse, MigrateMsg, QueryMsg,
     },
     get_and_check_limit,
     types::RangeOrder,
@@ -80,7 +80,7 @@ pub fn execute(
     use ExecuteMsg::*;
 
     match msg {
-        Regsiter {
+        Register {
             merkle_root,
             denom,
             label,
@@ -147,7 +147,6 @@ pub fn execute(
         Claim {
             id,
             amount,
-            beneficiary,
             claim_proof,
             merkle_proof,
         } => {
@@ -156,56 +155,54 @@ pub fn execute(
                 AirdropId::Label(label) => LABELS.load(deps.storage, label)?,
             };
 
-            let verifier = beneficiary
-                .map(|v| deps.api.addr_validate(&v))
-                .transpose()?
-                .unwrap_or_else(|| info.sender.clone());
+            let (claim_proof, beneficiary, bearer_expected) = match claim_proof {
+                ClaimProofOptional::Account(account) => {
+                    let beneficiary = account
+                        .map(|v| deps.api.addr_validate(&v))
+                        .transpose()?
+                        .unwrap_or_else(|| info.sender.clone());
+
+                    (beneficiary.to_string(), beneficiary, false)
+                }
+                ClaimProofOptional::ClaimProof(proof) => (proof, info.sender.clone(), true),
+            };
+
+            // verify merkle proof (from https://github.com/cosmwasm/cw-tokens/blob/master/contracts/cw20-merkle-airdrop/src/contract.rs)
+            let mut airdrop = AIRDROPS.load(deps.storage, airdrop_id)?;
+            if !(airdrop.bearer ^ bearer_expected) {
+                return Err(ContractError::InvalidArguments {
+                    arg: "claim_proof".to_string(),
+                    reason: "unexpected proof type".to_string(),
+                });
+            }
 
             if CLAIM_LOGS
-                .may_load(deps.storage, (airdrop_id, verifier.clone()))?
+                .may_load(deps.storage, (airdrop_id, &claim_proof))?
                 .is_some()
             {
                 return Err(ContractError::AlreadyClaimed {
                     airdrop_id,
-                    claimer: verifier,
+                    claimer: beneficiary,
                 });
             }
 
-            // verify merkle proof (from https://github.com/cosmwasm/cw-tokens/blob/master/contracts/cw20-merkle-airdrop/src/contract.rs)
-            let mut airdrop = AIRDROPS.load(deps.storage, airdrop_id)?;
-            if airdrop.bearer {
-                if let Some(claim_proof) = claim_proof {
-                    verify_merkle_proof(&airdrop.merkle_root, merkle_proof, &claim_proof, amount)?;
-                } else {
-                    return Err(ContractError::InvalidArguments {
-                        arg: "claim_proof".to_string(),
-                        reason: "is empty".to_string(),
-                    });
-                }
-            } else {
-                verify_merkle_proof(
-                    &airdrop.merkle_root,
-                    merkle_proof,
-                    verifier.as_str(),
-                    amount,
-                )?;
-            }
+            verify_merkle_proof(&airdrop.merkle_root, merkle_proof, &claim_proof, amount)?;
 
-            CLAIM_LOGS.save(deps.storage, (airdrop_id, verifier.clone()), &amount)?;
+            CLAIM_LOGS.save(deps.storage, (airdrop_id, &claim_proof), &amount)?;
 
             airdrop.total_claimed = airdrop.total_claimed.checked_add(amount)?;
             AIRDROPS.save(deps.storage, airdrop_id, &airdrop)?;
 
             Ok(Response::new()
                 .add_message(BankMsg::Send {
-                    to_address: verifier.to_string(),
+                    to_address: beneficiary.to_string(),
                     amount: coins(amount.u128(), airdrop.denom),
                 })
                 .add_attributes(vec![
                     attr("action", "claim"),
                     attr("executor", info.sender),
                     attr("airdrop_id", airdrop_id.to_string()),
-                    attr("beneficiary", verifier),
+                    attr("beneficiary", beneficiary),
                     attr("amount", amount),
                 ]))
         }
@@ -298,15 +295,25 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, Cont
         LatestAirdropId {} => Ok(to_binary(&LatestAirdropResponse(
             LATEST_AIRDROP_ID.load(deps.storage)?,
         ))?),
-        GetClaim { id, account } => {
+        GetClaim { id, claim_proof } => {
             let airdrop_id = match id {
                 AirdropId::Id(id) => id,
                 AirdropId::Label(l) => LABELS.load(deps.storage, l)?,
             };
-            let account = deps.api.addr_validate(&account)?;
-            let amount = CLAIM_LOGS.load(deps.storage, (airdrop_id, account.clone()))?;
 
-            Ok(to_binary(&GetClaimResponse { amount, account })?)
+            let claim_proof = match claim_proof {
+                ClaimProof::Account(account) => {
+                    deps.api.addr_validate(&account)?;
+                    StdResult::Ok(account)
+                }
+                ClaimProof::ClaimProof(proof) => Ok(proof),
+            }?;
+            let amount = CLAIM_LOGS.load(deps.storage, (airdrop_id, &claim_proof))?;
+
+            Ok(to_binary(&GetClaimResponse {
+                amount,
+                claim_proof,
+            })?)
         }
         ListClaims {
             id,
@@ -319,9 +326,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, Cont
                 AirdropId::Label(l) => LABELS.load(deps.storage, l)?,
             };
 
-            let start = start_after
-                .map(|v| deps.api.addr_validate(&v))
-                .transpose()?;
+            let start = start_after.as_deref();
             let limit = get_and_check_limit(limit, MAX_LIMIT, DEFAULT_LIMIT)? as usize;
             let order = order.unwrap_or(RangeOrder::Asc).into();
             let (min, max) = match order {
@@ -337,8 +342,8 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, Cont
                     let (k, v) = item?;
 
                     Ok(GetClaimResponse {
-                        account: k,
                         amount: v,
+                        claim_proof: k,
                     })
                 })
                 .collect::<StdResult<_>>()?;
@@ -348,7 +353,6 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, Cont
         CheckQualification {
             id,
             amount,
-            beneficiary,
             claim_proof,
             merkle_proof,
         } => {
@@ -356,27 +360,34 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, Cont
                 AirdropId::Id(id) => id,
                 AirdropId::Label(l) => LABELS.load(deps.storage, l)?,
             };
-            let airdrop = AIRDROPS.load(deps.storage, airdrop_id)?;
-            let checked = if airdrop.bearer {
-                let claim_proof = claim_proof.ok_or(ContractError::InvalidArguments {
-                    arg: "claim_proof".to_string(),
-                    reason: "is_none".to_string(),
-                })?;
 
-                verify_merkle_proof(&airdrop.merkle_root, merkle_proof, &claim_proof, amount)
-                    .is_ok()
-            } else {
-                let beneficiary = beneficiary.ok_or(ContractError::InvalidArguments {
-                    arg: "beneficiary".to_string(),
-                    reason: "is_none".to_string(),
-                })?;
-                deps.api.addr_validate(&beneficiary)?;
-
-                verify_merkle_proof(&airdrop.merkle_root, merkle_proof, &beneficiary, amount)
-                    .is_ok()
+            let (claim_proof, bearer_expected) = match claim_proof {
+                ClaimProof::Account(account) => (account, false),
+                ClaimProof::ClaimProof(proof) => (proof, true),
             };
 
-            Ok(to_binary(&CheckQualificationResponse(checked))?)
+            let airdrop = AIRDROPS.load(deps.storage, airdrop_id)?;
+            if !(airdrop.bearer ^ bearer_expected) {
+                return Err(ContractError::InvalidArguments {
+                    arg: "claim_proof".to_string(),
+                    reason: "unexpected proof type".to_string(),
+                });
+            }
+
+            if CLAIM_LOGS
+                .may_load(deps.storage, (airdrop_id, &claim_proof))?
+                .is_some()
+            {
+                return Err(ContractError::AlreadyClaimed {
+                    airdrop_id,
+                    claimer: Addr::unchecked("<simulation>"),
+                });
+            }
+
+            Ok(to_binary(&CheckQualificationResponse(
+                verify_merkle_proof(&airdrop.merkle_root, merkle_proof, &claim_proof, amount)
+                    .is_ok(),
+            ))?)
         }
     }
 }

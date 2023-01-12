@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::Uint128;
 
 use crate::types::RangeOrder;
 
@@ -19,8 +19,20 @@ pub enum AirdropIdOptional {
 }
 
 #[cw_serde]
+pub enum ClaimProof {
+    Account(String),
+    ClaimProof(String),
+}
+
+#[cw_serde]
+pub enum ClaimProofOptional {
+    Account(Option<String>),
+    ClaimProof(String),
+}
+
+#[cw_serde]
 pub enum ExecuteMsg {
-    Regsiter {
+    Register {
         merkle_root: String,
         denom: String,
         label: Option<String>,
@@ -34,8 +46,7 @@ pub enum ExecuteMsg {
     Claim {
         id: AirdropId,
         amount: Uint128,
-        beneficiary: Option<String>,
-        claim_proof: Option<String>,
+        claim_proof: ClaimProofOptional,
         merkle_proof: Vec<String>,
     },
 }
@@ -57,7 +68,10 @@ pub enum QueryMsg {
     LatestAirdropId {},
 
     #[returns(GetClaimResponse)]
-    GetClaim { id: AirdropId, account: String },
+    GetClaim {
+        id: AirdropId,
+        claim_proof: ClaimProof,
+    },
 
     #[returns(ListClaimsResponse)]
     ListClaims {
@@ -71,8 +85,7 @@ pub enum QueryMsg {
     CheckQualification {
         id: AirdropId,
         amount: Uint128,
-        beneficiary: Option<String>,
-        claim_proof: Option<String>,
+        claim_proof: ClaimProof,
         merkle_proof: Vec<String>,
     },
 }
@@ -96,7 +109,7 @@ pub struct LatestAirdropResponse(pub u64);
 #[cw_serde]
 pub struct GetClaimResponse {
     pub amount: Uint128,
-    pub account: Addr,
+    pub claim_proof: String,
 }
 
 #[cw_serde]
