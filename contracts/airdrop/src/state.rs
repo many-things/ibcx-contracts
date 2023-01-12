@@ -18,7 +18,7 @@ pub const AIRDROPS_PREFIX: &str = "airdrops";
 pub const AIRDROPS: Map<u64, Airdrop> = Map::new(AIRDROPS_PREFIX);
 
 pub const LABELS_PREFIX: &str = "labels";
-pub const LABELS: Map<String, u64> = Map::new(LABELS_PREFIX);
+pub const LABELS: Map<&str, u64> = Map::new(LABELS_PREFIX);
 
 pub const CLAIM_LOGS_PREFIX: &str = "claim_logs";
 pub const CLAIM_LOGS: Map<(u64, &str), Uint128> = Map::new(CLAIM_LOGS_PREFIX);

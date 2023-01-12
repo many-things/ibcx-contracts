@@ -95,15 +95,17 @@ pub fn execute(
             let airdrop_id = LATEST_AIRDROP_ID.load(deps.storage)?;
             LATEST_AIRDROP_ID.save(deps.storage, &(airdrop_id + 1))?;
 
-            if let Some(label) = label {
-                if LABELS.has(deps.storage, label.clone()) {
+            let label = label.map(|v| format!("{}/{}", info.sender, v));
+
+            if let Some(label) = label.clone() {
+                if LABELS.has(deps.storage, &label) {
                     return Err(ContractError::KeyAlreadyExists {
                         typ: "label".to_string(),
                         key: label,
                     });
                 }
 
-                LABELS.save(deps.storage, label, &airdrop_id)?;
+                LABELS.save(deps.storage, &label, &airdrop_id)?;
             }
 
             AIRDROPS.save(
@@ -123,12 +125,14 @@ pub fn execute(
                 attr("executor", info.sender),
                 attr("merkle_root", merkle_root),
                 attr("total_amount", received),
+                attr("label", label.unwrap_or_default()),
+                attr("bearer", bearer.unwrap_or(false).to_string()),
             ]))
         }
         Fund { id } => {
             let airdrop_id = match id {
                 AirdropId::Id(id) => id,
-                AirdropId::Label(label) => LABELS.load(deps.storage, label)?,
+                AirdropId::Label(label) => LABELS.load(deps.storage, &label)?,
             };
             let mut airdrop = AIRDROPS.load(deps.storage, airdrop_id)?;
 
@@ -152,7 +156,7 @@ pub fn execute(
         } => {
             let airdrop_id = match id {
                 AirdropId::Id(id) => id,
-                AirdropId::Label(label) => LABELS.load(deps.storage, label)?,
+                AirdropId::Label(label) => LABELS.load(deps.storage, &label)?,
             };
 
             let (claim_proof, beneficiary, bearer_expected) = match claim_proof {
@@ -217,7 +221,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, Cont
         GetAirdrop { id } => {
             let (airdrop_id, label) = match id {
                 AirdropId::Id(id) => (id, None),
-                AirdropId::Label(l) => (LABELS.load(deps.storage, l.clone())?, Some(l)),
+                AirdropId::Label(l) => (LABELS.load(deps.storage, &l)?, Some(l)),
             };
             let airdrop = AIRDROPS.load(deps.storage, airdrop_id)?;
 
@@ -263,7 +267,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, Cont
                         .collect::<StdResult<_>>()?
                 }
                 AirdropIdOptional::Label(l) => {
-                    let start = l.map(|v| deps.api.addr_validate(&v)).transpose()?;
+                    let start = l.as_deref();
                     let (min, max) = match order {
                         Order::Ascending => (start.map(Bound::exclusive), None),
                         Order::Descending => (None, start.map(Bound::exclusive)),
@@ -298,7 +302,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, Cont
         GetClaim { id, claim_proof } => {
             let airdrop_id = match id {
                 AirdropId::Id(id) => id,
-                AirdropId::Label(l) => LABELS.load(deps.storage, l)?,
+                AirdropId::Label(l) => LABELS.load(deps.storage, &l)?,
             };
 
             let claim_proof = match claim_proof {
@@ -323,7 +327,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, Cont
         } => {
             let airdrop_id = match id {
                 AirdropId::Id(id) => id,
-                AirdropId::Label(l) => LABELS.load(deps.storage, l)?,
+                AirdropId::Label(l) => LABELS.load(deps.storage, &l)?,
             };
 
             let start = start_after.as_deref();
