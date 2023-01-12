@@ -38,4 +38,7 @@ pub enum ContractError {
 
     #[error("Invalid arguments. arg:{arg:?}, reason:{reason:?}")]
     InvalidArguments { arg: String, reason: String },
+
+    #[error("Unabled to claim more than supplied funds.")]
+    InsufficientAirdropFunds {},
 }

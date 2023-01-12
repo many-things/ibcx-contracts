@@ -30,6 +30,16 @@ pub enum ClaimProofOptional {
     ClaimProof(String),
 }
 
+impl ClaimProofOptional {
+    pub fn account(address: impl Into<String>) -> Self {
+        ClaimProofOptional::Account(Some(address.into()))
+    }
+
+    pub fn claim_proof(proof: impl Into<String>) -> Self {
+        ClaimProofOptional::ClaimProof(proof.into())
+    }
+}
+
 #[cw_serde]
 pub enum ExecuteMsg {
     Register {
