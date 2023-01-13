@@ -1,9 +1,10 @@
 use cosmwasm_std::{
-    attr, coins, entry_point, to_binary, Addr, BankMsg, Env, MessageInfo, Order, QueryResponse,
-    StdResult, Uint128,
+    attr, coins, entry_point, to_binary, Addr, Api, BankMsg, CosmosMsg, Env, MessageInfo, Order,
+    QueryResponse, StdResult, Storage, Uint128,
 };
 use cosmwasm_std::{Deps, DepsMut, Response};
 use cw_storage_plus::Bound;
+use ibcx_interface::airdrop::ClaimPayload;
 use ibcx_interface::{
     airdrop::{
         AirdropId, AirdropIdOptional, CheckQualificationResponse, ClaimProof, ClaimProofOptional,
@@ -70,6 +71,64 @@ fn verify_merkle_proof(
     Ok(())
 }
 
+fn claim(
+    api: &dyn Api,
+    storage: &mut dyn Storage,
+    sender: &Addr,
+    id: AirdropId,
+    amount: Uint128,
+    claim_proof: ClaimProofOptional,
+    merkle_proof: Vec<String>,
+) -> Result<((u64, Airdrop), Addr, Uint128), ContractError> {
+    let airdrop_id = match id {
+        AirdropId::Id(id) => id,
+        AirdropId::Label(label) => LABELS.load(storage, &label)?,
+    };
+
+    let (claim_proof, beneficiary, bearer_expected) = match claim_proof {
+        ClaimProofOptional::Account(account) => {
+            let beneficiary = account
+                .map(|v| api.addr_validate(&v))
+                .transpose()?
+                .unwrap_or_else(|| sender.clone());
+
+            (beneficiary.to_string(), beneficiary, false)
+        }
+        ClaimProofOptional::ClaimProof(proof) => (proof, sender.clone(), true),
+    };
+
+    // verify merkle proof (from https://github.com/cosmwasm/cw-tokens/blob/master/contracts/cw20-merkle-airdrop/src/contract.rs)
+    let mut airdrop = AIRDROPS.load(storage, airdrop_id)?;
+    if airdrop.bearer != bearer_expected {
+        return Err(ContractError::InvalidArguments {
+            arg: "claim_proof".to_string(),
+            reason: "unexpected proof type".to_string(),
+        });
+    }
+
+    if CLAIM_LOGS
+        .may_load(storage, (airdrop_id, &claim_proof))?
+        .is_some()
+    {
+        return Err(ContractError::AlreadyClaimed {
+            airdrop_id,
+            claimer: beneficiary,
+        });
+    }
+
+    verify_merkle_proof(&airdrop.merkle_root, merkle_proof, &claim_proof, amount)?;
+
+    CLAIM_LOGS.save(storage, (airdrop_id, &claim_proof), &amount)?;
+
+    airdrop.total_claimed = airdrop.total_claimed.checked_add(amount)?;
+    if airdrop.total_claimed > airdrop.total_amount {
+        return Err(ContractError::InsufficientAirdropFunds {});
+    }
+    AIRDROPS.save(storage, airdrop_id, &airdrop)?;
+
+    Ok(((airdrop_id, airdrop), beneficiary, amount))
+}
+
 #[entry_point]
 pub fn execute(
     deps: DepsMut,
@@ -107,7 +166,6 @@ pub fn execute(
 
                 LABELS.save(deps.storage, &label, &airdrop_id)?;
             }
-
             AIRDROPS.save(
                 deps.storage,
                 airdrop_id,
@@ -148,57 +206,21 @@ pub fn execute(
                 attr("amount", received),
             ]))
         }
-        Claim {
+        Claim(ClaimPayload {
             id,
             amount,
             claim_proof,
             merkle_proof,
-        } => {
-            let airdrop_id = match id {
-                AirdropId::Id(id) => id,
-                AirdropId::Label(label) => LABELS.load(deps.storage, &label)?,
-            };
-
-            let (claim_proof, beneficiary, bearer_expected) = match claim_proof {
-                ClaimProofOptional::Account(account) => {
-                    let beneficiary = account
-                        .map(|v| deps.api.addr_validate(&v))
-                        .transpose()?
-                        .unwrap_or_else(|| info.sender.clone());
-
-                    (beneficiary.to_string(), beneficiary, false)
-                }
-                ClaimProofOptional::ClaimProof(proof) => (proof, info.sender.clone(), true),
-            };
-
-            // verify merkle proof (from https://github.com/cosmwasm/cw-tokens/blob/master/contracts/cw20-merkle-airdrop/src/contract.rs)
-            let mut airdrop = AIRDROPS.load(deps.storage, airdrop_id)?;
-            if airdrop.bearer != bearer_expected {
-                return Err(ContractError::InvalidArguments {
-                    arg: "claim_proof".to_string(),
-                    reason: "unexpected proof type".to_string(),
-                });
-            }
-
-            if CLAIM_LOGS
-                .may_load(deps.storage, (airdrop_id, &claim_proof))?
-                .is_some()
-            {
-                return Err(ContractError::AlreadyClaimed {
-                    airdrop_id,
-                    claimer: beneficiary,
-                });
-            }
-
-            verify_merkle_proof(&airdrop.merkle_root, merkle_proof, &claim_proof, amount)?;
-
-            CLAIM_LOGS.save(deps.storage, (airdrop_id, &claim_proof), &amount)?;
-
-            airdrop.total_claimed = airdrop.total_claimed.checked_add(amount)?;
-            if airdrop.total_claimed > airdrop.total_amount {
-                return Err(ContractError::InsufficientAirdropFunds {});
-            }
-            AIRDROPS.save(deps.storage, airdrop_id, &airdrop)?;
+        }) => {
+            let ((airdrop_id, airdrop), beneficiary, amount) = claim(
+                deps.api,
+                deps.storage,
+                &info.sender,
+                id,
+                amount,
+                claim_proof,
+                merkle_proof,
+            )?;
 
             Ok(Response::new()
                 .add_message(BankMsg::Send {
@@ -212,6 +234,50 @@ pub fn execute(
                     attr("beneficiary", beneficiary),
                     attr("amount", amount),
                 ]))
+        }
+        MultiClaim(claims) => {
+            let mut msgs: Vec<CosmosMsg> = vec![];
+            let mut airdrop_ids = vec![];
+            let mut beneficiaries = vec![];
+            let mut amounts = vec![];
+
+            for ClaimPayload {
+                id,
+                amount,
+                claim_proof,
+                merkle_proof,
+            } in claims
+            {
+                let ((airdrop_id, airdrop), beneficiary, amount) = claim(
+                    deps.api,
+                    deps.storage,
+                    &info.sender,
+                    id,
+                    amount,
+                    claim_proof,
+                    merkle_proof,
+                )?;
+
+                msgs.push(
+                    BankMsg::Send {
+                        to_address: beneficiary.to_string(),
+                        amount: coins(amount.u128(), &airdrop.denom),
+                    }
+                    .into(),
+                );
+
+                airdrop_ids.push(airdrop_id);
+                beneficiaries.push(beneficiary.to_string());
+                amounts.push(amount.to_string());
+            }
+
+            Ok(Response::new().add_messages(msgs).add_attributes(vec![
+                attr("action", "multi_claim"),
+                attr("executor", info.sender),
+                attr("airdrop_ids", format!("{:?}", airdrop_ids)),
+                attr("beneficiaries", format!("{:?}", beneficiaries)),
+                attr("amounts", format!("{:?}", amounts)),
+            ]))
         }
     }
 }
@@ -439,6 +505,15 @@ mod test {
             }
         }
 
+        fn to_payload(&self, airdrop_id: AirdropId) -> ClaimPayload {
+            ClaimPayload {
+                id: airdrop_id,
+                amount: Uint128::from(self.amount),
+                claim_proof: self.claim_proof.clone(),
+                merkle_proof: self.merkle_proof.clone(),
+            }
+        }
+
         fn execute(&self, deps: DepsMut, airdrop_id: AirdropId) -> Result<Response, ContractError> {
             execute_claim(
                 deps,
@@ -647,12 +722,12 @@ mod test {
             deps,
             mock_env(),
             mock_info(sender, &[]),
-            ExecuteMsg::Claim {
+            ExecuteMsg::Claim(ClaimPayload {
                 id: airdrop_id,
                 amount: Uint128::from(amount),
                 claim_proof: claim_proof.clone(),
                 merkle_proof,
-            },
+            }),
         );
 
         if let Ok(ref resp) = res {
@@ -671,6 +746,53 @@ mod test {
                         }
                     ),
                     attr("amount", amount.to_string()),
+                ]
+            )
+        }
+
+        res
+    }
+
+    fn execute_multi_claim(
+        deps: DepsMut,
+        sender: &str,
+        payload: Vec<ClaimPayload>,
+    ) -> Result<Response, ContractError> {
+        let (airdrop_ids, beneficiaries, amounts) = payload.clone().into_iter().fold(
+            (vec![], vec![], vec![]),
+            |(mut airdrop_ids, mut beneficiaries, mut amounts), v| {
+                airdrop_ids.push(match v.id {
+                    AirdropId::Id(id) => id,
+                    AirdropId::Label(label) => LABELS.load(deps.storage, &label).unwrap(),
+                });
+
+                beneficiaries.push(match v.claim_proof {
+                    ClaimProofOptional::Account(acc) => acc.unwrap_or_else(|| sender.to_string()),
+                    ClaimProofOptional::ClaimProof(_) => sender.to_string(),
+                });
+
+                amounts.push(v.amount.to_string());
+
+                (airdrop_ids, beneficiaries, amounts)
+            },
+        );
+
+        let res = execute(
+            deps,
+            mock_env(),
+            mock_info(sender, &[]),
+            ExecuteMsg::MultiClaim(payload),
+        );
+
+        if let Ok(ref resp) = res {
+            assert_eq!(
+                resp.attributes,
+                vec![
+                    attr("action", "multi_claim"),
+                    attr("executor", sender),
+                    attr("airdrop_ids", format!("{:?}", airdrop_ids)),
+                    attr("beneficiaries", format!("{:?}", beneficiaries)),
+                    attr("amounts", format!("{:?}", amounts))
                 ]
             )
         }
@@ -906,6 +1028,50 @@ mod test {
                 .execute(deps.as_mut(), AirdropId::Id(2))
                 .unwrap_err();
             assert_eq!(err, ContractError::InvalidProof {});
+        }
+
+        #[test]
+        fn multi_claim() {
+            let mut deps = mock_dependencies();
+
+            setup(deps.as_mut());
+
+            // open
+            let claims = super::get_open_claims();
+            let claim_total_amount = claims
+                .iter()
+                .fold(Uint128::zero(), |acc, c| acc + Uint128::from(c.amount));
+
+            let airdrop = make_airdrop(SAMPLE_ROOT_OPEN, "uosmo", claim_total_amount, 0u128, false);
+            super::execute_register(deps.as_mut(), "owner", &airdrop, None).unwrap();
+            super::execute_multi_claim(
+                deps.as_mut(),
+                "owner",
+                claims
+                    .iter()
+                    .map(|v| v.to_payload(AirdropId::Id(0)))
+                    .collect(),
+            )
+            .unwrap();
+
+            // bearer
+            let claims = super::get_bearer_claims("claimer");
+            let claim_total_amount = claims
+                .iter()
+                .fold(Uint128::zero(), |acc, c| acc + Uint128::from(c.amount));
+
+            let airdrop =
+                make_airdrop(SAMPLE_ROOT_BEARER, "uosmo", claim_total_amount, 0u128, true);
+            super::execute_register(deps.as_mut(), "owner", &airdrop, None).unwrap();
+            super::execute_multi_claim(
+                deps.as_mut(),
+                "owner",
+                claims
+                    .iter()
+                    .map(|v| v.to_payload(AirdropId::Id(1)))
+                    .collect(),
+            )
+            .unwrap();
         }
     }
 

@@ -41,6 +41,14 @@ impl ClaimProofOptional {
 }
 
 #[cw_serde]
+pub struct ClaimPayload {
+    pub id: AirdropId,
+    pub amount: Uint128,
+    pub claim_proof: ClaimProofOptional,
+    pub merkle_proof: Vec<String>,
+}
+
+#[cw_serde]
 pub enum ExecuteMsg {
     Register {
         merkle_root: String,
@@ -53,12 +61,8 @@ pub enum ExecuteMsg {
         id: AirdropId,
     },
 
-    Claim {
-        id: AirdropId,
-        amount: Uint128,
-        claim_proof: ClaimProofOptional,
-        merkle_proof: Vec<String>,
-    },
+    Claim(ClaimPayload),
+    MultiClaim(Vec<ClaimPayload>),
 }
 
 #[cw_serde]
