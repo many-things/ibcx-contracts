@@ -439,7 +439,7 @@ mod test {
             }
         }
 
-        fn execute(&self, deps: DepsMut, airdrop_id: AirdropId) {
+        fn execute(&self, deps: DepsMut, airdrop_id: AirdropId) -> Result<Response, ContractError> {
             execute_claim(
                 deps,
                 &self.account,
@@ -555,8 +555,13 @@ mod test {
         }
     }
 
-    fn execute_register(deps: DepsMut, sender: &str, airdrop: &Airdrop, label: Option<String>) {
-        let resp = execute(
+    fn execute_register(
+        deps: DepsMut,
+        sender: &str,
+        airdrop: &Airdrop,
+        label: Option<String>,
+    ) -> Result<Response, ContractError> {
+        let res = execute(
             deps,
             mock_env(),
             mock_info(sender, &[coin(airdrop.total_amount.u128(), &airdrop.denom)]),
@@ -566,51 +571,62 @@ mod test {
                 label: label.clone(),
                 bearer: Some(airdrop.bearer),
             },
-        )
-        .unwrap();
+        );
 
-        assert_eq!(
-            resp.attributes,
-            vec![
-                attr("action", "register"),
-                attr("executor", sender),
-                attr("merkle_root", airdrop.merkle_root.to_string()),
-                attr("total_amount", airdrop.total_amount.to_string()),
-                attr(
-                    "label",
-                    label
-                        .map(|v| format!("{}/{}", sender, v))
-                        .unwrap_or_default(),
-                ),
-                attr("bearer", airdrop.bearer.to_string()),
-            ]
-        )
+        if let Ok(ref resp) = res {
+            assert_eq!(
+                resp.attributes,
+                vec![
+                    attr("action", "register"),
+                    attr("executor", sender),
+                    attr("merkle_root", airdrop.merkle_root.to_string()),
+                    attr("total_amount", airdrop.total_amount.to_string()),
+                    attr(
+                        "label",
+                        label
+                            .map(|v| format!("{}/{}", sender, v))
+                            .unwrap_or_default(),
+                    ),
+                    attr("bearer", airdrop.bearer.to_string()),
+                ]
+            );
+        }
+
+        res
     }
 
-    fn execute_fund(deps: DepsMut, sender: &str, fund: Coin, airdrop_id: AirdropId) {
+    fn execute_fund(
+        deps: DepsMut,
+        sender: &str,
+        fund: Coin,
+        airdrop_id: AirdropId,
+    ) -> Result<Response, ContractError> {
         let conv = match airdrop_id.clone() {
             AirdropId::Id(id) => id,
             AirdropId::Label(label) => LABELS.load(deps.storage, &label).unwrap(),
         }
         .to_string();
 
-        let resp = execute(
+        let res = execute(
             deps,
             mock_env(),
             mock_info(sender, &[fund.clone()]),
             ExecuteMsg::Fund { id: airdrop_id },
-        )
-        .unwrap();
-
-        assert_eq!(
-            resp.attributes,
-            vec![
-                attr("action", "fund"),
-                attr("executor", sender),
-                attr("airdrop_id", conv),
-                attr("amount", fund.amount.to_string()),
-            ]
         );
+
+        if let Ok(ref resp) = res {
+            assert_eq!(
+                resp.attributes,
+                vec![
+                    attr("action", "fund"),
+                    attr("executor", sender),
+                    attr("airdrop_id", conv),
+                    attr("amount", fund.amount.to_string()),
+                ]
+            );
+        }
+
+        res
     }
 
     fn execute_claim(
@@ -620,14 +636,14 @@ mod test {
         amount: u128,
         claim_proof: ClaimProofOptional,
         merkle_proof: Vec<String>,
-    ) {
+    ) -> Result<Response, ContractError> {
         let conv = match airdrop_id.clone() {
             AirdropId::Id(id) => id,
             AirdropId::Label(label) => LABELS.load(deps.storage, &label).unwrap(),
         }
         .to_string();
 
-        let resp = execute(
+        let res = execute(
             deps,
             mock_env(),
             mock_info(sender, &[]),
@@ -637,26 +653,29 @@ mod test {
                 claim_proof: claim_proof.clone(),
                 merkle_proof,
             },
-        )
-        .unwrap();
+        );
 
-        assert_eq!(
-            resp.attributes,
-            vec![
-                attr("action", "claim"),
-                attr("executor", sender),
-                attr("airdrop_id", conv),
-                attr(
-                    "beneficiary",
-                    match claim_proof {
-                        ClaimProofOptional::Account(acc) =>
-                            acc.unwrap_or_else(|| sender.to_string()),
-                        ClaimProofOptional::ClaimProof(_) => sender.to_string(),
-                    }
-                ),
-                attr("amount", amount.to_string()),
-            ]
-        )
+        if let Ok(ref resp) = res {
+            assert_eq!(
+                resp.attributes,
+                vec![
+                    attr("action", "claim"),
+                    attr("executor", sender),
+                    attr("airdrop_id", conv),
+                    attr(
+                        "beneficiary",
+                        match claim_proof {
+                            ClaimProofOptional::Account(acc) =>
+                                acc.unwrap_or_else(|| sender.to_string()),
+                            ClaimProofOptional::ClaimProof(_) => sender.to_string(),
+                        }
+                    ),
+                    attr("amount", amount.to_string()),
+                ]
+            )
+        }
+
+        res
     }
 
     #[test]
@@ -700,7 +719,7 @@ mod test {
 
             // raw
             let airdrop = make_airdrop(SAMPLE_ROOT_TEST, "uosmo", 1000000u128, 0u128, false);
-            super::execute_register(deps.as_mut(), "owner", &airdrop, None);
+            super::execute_register(deps.as_mut(), "owner", &airdrop, None).unwrap();
 
             let latest_airdrop_id = LATEST_AIRDROP_ID.load(deps.as_ref().storage).unwrap();
             assert_eq!(latest_airdrop_id, 1);
@@ -708,7 +727,7 @@ mod test {
 
             // with bearer
             let airdrop = make_airdrop(SAMPLE_ROOT_TEST, "uatom", 2000000000u128, 0u128, true);
-            super::execute_register(deps.as_mut(), "owner", &airdrop, None);
+            super::execute_register(deps.as_mut(), "owner", &airdrop, None).unwrap();
 
             let latest_airdrop_id = LATEST_AIRDROP_ID.load(deps.as_ref().storage).unwrap();
             assert_eq!(latest_airdrop_id, 2);
@@ -717,7 +736,7 @@ mod test {
             // with label
             let label = "test_label".to_string();
             let airdrop = make_airdrop(SAMPLE_ROOT_TEST, "uatom", 2000000000u128, 0u128, false);
-            super::execute_register(deps.as_mut(), "owner", &airdrop, Some(label.clone()));
+            super::execute_register(deps.as_mut(), "owner", &airdrop, Some(label.clone())).unwrap();
 
             let latest_airdrop_id = LATEST_AIRDROP_ID.load(deps.as_ref().storage).unwrap();
             assert_eq!(latest_airdrop_id, 3);
@@ -727,6 +746,18 @@ mod test {
                 .load(deps.as_ref().storage, &format!("{}/{}", "owner", label))
                 .unwrap();
             assert_eq!(airdrop_id_from_label, 2);
+
+            // check label duplication
+            let err =
+                super::execute_register(deps.as_mut(), "owner", &airdrop, Some(label.clone()))
+                    .unwrap_err();
+            assert_eq!(
+                err,
+                ContractError::KeyAlreadyExists {
+                    typ: "label".to_string(),
+                    key: format!("{}/{}", "owner", label)
+                }
+            );
         }
 
         #[test]
@@ -737,7 +768,7 @@ mod test {
 
             let label = "test_label".to_string();
             let mut airdrop = make_airdrop(SAMPLE_ROOT_TEST, "uosmo", 1000000u128, 0u128, false);
-            super::execute_register(deps.as_mut(), "owner", &airdrop, Some(label.clone()));
+            super::execute_register(deps.as_mut(), "owner", &airdrop, Some(label.clone())).unwrap();
             let label = format!("{}/{}", "owner", label);
 
             let fund_amount = 100000000u128;
@@ -746,7 +777,8 @@ mod test {
                 "owner",
                 coin(fund_amount, &airdrop.denom),
                 AirdropId::Id(0),
-            );
+            )
+            .unwrap();
 
             airdrop.total_amount += Uint128::from(fund_amount);
             assert_eq!(
@@ -763,7 +795,8 @@ mod test {
                 "owner",
                 coin(fund_amount, &airdrop.denom),
                 AirdropId::Label(label),
-            );
+            )
+            .unwrap();
 
             airdrop.total_amount += Uint128::from(fund_amount);
             assert_eq!(
@@ -788,10 +821,10 @@ mod test {
                 .fold(Uint128::zero(), |acc, c| acc + Uint128::from(c.amount));
 
             let airdrop = make_airdrop(SAMPLE_ROOT_OPEN, "uosmo", claim_total_amount, 0u128, false);
-            super::execute_register(deps.as_mut(), "owner", &airdrop, None);
+            super::execute_register(deps.as_mut(), "owner", &airdrop, None).unwrap();
 
             for claim in claims {
-                claim.execute(deps.as_mut(), AirdropId::Id(0));
+                claim.execute(deps.as_mut(), AirdropId::Id(0)).unwrap();
             }
             let fetched_airdrop = AIRDROPS.load(deps.as_ref().storage, 0).unwrap();
             assert_eq!(fetched_airdrop.total_claimed, claim_total_amount);
@@ -810,18 +843,69 @@ mod test {
                 "owner",
                 &airdrop,
                 Some("airdrop".to_string()),
-            );
+            )
+            .unwrap();
 
             for claim in claims {
-                claim.execute(
-                    deps.as_mut(),
-                    AirdropId::Label(format!("{}/{}", "owner", "airdrop")),
-                )
+                claim
+                    .execute(
+                        deps.as_mut(),
+                        AirdropId::Label(format!("{}/{}", "owner", "airdrop")),
+                    )
+                    .unwrap();
             }
 
             let fetched_airdrop = AIRDROPS.load(deps.as_ref().storage, 1).unwrap();
             assert_eq!(fetched_airdrop.total_claimed, claim_total_amount);
             assert_eq!(fetched_airdrop.total_amount, fetched_airdrop.total_claimed);
+
+            // check type of claim_proof
+            let claims = super::get_open_claims();
+            let claim_total_amount = claims
+                .iter()
+                .fold(Uint128::zero(), |acc, c| acc + Uint128::from(c.amount));
+
+            let airdrop = make_airdrop(SAMPLE_ROOT_OPEN, "uosmo", claim_total_amount, 0u128, false);
+            super::execute_register(deps.as_mut(), "owner", &airdrop, None).unwrap();
+
+            claims[0].execute(deps.as_mut(), AirdropId::Id(2)).unwrap();
+
+            let err = Claim::new(
+                &claims[0].account,
+                1000u128,
+                ClaimProofOptional::claim_proof(SAMPLE_ROOT_TEST),
+                vec![],
+            )
+            .execute(deps.as_mut(), AirdropId::Id(2))
+            .unwrap_err();
+            assert_eq!(
+                err,
+                ContractError::InvalidArguments {
+                    arg: "claim_proof".to_string(),
+                    reason: "unexpected proof type".to_string()
+                }
+            );
+
+            // check double spending
+            let err = claims[0]
+                .execute(deps.as_mut(), AirdropId::Id(2))
+                .unwrap_err();
+            assert_eq!(
+                err,
+                ContractError::AlreadyClaimed {
+                    airdrop_id: 2,
+                    claimer: Addr::unchecked(&claims[0].account)
+                }
+            );
+
+            // check merkle proof
+            let mut claim_mixed = claims[1].clone();
+            claim_mixed.merkle_proof = claims[2].merkle_proof.clone();
+
+            let err = claim_mixed
+                .execute(deps.as_mut(), AirdropId::Id(2))
+                .unwrap_err();
+            assert_eq!(err, ContractError::InvalidProof {});
         }
     }
 
