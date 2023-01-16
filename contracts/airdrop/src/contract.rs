@@ -389,7 +389,8 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, Cont
                 ClaimProof::ClaimProof(ref proof) => {
                     CLAIM_LOGS.load(deps.storage, (airdrop_id, proof))
                 }
-            }?;
+            }
+            .map_err(|_| ContractError::Std(StdError::not_found("claim")))?;
 
             Ok(to_binary(&GetClaimResponse {
                 amount,
@@ -1387,7 +1388,7 @@ mod test {
                 .fold(Uint128::zero(), |acc, c| acc + Uint128::from(c.amount));
 
             let airdrop = make_airdrop(
-                SAMPLE_ROOT_OPEN,
+                SAMPLE_ROOT_BEARER,
                 "uosmo",
                 claim_total_amount,
                 0u128,
@@ -1400,13 +1401,13 @@ mod test {
                 open_claims[idx]
                     .execute(
                         deps.as_mut(),
-                        AirdropId::Label("open_claim_test".to_string()),
+                        AirdropId::Label("owner/open_claim_test".to_string()),
                     )
                     .unwrap();
                 bearer_claims[idx]
                     .execute(
                         deps.as_mut(),
-                        AirdropId::Label("bearer_claim_test".to_string()),
+                        AirdropId::Label("owner/bearer_claim_test".to_string()),
                     )
                     .unwrap();
             }
@@ -1481,39 +1482,81 @@ mod test {
             assert!(matches!(
                 err,
                 ContractError::Std(StdError::NotFound { kind })
-                if kind == "Uint128",
+                if kind == "claim",
             ));
 
             // list claim
-            let resp: ListClaimsResponse = from_binary(
-                &query(
-                    deps.as_ref(),
-                    mock_env(),
-                    QueryMsg::ListClaims {
-                        id: AirdropId::Id(0),
-                        start_after: None,
-                        limit: None,
-                        order: None,
-                    },
-                )
-                .unwrap(),
-            )
-            .unwrap();
+            let airdrop_ids = [
+                AirdropId::Id(0),
+                AirdropId::Label("owner/open_claim_test".to_string()),
+                AirdropId::Id(1),
+                AirdropId::Label("owner/bearer_claim_test".to_string()),
+            ];
+
+            let resps = airdrop_ids
+                .into_iter()
+                .map(|id| {
+                    from_binary(
+                        &query(
+                            deps.as_ref(),
+                            mock_env(),
+                            QueryMsg::ListClaims {
+                                id,
+                                start_after: None,
+                                limit: None,
+                                order: None,
+                            },
+                        )
+                        .unwrap(),
+                    )
+                    .unwrap()
+                })
+                .collect::<Vec<ListClaimsResponse>>();
+
+            let resp_open_id = resps.get(0).unwrap();
+            let resp_open_label = resps.get(1).unwrap();
+            let resp_bearer_id = resps.get(2).unwrap();
+            let resp_bearer_label = resps.get(3).unwrap();
 
             // must sort & compare
-            let mut sorted_claims = open_claims.clone();
-            sorted_claims.sort_by(|a, b| a.account.cmp(&b.account));
+            let cmp_claims = |a: &Claim, b: &Claim| {
+                let a = unwrap_optional(a);
+                let b = unwrap_optional(b);
 
-            assert_eq!(
-                resp.0,
-                sorted_claims
-                    .into_iter()
-                    .map(|v| GetClaimResponse {
-                        amount: Uint128::from(v.amount),
-                        claim_proof: unwrap_optional(&v)
-                    })
-                    .collect::<Vec<_>>()
-            )
+                match (a, b) {
+                    (ClaimProof::Account(a), ClaimProof::Account(b)) => a.cmp(&b),
+                    (ClaimProof::ClaimProof(a), ClaimProof::ClaimProof(b)) => a.cmp(&b),
+                    _ => panic!("type doesn't match"),
+                }
+            };
+
+            let mut sorted_claims = open_claims;
+            sorted_claims.sort_by(|a, b| cmp_claims(a, b));
+
+            let expected_resps = sorted_claims
+                .into_iter()
+                .map(|v| GetClaimResponse {
+                    amount: Uint128::from(v.amount),
+                    claim_proof: unwrap_optional(&v),
+                })
+                .collect::<Vec<_>>();
+
+            assert_eq!(resp_open_id.0, expected_resps);
+            assert_eq!(resp_open_label.0, expected_resps);
+
+            let mut sorted_claims = bearer_claims;
+            sorted_claims.sort_by(|a, b| cmp_claims(a, b));
+
+            let expected_resps = sorted_claims
+                .into_iter()
+                .map(|v| GetClaimResponse {
+                    amount: Uint128::from(v.amount),
+                    claim_proof: unwrap_optional(&v),
+                })
+                .collect::<Vec<_>>();
+
+            assert_eq!(resp_bearer_id.0, expected_resps);
+            assert_eq!(resp_bearer_label.0, expected_resps);
         }
     }
 }
