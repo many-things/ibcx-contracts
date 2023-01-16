@@ -30,12 +30,10 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Load toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
           components: clippy
-          profile: minimal
-          override: true
       - run: cargo fetch --verbose
       - run: cargo clippy --all --all-targets -- -D warnings
 
@@ -60,10 +58,8 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Load toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
           components: rustfmt
-          profile: minimal
-          override: true
       - run: cargo fmt -- --check

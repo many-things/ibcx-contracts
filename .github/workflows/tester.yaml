@@ -30,10 +30,9 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Load toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          profile: minimal
       - run: cargo fetch --verbose
       - run: cargo build
       - run: cargo test --verbose --all
