@@ -1,4 +1,4 @@
-name: coverage
+name: Test & Coverage
 
 on:
   push:
@@ -9,15 +9,33 @@ on:
       - "main"
 
 jobs:
-  test:
-    name: coverage
+  unit-test:
+    name: Actions - unit-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
+      - name: Load toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+      - run: cargo fetch --verbose
+      - run: cargo build
+      - run: cargo test --verbose --all
+
+  coverage:
+    name: Actions - coverage
     runs-on: ubuntu-latest
     container:
       image: xd009642/tarpaulin:develop-nightly
       options: --security-opt seccomp=unconfined
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Cache dependencies
         uses: actions/cache@v3
@@ -35,7 +53,7 @@ jobs:
           cargo +nightly tarpaulin --verbose --lib --timeout 120 --out Xml
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
         with:
           token: ${{secrets.CODECOV_TOKEN}}
           fail_ci_if_error: true
