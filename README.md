@@ -1,6 +1,6 @@
 # ibcx-contracts
 
-[![codecov](https://codecov.io/gh/many-things/ibc-contracts/branch/main/graph/badge.svg?token=NWZGJ8MBHE)](https://codecov.io/gh/many-things/ibc-contracts)
+[![codecov](https://codecov.io/gh/many-things/ibcx-contracts/branch/main/graph/badge.svg?token=NWZGJ8MBHE)](https://codecov.io/gh/many-things/ibcx-contracts)
 
 ## Testing
 
