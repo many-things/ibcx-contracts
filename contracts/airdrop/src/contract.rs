@@ -1022,6 +1022,44 @@ mod test {
             assert_eq!(fetched_airdrop.total_claimed, claim_total_amount);
             assert_eq!(fetched_airdrop.total_amount, fetched_airdrop.total_claimed);
 
+            // check total_amount > total_claimed
+            let claims = super::get_bearer_claims("claimer");
+            let claim_total_amount = claims
+                .iter()
+                .fold(Uint128::zero(), |acc, c| acc + Uint128::from(c.amount));
+
+            let airdrop = make_airdrop(
+                SAMPLE_ROOT_BEARER,
+                "usomo",
+                claim_total_amount - Uint128::one(),
+                0u128,
+                true,
+                Some("check_overflow".to_string()),
+            );
+            super::execute_register(deps.as_mut(), "owner", &airdrop).unwrap();
+
+            claims[0]
+                .execute(
+                    deps.as_mut(),
+                    AirdropId::Label("owner/check_overflow".to_string()),
+                )
+                .unwrap();
+            claims[1]
+                .execute(
+                    deps.as_mut(),
+                    AirdropId::Label("owner/check_overflow".to_string()),
+                )
+                .unwrap();
+            assert_eq!(
+                claims[2]
+                    .execute(
+                        deps.as_mut(),
+                        AirdropId::Label("owner/check_overflow".to_string())
+                    )
+                    .unwrap_err(),
+                ContractError::InsufficientAirdropFunds {}
+            );
+
             // check type of claim_proof
             let claims = super::get_open_claims();
             let claim_total_amount = claims
@@ -1038,7 +1076,7 @@ mod test {
             );
             super::execute_register(deps.as_mut(), "owner", &airdrop).unwrap();
 
-            claims[0].execute(deps.as_mut(), AirdropId::Id(2)).unwrap();
+            claims[0].execute(deps.as_mut(), AirdropId::Id(3)).unwrap();
 
             let err = Claim::new(
                 &claims[0].account,
@@ -1046,7 +1084,7 @@ mod test {
                 ClaimProofOptional::claim_proof(SAMPLE_ROOT_TEST),
                 vec![],
             )
-            .execute(deps.as_mut(), AirdropId::Id(2))
+            .execute(deps.as_mut(), AirdropId::Id(3))
             .unwrap_err();
             assert_eq!(
                 err,
@@ -1058,12 +1096,12 @@ mod test {
 
             // check double spending
             let err = claims[0]
-                .execute(deps.as_mut(), AirdropId::Id(2))
+                .execute(deps.as_mut(), AirdropId::Id(3))
                 .unwrap_err();
             assert_eq!(
                 err,
                 ContractError::AlreadyClaimed {
-                    airdrop_id: 2,
+                    airdrop_id: 3,
                     claimer: Addr::unchecked(&claims[0].account)
                 }
             );
@@ -1073,7 +1111,7 @@ mod test {
             claim_mixed.merkle_proof = claims[2].merkle_proof.clone();
 
             let err = claim_mixed
-                .execute(deps.as_mut(), AirdropId::Id(2))
+                .execute(deps.as_mut(), AirdropId::Id(3))
                 .unwrap_err();
             assert_eq!(err, ContractError::InvalidProof {});
         }
