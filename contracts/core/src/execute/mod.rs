@@ -266,6 +266,18 @@ mod test {
         let env = mock_env();
         let now = env.block.time.seconds();
 
+        FEE.save(
+            deps.as_mut().storage,
+            &Fee {
+                collector: Addr::unchecked("test"),
+                mint: Default::default(),
+                burn: Default::default(),
+                stream: Default::default(),
+                stream_last_collected_at: Default::default(),
+            },
+        )
+        .unwrap();
+
         TOKEN
             .save(
                 deps.as_mut().storage,

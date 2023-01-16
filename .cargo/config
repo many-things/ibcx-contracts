@@ -3,6 +3,7 @@ wasm = "build --release --lib --target wasm32-unknown-unknown"
 unit-test = "test --lib"
 all-test = "test --workspace"
 schema = "run --bin schema"
+coverage = "tarpaulin --lib --out json --output-dir coverage"
 
 [env]
 RUSTFLAGS = "-C link-arg=-s"
