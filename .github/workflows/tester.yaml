@@ -10,7 +10,7 @@ on:
 
 jobs:
   unit-test:
-    name: Actions - unit-test
+    name: unit-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -28,7 +28,7 @@ jobs:
       - run: cargo test --verbose --all
 
   coverage:
-    name: Actions - coverage
+    name: coverage
     runs-on: ubuntu-latest
     container:
       image: xd009642/tarpaulin:develop-nightly

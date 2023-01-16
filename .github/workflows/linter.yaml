@@ -9,8 +9,8 @@ on:
       - "main"
 
 jobs:
-  linter:
-    name: Actions - clippy
+  clippy:
+    name: clippy
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -22,9 +22,26 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          components: rustfmt, clippy
+          components: clippy
           profile: minimal
           override: true
       - run: cargo fetch --verbose
       - run: cargo clippy --all --all-targets -- -D warnings
+
+  rustfmt:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
+      - name: Load toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt
+          profile: minimal
+          override: true
       - run: cargo fmt -- --check
