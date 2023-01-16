@@ -12,7 +12,7 @@ use crate::{
 pub fn balance(deps: Deps, _env: Env, account: String) -> Result<QueryResponse, ContractError> {
     let token = TOKEN.load(deps.storage)?;
 
-    let resp = deps.querier.query_balance(&account, &token.denom)?;
+    let resp = deps.querier.query_balance(account, token.denom)?;
 
     Ok(to_binary(&resp.amount)?)
 }

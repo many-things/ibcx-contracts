@@ -44,7 +44,7 @@ fn verify_merkle_proof(
     claim_proof: &str,
     amount: Uint128,
 ) -> Result<(), ContractError> {
-    let user_input = format!("{}{}", claim_proof, amount);
+    let user_input = format!("{claim_proof}{amount}");
 
     let hash = sha2::Sha256::digest(user_input.as_bytes())
         .as_slice()
@@ -154,7 +154,7 @@ pub fn execute(
             let airdrop_id = LATEST_AIRDROP_ID.load(deps.storage)?;
             LATEST_AIRDROP_ID.save(deps.storage, &(airdrop_id + 1))?;
 
-            let label = label.map(|v| format!("{}/{}", info.sender, v));
+            let label = label.map(|v| format!("{}/{v}", info.sender));
 
             if let Some(label) = label.clone() {
                 if LABELS.has(deps.storage, &label) {
@@ -275,9 +275,9 @@ pub fn execute(
             Ok(Response::new().add_messages(msgs).add_attributes(vec![
                 attr("action", "multi_claim"),
                 attr("executor", info.sender),
-                attr("airdrop_ids", format!("{:?}", airdrop_ids)),
-                attr("beneficiaries", format!("{:?}", beneficiaries)),
-                attr("amounts", format!("{:?}", amounts)),
+                attr("airdrop_ids", format!("{airdrop_ids:?}",)),
+                attr("beneficiaries", format!("{beneficiaries:?}",)),
+                attr("amounts", format!("{amounts:?}",)),
             ]))
         }
     }
@@ -681,7 +681,7 @@ mod test {
                         airdrop
                             .label
                             .as_ref()
-                            .map(|v| format!("{}/{}", sender, v))
+                            .map(|v| format!("{sender}/{v}"))
                             .unwrap_or_default(),
                     ),
                     attr("bearer", airdrop.bearer.to_string()),
@@ -812,9 +812,9 @@ mod test {
                 vec![
                     attr("action", "multi_claim"),
                     attr("executor", sender),
-                    attr("airdrop_ids", format!("{:?}", airdrop_ids)),
-                    attr("beneficiaries", format!("{:?}", beneficiaries)),
-                    attr("amounts", format!("{:?}", amounts))
+                    attr("airdrop_ids", format!("{airdrop_ids:?}")),
+                    attr("beneficiaries", format!("{beneficiaries:?}")),
+                    attr("amounts", format!("{amounts:?}"))
                 ]
             )
         }
@@ -889,14 +889,14 @@ mod test {
                 Some(label.clone()),
             );
             super::execute_register(deps.as_mut(), "owner", &airdrop).unwrap();
-            airdrop.label = Some(format!("{}/{}", "owner", label));
+            airdrop.label = Some(format!("owner/{label}"));
 
             let latest_airdrop_id = LATEST_AIRDROP_ID.load(deps.as_ref().storage).unwrap();
             assert_eq!(latest_airdrop_id, 3);
             assert_eq!(airdrop, AIRDROPS.load(deps.as_ref().storage, 2).unwrap());
 
             let airdrop_id_from_label = LABELS
-                .load(deps.as_ref().storage, &format!("{}/{}", "owner", label))
+                .load(deps.as_ref().storage, &format!("owner/{label}"))
                 .unwrap();
             assert_eq!(airdrop_id_from_label, 2);
 
@@ -907,7 +907,7 @@ mod test {
                 err,
                 ContractError::KeyAlreadyExists {
                     typ: "label".to_string(),
-                    key: format!("{}/{}", "owner", label)
+                    key: format!("owner/{label}")
                 }
             );
         }
@@ -928,7 +928,7 @@ mod test {
                 Some(label.clone()),
             );
             super::execute_register(deps.as_mut(), "owner", &airdrop).unwrap();
-            let label = format!("{}/{}", "owner", label);
+            let label = format!("owner/{label}");
 
             let fund_amount = 100000000u128;
             super::execute_fund(
@@ -1014,10 +1014,7 @@ mod test {
 
             for claim in claims {
                 claim
-                    .execute(
-                        deps.as_mut(),
-                        AirdropId::Label(format!("{}/{}", "owner", "airdrop")),
-                    )
+                    .execute(deps.as_mut(), AirdropId::Label("owner/airdrop".to_string()))
                     .unwrap();
             }
 

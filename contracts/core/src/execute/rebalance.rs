@@ -40,8 +40,7 @@ fn check_duplication(
         .collect::<Vec<_>>();
     if !f.is_empty() {
         return Err(ContractError::InvalidArgument(format!(
-            "duplicated coin: {:?}",
-            f
+            "duplicated coin: {f:?}",
         )));
     }
 
@@ -134,8 +133,7 @@ fn deflate(
         Some(d) => d,
         None => {
             return Err(ContractError::InvalidArgument(format!(
-                "invalid denom: {:?}",
-                denom
+                "invalid denom: {denom:?}",
             )))
         }
     };
@@ -150,8 +148,7 @@ fn deflate(
         let additional_unit = Decimal::checked_from_ratio(amount, token.total_supply)?;
         if origin_unit.checked_sub(additional_unit)? < *target_unit {
             return Err(ContractError::InvalidArgument(format!(
-                "exceed max trade amount: {:?}",
-                amount
+                "exceed max trade amount: {amount:?}",
             )));
         }
 
@@ -181,8 +178,7 @@ fn deflate(
     trade_info.checked_update_cooldown(env.block.time.seconds())?;
     if trade_info.max_trade_amount < amount {
         return Err(ContractError::InvalidArgument(format!(
-            "exceed max trade amount: {:?}",
-            trade_info
+            "exceed max trade amount: {trade_info:?}",
         )));
     }
 
@@ -193,8 +189,7 @@ fn deflate(
     let amount_gap = origin_unit.checked_sub(*target_unit)? * token.total_supply;
     if amount_gap < amount {
         return Err(ContractError::InvalidArgument(format!(
-            "insufficient amount: {:?}",
-            amount_gap
+            "insufficient amount: {amount_gap:?}",
         )));
     }
 
@@ -265,8 +260,7 @@ fn inflate(
 ) -> Result<Response, ContractError> {
     if !rebalance.inflation.iter().any(|v| v.0 == denom) {
         return Err(ContractError::InvalidArgument(format!(
-            "invalid denom: {:?}",
-            denom
+            "invalid denom: {denom:?}",
         )));
     }
 
@@ -275,8 +269,7 @@ fn inflate(
     trade_info.checked_update_cooldown(env.block.time.seconds())?;
     if trade_info.max_trade_amount < amount {
         return Err(ContractError::InvalidArgument(format!(
-            "exceed max trade amount: {:?}",
-            trade_info
+            "exceed max trade amount: {trade_info:?}",
         )));
     }
 
@@ -284,8 +277,7 @@ fn inflate(
     let buffer = RESERVE_BUFFER.load(deps.storage, denom.clone())?;
     if buffer < amount {
         return Err(ContractError::InvalidArgument(format!(
-            "insufficient buffer: {:?}",
-            buffer
+            "insufficient buffer: {buffer:?}",
         )));
     }
 

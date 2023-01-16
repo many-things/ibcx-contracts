@@ -116,7 +116,7 @@ fn update_fee(deps: DepsMut, info: MessageInfo, new_fee: Fee) -> Result<Response
     let resp = Response::new().add_attributes(vec![
         attr("method", "gov::update_fee"),
         attr("executor", info.sender),
-        attr("new_fee", format!("{:?}", new_fee)),
+        attr("new_fee", format!("{new_fee:?}")),
     ]);
 
     Ok(resp)
