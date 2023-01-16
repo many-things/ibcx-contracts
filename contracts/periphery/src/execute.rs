@@ -23,7 +23,7 @@ pub fn mint_exact_amount_out(
     // input & output
     let max_input_amount = cw_utils::must_pay(&info, &input_asset)?;
     let max_input = coin(max_input_amount.u128(), &input_asset);
-    let output = coin(output_amount.u128(), &core_config.denom);
+    let output = coin(output_amount.u128(), core_config.denom);
 
     let desired = core
         .simulate_burn(&deps.querier, output.amount)?

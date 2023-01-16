@@ -56,7 +56,7 @@ fn verify_merkle_proof(
         hex::decode_to_slice(p, &mut proof_buf)?;
         let mut hashes = [hash, proof_buf];
         hashes.sort_unstable();
-        sha2::Sha256::digest(&hashes.concat())
+        sha2::Sha256::digest(hashes.concat())
             .as_slice()
             .try_into()
             .map_err(|_| ContractError::WrongLength {})
@@ -262,7 +262,7 @@ pub fn execute(
                 msgs.push(
                     BankMsg::Send {
                         to_address: beneficiary.to_string(),
-                        amount: coins(amount.u128(), &airdrop.denom),
+                        amount: coins(amount.u128(), airdrop.denom),
                     }
                     .into(),
                 );
