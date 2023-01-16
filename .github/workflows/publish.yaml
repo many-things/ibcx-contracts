@@ -1,0 +1,40 @@
+name: publish
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  optimize-airdrop:
+    name: optimize-airdrop
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Generate Cargo.lock
+        run: |
+          cargo build --workspace
+          cargo fetch --verbose
+
+      - name: Build Artifacts
+        run: |
+          docker run --rm -v "$(pwd)":/code \
+          --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
+          --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
+          cosmwasm/rust-optimizer:0.12.8 contracts/airdrop
+
+      - name: Upload bytecode
+        uses: actions/upload-artifact@v3
+        with:
+          name: ibcx_airdrop
+          path: artifacts/ibcx_airdrop.wasm
