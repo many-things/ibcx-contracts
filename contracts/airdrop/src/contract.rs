@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     attr, coins, entry_point, to_binary, Addr, Api, BankMsg, CosmosMsg, Env, MessageInfo, Order,
-    QueryResponse, StdResult, Storage, Uint128,
+    QueryResponse, StdError, StdResult, Storage, Uint128,
 };
 use cosmwasm_std::{Deps, DepsMut, Response};
 use cw_storage_plus::Bound;
@@ -175,6 +175,7 @@ pub fn execute(
                     total_amount: received,
                     total_claimed: Uint128::zero(),
                     bearer: bearer.unwrap_or(false),
+                    label: label.clone(),
                 },
             )?;
 
@@ -288,15 +289,19 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, Cont
 
     match msg {
         GetAirdrop { id } => {
-            let (airdrop_id, label) = match id {
-                AirdropId::Id(id) => (id, None),
-                AirdropId::Label(l) => (LABELS.load(deps.storage, &l)?, Some(l)),
-            };
-            let airdrop = AIRDROPS.load(deps.storage, airdrop_id)?;
+            let airdrop_id = match id {
+                AirdropId::Id(id) => Ok(id),
+                AirdropId::Label(l) => LABELS
+                    .load(deps.storage, &l)
+                    .map_err(|_| StdError::not_found("label")),
+            }?;
+            let airdrop = AIRDROPS
+                .load(deps.storage, airdrop_id)
+                .map_err(|_| StdError::not_found("airdrop"))?;
 
             Ok(to_binary(&GetAirdropResponse {
                 id: airdrop_id,
-                label,
+                label: airdrop.label,
                 denom: airdrop.denom,
                 total_amount: airdrop.total_amount,
                 total_claimed: airdrop.total_claimed,
@@ -326,7 +331,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, Cont
 
                             Ok(GetAirdropResponse {
                                 id: k,
-                                label: None,
+                                label: v.label,
                                 denom: v.denom,
                                 total_amount: v.total_amount,
                                 total_claimed: v.total_claimed,
@@ -370,18 +375,21 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, Cont
         ))?),
         GetClaim { id, claim_proof } => {
             let airdrop_id = match id {
-                AirdropId::Id(id) => id,
-                AirdropId::Label(l) => LABELS.load(deps.storage, &l)?,
-            };
-
-            let claim_proof = match claim_proof {
-                ClaimProof::Account(account) => {
-                    deps.api.addr_validate(&account)?;
-                    StdResult::Ok(account)
-                }
-                ClaimProof::ClaimProof(proof) => Ok(proof),
+                AirdropId::Id(id) => Ok(id),
+                AirdropId::Label(l) => LABELS
+                    .load(deps.storage, &l)
+                    .map_err(|_| StdError::not_found("label")),
             }?;
-            let amount = CLAIM_LOGS.load(deps.storage, (airdrop_id, &claim_proof))?;
+
+            let amount = match claim_proof {
+                ClaimProof::Account(ref account) => {
+                    deps.api.addr_validate(account)?;
+                    CLAIM_LOGS.load(deps.storage, (airdrop_id, account))
+                }
+                ClaimProof::ClaimProof(ref proof) => {
+                    CLAIM_LOGS.load(deps.storage, (airdrop_id, proof))
+                }
+            }?;
 
             Ok(to_binary(&GetClaimResponse {
                 amount,
@@ -395,9 +403,14 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, Cont
             order,
         } => {
             let airdrop_id = match id {
-                AirdropId::Id(id) => id,
-                AirdropId::Label(l) => LABELS.load(deps.storage, &l)?,
-            };
+                AirdropId::Id(id) => Ok(id),
+                AirdropId::Label(l) => LABELS
+                    .load(deps.storage, &l)
+                    .map_err(|_| StdError::not_found("label")),
+            }?;
+            let airdrop = AIRDROPS
+                .load(deps.storage, airdrop_id)
+                .map_err(|_| StdError::not_found("airdrop"))?;
 
             let start = start_after.as_deref();
             let limit = get_and_check_limit(limit, MAX_LIMIT, DEFAULT_LIMIT)? as usize;
@@ -414,9 +427,15 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, Cont
                 .map(|item| {
                     let (k, v) = item?;
 
+                    let claim_proof = if airdrop.bearer {
+                        ClaimProof::ClaimProof(k)
+                    } else {
+                        ClaimProof::Account(k)
+                    };
+
                     Ok(GetClaimResponse {
                         amount: v,
-                        claim_proof: k,
+                        claim_proof,
                     })
                 })
                 .collect::<StdResult<_>>()?;
@@ -620,6 +639,7 @@ mod test {
         total_amount: impl Into<Uint128>,
         total_claimed: impl Into<Uint128>,
         bearer: bool,
+        label: Option<String>,
     ) -> Airdrop {
         Airdrop {
             merkle_root: merkle_root.into(),
@@ -627,6 +647,7 @@ mod test {
             total_amount: total_amount.into(),
             total_claimed: total_claimed.into(),
             bearer,
+            label,
         }
     }
 
@@ -634,7 +655,6 @@ mod test {
         deps: DepsMut,
         sender: &str,
         airdrop: &Airdrop,
-        label: Option<String>,
     ) -> Result<Response, ContractError> {
         let res = execute(
             deps,
@@ -643,7 +663,7 @@ mod test {
             ExecuteMsg::Register {
                 merkle_root: airdrop.merkle_root.clone(),
                 denom: airdrop.denom.clone(),
-                label: label.clone(),
+                label: airdrop.label.clone(),
                 bearer: Some(airdrop.bearer),
             },
         );
@@ -658,7 +678,9 @@ mod test {
                     attr("total_amount", airdrop.total_amount.to_string()),
                     attr(
                         "label",
-                        label
+                        airdrop
+                            .label
+                            .as_ref()
                             .map(|v| format!("{}/{}", sender, v))
                             .unwrap_or_default(),
                     ),
@@ -840,16 +862,17 @@ mod test {
             setup(deps.as_mut());
 
             // raw
-            let airdrop = make_airdrop(SAMPLE_ROOT_TEST, "uosmo", 1000000u128, 0u128, false);
-            super::execute_register(deps.as_mut(), "owner", &airdrop, None).unwrap();
+            let airdrop = make_airdrop(SAMPLE_ROOT_TEST, "uosmo", 1000000u128, 0u128, false, None);
+            super::execute_register(deps.as_mut(), "owner", &airdrop).unwrap();
 
             let latest_airdrop_id = LATEST_AIRDROP_ID.load(deps.as_ref().storage).unwrap();
             assert_eq!(latest_airdrop_id, 1);
             assert_eq!(airdrop, AIRDROPS.load(deps.as_ref().storage, 0).unwrap());
 
             // with bearer
-            let airdrop = make_airdrop(SAMPLE_ROOT_TEST, "uatom", 2000000000u128, 0u128, true);
-            super::execute_register(deps.as_mut(), "owner", &airdrop, None).unwrap();
+            let airdrop =
+                make_airdrop(SAMPLE_ROOT_TEST, "uatom", 2000000000u128, 0u128, true, None);
+            super::execute_register(deps.as_mut(), "owner", &airdrop).unwrap();
 
             let latest_airdrop_id = LATEST_AIRDROP_ID.load(deps.as_ref().storage).unwrap();
             assert_eq!(latest_airdrop_id, 2);
@@ -857,8 +880,16 @@ mod test {
 
             // with label
             let label = "test_label".to_string();
-            let airdrop = make_airdrop(SAMPLE_ROOT_TEST, "uatom", 2000000000u128, 0u128, false);
-            super::execute_register(deps.as_mut(), "owner", &airdrop, Some(label.clone())).unwrap();
+            let mut airdrop = make_airdrop(
+                SAMPLE_ROOT_TEST,
+                "uatom",
+                2000000000u128,
+                0u128,
+                false,
+                Some(label.clone()),
+            );
+            super::execute_register(deps.as_mut(), "owner", &airdrop).unwrap();
+            airdrop.label = Some(format!("{}/{}", "owner", label));
 
             let latest_airdrop_id = LATEST_AIRDROP_ID.load(deps.as_ref().storage).unwrap();
             assert_eq!(latest_airdrop_id, 3);
@@ -870,9 +901,8 @@ mod test {
             assert_eq!(airdrop_id_from_label, 2);
 
             // check label duplication
-            let err =
-                super::execute_register(deps.as_mut(), "owner", &airdrop, Some(label.clone()))
-                    .unwrap_err();
+            airdrop.label = Some(label.clone());
+            let err = super::execute_register(deps.as_mut(), "owner", &airdrop).unwrap_err();
             assert_eq!(
                 err,
                 ContractError::KeyAlreadyExists {
@@ -889,8 +919,15 @@ mod test {
             setup(deps.as_mut());
 
             let label = "test_label".to_string();
-            let mut airdrop = make_airdrop(SAMPLE_ROOT_TEST, "uosmo", 1000000u128, 0u128, false);
-            super::execute_register(deps.as_mut(), "owner", &airdrop, Some(label.clone())).unwrap();
+            let mut airdrop = make_airdrop(
+                SAMPLE_ROOT_TEST,
+                "uosmo",
+                1000000u128,
+                0u128,
+                false,
+                Some(label.clone()),
+            );
+            super::execute_register(deps.as_mut(), "owner", &airdrop).unwrap();
             let label = format!("{}/{}", "owner", label);
 
             let fund_amount = 100000000u128;
@@ -942,8 +979,15 @@ mod test {
                 .iter()
                 .fold(Uint128::zero(), |acc, c| acc + Uint128::from(c.amount));
 
-            let airdrop = make_airdrop(SAMPLE_ROOT_OPEN, "uosmo", claim_total_amount, 0u128, false);
-            super::execute_register(deps.as_mut(), "owner", &airdrop, None).unwrap();
+            let airdrop = make_airdrop(
+                SAMPLE_ROOT_OPEN,
+                "uosmo",
+                claim_total_amount,
+                0u128,
+                false,
+                None,
+            );
+            super::execute_register(deps.as_mut(), "owner", &airdrop).unwrap();
 
             for claim in claims {
                 claim.execute(deps.as_mut(), AirdropId::Id(0)).unwrap();
@@ -958,15 +1002,15 @@ mod test {
                 .iter()
                 .fold(Uint128::zero(), |acc, c| acc + Uint128::from(c.amount));
 
-            let airdrop =
-                make_airdrop(SAMPLE_ROOT_BEARER, "usomo", claim_total_amount, 0u128, true);
-            super::execute_register(
-                deps.as_mut(),
-                "owner",
-                &airdrop,
+            let airdrop = make_airdrop(
+                SAMPLE_ROOT_BEARER,
+                "usomo",
+                claim_total_amount,
+                0u128,
+                true,
                 Some("airdrop".to_string()),
-            )
-            .unwrap();
+            );
+            super::execute_register(deps.as_mut(), "owner", &airdrop).unwrap();
 
             for claim in claims {
                 claim
@@ -987,8 +1031,15 @@ mod test {
                 .iter()
                 .fold(Uint128::zero(), |acc, c| acc + Uint128::from(c.amount));
 
-            let airdrop = make_airdrop(SAMPLE_ROOT_OPEN, "uosmo", claim_total_amount, 0u128, false);
-            super::execute_register(deps.as_mut(), "owner", &airdrop, None).unwrap();
+            let airdrop = make_airdrop(
+                SAMPLE_ROOT_OPEN,
+                "uosmo",
+                claim_total_amount,
+                0u128,
+                false,
+                None,
+            );
+            super::execute_register(deps.as_mut(), "owner", &airdrop).unwrap();
 
             claims[0].execute(deps.as_mut(), AirdropId::Id(2)).unwrap();
 
@@ -1042,8 +1093,15 @@ mod test {
                 .iter()
                 .fold(Uint128::zero(), |acc, c| acc + Uint128::from(c.amount));
 
-            let airdrop = make_airdrop(SAMPLE_ROOT_OPEN, "uosmo", claim_total_amount, 0u128, false);
-            super::execute_register(deps.as_mut(), "owner", &airdrop, None).unwrap();
+            let airdrop = make_airdrop(
+                SAMPLE_ROOT_OPEN,
+                "uosmo",
+                claim_total_amount,
+                0u128,
+                false,
+                None,
+            );
+            super::execute_register(deps.as_mut(), "owner", &airdrop).unwrap();
             super::execute_multi_claim(
                 deps.as_mut(),
                 "owner",
@@ -1060,9 +1118,15 @@ mod test {
                 .iter()
                 .fold(Uint128::zero(), |acc, c| acc + Uint128::from(c.amount));
 
-            let airdrop =
-                make_airdrop(SAMPLE_ROOT_BEARER, "uosmo", claim_total_amount, 0u128, true);
-            super::execute_register(deps.as_mut(), "owner", &airdrop, None).unwrap();
+            let airdrop = make_airdrop(
+                SAMPLE_ROOT_BEARER,
+                "uosmo",
+                claim_total_amount,
+                0u128,
+                true,
+                None,
+            );
+            super::execute_register(deps.as_mut(), "owner", &airdrop).unwrap();
             super::execute_multi_claim(
                 deps.as_mut(),
                 "owner",
@@ -1076,6 +1140,8 @@ mod test {
     }
 
     mod query {
+        use cosmwasm_std::{from_binary, StdError};
+
         use super::*;
 
         fn setup(deps: DepsMut) {
@@ -1087,6 +1153,21 @@ mod test {
             let mut deps = mock_dependencies();
 
             setup(deps.as_mut());
+
+            let resp: LatestAirdropResponse = from_binary(
+                &query(deps.as_ref(), mock_env(), QueryMsg::LatestAirdropId {}).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(resp.0, 0);
+
+            let airdrop = make_airdrop(SAMPLE_ROOT_OPEN, "uosmo", 10000u128, 0u128, false, None);
+            super::execute_register(deps.as_mut(), "owner", &airdrop).unwrap();
+
+            let resp: LatestAirdropResponse = from_binary(
+                &query(deps.as_ref(), mock_env(), QueryMsg::LatestAirdropId {}).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(resp.0, 1);
         }
 
         #[test]
@@ -1094,6 +1175,153 @@ mod test {
             let mut deps = mock_dependencies();
 
             setup(deps.as_mut());
+
+            // check id not found
+            let err = query(
+                deps.as_ref(),
+                mock_env(),
+                QueryMsg::GetAirdrop {
+                    id: AirdropId::Id(0),
+                },
+            )
+            .unwrap_err();
+            assert_eq!(err, ContractError::Std(StdError::not_found("airdrop")));
+
+            // check label not found
+            let err = query(
+                deps.as_ref(),
+                mock_env(),
+                QueryMsg::GetAirdrop {
+                    id: AirdropId::Label("test_label".to_string()),
+                },
+            )
+            .unwrap_err();
+            assert_eq!(err, ContractError::Std(StdError::not_found("label")));
+
+            let airdrop_base =
+                make_airdrop(SAMPLE_ROOT_OPEN, "uosmo", 10000u128, 0u128, false, None);
+
+            let mut airdrop_open_labeled = airdrop_base.clone();
+            airdrop_open_labeled.label = Some("open_labeled".to_string());
+
+            let mut airdrop_open_unlabeled = airdrop_base.clone();
+            airdrop_open_unlabeled.label = None;
+
+            let mut airdrop_bearer_labeled = airdrop_base.clone();
+            airdrop_bearer_labeled.bearer = true;
+            airdrop_bearer_labeled.label = Some("bearer_labeled".to_string());
+
+            let mut airdrop_bearer_unlabeled = airdrop_base;
+            airdrop_bearer_unlabeled.bearer = true;
+            airdrop_bearer_unlabeled.label = None;
+
+            let airdrops = [
+                airdrop_open_labeled.clone(),
+                airdrop_open_unlabeled,
+                airdrop_bearer_labeled.clone(),
+                airdrop_bearer_unlabeled,
+            ];
+
+            airdrops.iter().for_each(|a| {
+                super::execute_register(deps.as_mut(), "owner", a).unwrap();
+            });
+
+            // get airdrop
+
+            // airdrop_open_unlabeled
+            let resp: GetAirdropResponse = from_binary(
+                &query(
+                    deps.as_ref(),
+                    mock_env(),
+                    QueryMsg::GetAirdrop {
+                        id: AirdropId::Id(1),
+                    },
+                )
+                .unwrap(),
+            )
+            .unwrap();
+
+            assert_eq!(resp.id, 1);
+            assert_eq!(resp.label, None);
+            assert_eq!(resp.total_amount, Uint128::from(10000u128));
+            assert_eq!(resp.total_claimed, Uint128::zero());
+            assert_eq!(resp.denom, "uosmo");
+            assert!(!resp.bearer);
+
+            // airdrop_bearer_labeled
+            let resp: GetAirdropResponse = from_binary(
+                &query(
+                    deps.as_ref(),
+                    mock_env(),
+                    QueryMsg::GetAirdrop {
+                        id: AirdropId::Label("owner/bearer_labeled".to_string()),
+                    },
+                )
+                .unwrap(),
+            )
+            .unwrap();
+
+            assert_eq!(resp.id, 2);
+            assert_eq!(resp.label, Some("owner/bearer_labeled".to_string()));
+            assert_eq!(resp.total_amount, Uint128::from(10000u128));
+            assert_eq!(resp.total_claimed, Uint128::zero());
+            assert_eq!(resp.denom, "uosmo");
+            assert!(resp.bearer);
+
+            // list airdrop
+            let to_resp = |(i, v): (usize, Airdrop)| GetAirdropResponse {
+                id: u64::try_from(i).unwrap(),
+                label: v.label.map(|v| format!("{}/{}", "owner", v)),
+                denom: v.denom,
+                total_amount: v.total_amount,
+                total_claimed: v.total_claimed,
+                bearer: v.bearer,
+            };
+
+            let resp: ListAirdropsResponse = from_binary(
+                &query(
+                    deps.as_ref(),
+                    mock_env(),
+                    QueryMsg::ListAirdrops {
+                        start_after: AirdropIdOptional::Id(None),
+                        limit: None,
+                        order: None,
+                    },
+                )
+                .unwrap(),
+            )
+            .unwrap();
+
+            assert_eq!(
+                resp.0,
+                airdrops
+                    .into_iter()
+                    .enumerate()
+                    .map(to_resp)
+                    .collect::<Vec<_>>()
+            );
+
+            let resp: ListAirdropsResponse = from_binary(
+                &query(
+                    deps.as_ref(),
+                    mock_env(),
+                    QueryMsg::ListAirdrops {
+                        start_after: AirdropIdOptional::Label(None),
+                        limit: None,
+                        order: None,
+                    },
+                )
+                .unwrap(),
+            )
+            .unwrap();
+
+            assert_eq!(
+                resp.0,
+                [(2, airdrop_bearer_labeled), (0, airdrop_open_labeled)]
+                    .into_iter()
+                    .map(to_resp)
+                    .collect::<Vec<_>>()
+            );
         }
 
         #[test]
@@ -1101,6 +1329,84 @@ mod test {
             let mut deps = mock_dependencies();
 
             setup(deps.as_mut());
+
+            // register airdrop & claim
+            let claims = super::get_open_claims();
+            let claim_total_amount = claims
+                .iter()
+                .fold(Uint128::zero(), |acc, c| acc + Uint128::from(c.amount));
+
+            let airdrop = make_airdrop(
+                SAMPLE_ROOT_OPEN,
+                "uosmo",
+                claim_total_amount,
+                0u128,
+                false,
+                None,
+            );
+            super::execute_register(deps.as_mut(), "owner", &airdrop).unwrap();
+
+            for claim in claims.clone() {
+                claim.execute(deps.as_mut(), AirdropId::Id(0)).unwrap();
+            }
+
+            // get claim
+            let unwrap_optional = |opt: ClaimProofOptional| match opt {
+                ClaimProofOptional::Account(acc) => {
+                    ClaimProof::Account(acc.unwrap_or_else(|| claims[0].account.clone()))
+                }
+                ClaimProofOptional::ClaimProof(proof) => ClaimProof::ClaimProof(proof),
+            };
+
+            let resp: GetClaimResponse = from_binary(
+                &query(
+                    deps.as_ref(),
+                    mock_env(),
+                    QueryMsg::GetClaim {
+                        id: AirdropId::Id(0),
+                        claim_proof: unwrap_optional(claims[0].claim_proof.clone()),
+                    },
+                )
+                .unwrap(),
+            )
+            .unwrap();
+
+            assert_eq!(
+                resp.claim_proof,
+                unwrap_optional(claims[0].claim_proof.clone())
+            );
+            assert_eq!(resp.amount, Uint128::from(claims[0].amount));
+
+            // list claim
+            let resp: ListClaimsResponse = from_binary(
+                &query(
+                    deps.as_ref(),
+                    mock_env(),
+                    QueryMsg::ListClaims {
+                        id: AirdropId::Id(0),
+                        start_after: None,
+                        limit: None,
+                        order: None,
+                    },
+                )
+                .unwrap(),
+            )
+            .unwrap();
+
+            // must sort & compare
+            let mut sorted_claims = claims.clone();
+            sorted_claims.sort_by(|a, b| a.account.cmp(&b.account));
+
+            assert_eq!(
+                resp.0,
+                sorted_claims
+                    .into_iter()
+                    .map(|v| GetClaimResponse {
+                        amount: Uint128::from(v.amount),
+                        claim_proof: unwrap_optional(v.claim_proof)
+                    })
+                    .collect::<Vec<_>>()
+            )
         }
     }
 }
