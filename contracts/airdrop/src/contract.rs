@@ -389,7 +389,8 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, Cont
                 ClaimProof::ClaimProof(ref proof) => {
                     CLAIM_LOGS.load(deps.storage, (airdrop_id, proof))
                 }
-            }?;
+            }
+            .map_err(|_| ContractError::Std(StdError::not_found("claim")))?;
 
             Ok(to_binary(&GetClaimResponse {
                 amount,
@@ -459,7 +460,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, Cont
             };
 
             let airdrop = AIRDROPS.load(deps.storage, airdrop_id)?;
-            if !(airdrop.bearer ^ bearer_expected) {
+            if airdrop.bearer != bearer_expected {
                 return Err(ContractError::InvalidArguments {
                     arg: "claim_proof".to_string(),
                     reason: "unexpected proof type".to_string(),
@@ -1022,6 +1023,44 @@ mod test {
             assert_eq!(fetched_airdrop.total_claimed, claim_total_amount);
             assert_eq!(fetched_airdrop.total_amount, fetched_airdrop.total_claimed);
 
+            // check total_amount > total_claimed
+            let claims = super::get_bearer_claims("claimer");
+            let claim_total_amount = claims
+                .iter()
+                .fold(Uint128::zero(), |acc, c| acc + Uint128::from(c.amount));
+
+            let airdrop = make_airdrop(
+                SAMPLE_ROOT_BEARER,
+                "usomo",
+                claim_total_amount - Uint128::one(),
+                0u128,
+                true,
+                Some("check_overflow".to_string()),
+            );
+            super::execute_register(deps.as_mut(), "owner", &airdrop).unwrap();
+
+            claims[0]
+                .execute(
+                    deps.as_mut(),
+                    AirdropId::Label("owner/check_overflow".to_string()),
+                )
+                .unwrap();
+            claims[1]
+                .execute(
+                    deps.as_mut(),
+                    AirdropId::Label("owner/check_overflow".to_string()),
+                )
+                .unwrap();
+            assert_eq!(
+                claims[2]
+                    .execute(
+                        deps.as_mut(),
+                        AirdropId::Label("owner/check_overflow".to_string())
+                    )
+                    .unwrap_err(),
+                ContractError::InsufficientAirdropFunds {}
+            );
+
             // check type of claim_proof
             let claims = super::get_open_claims();
             let claim_total_amount = claims
@@ -1038,7 +1077,7 @@ mod test {
             );
             super::execute_register(deps.as_mut(), "owner", &airdrop).unwrap();
 
-            claims[0].execute(deps.as_mut(), AirdropId::Id(2)).unwrap();
+            claims[0].execute(deps.as_mut(), AirdropId::Id(3)).unwrap();
 
             let err = Claim::new(
                 &claims[0].account,
@@ -1046,7 +1085,7 @@ mod test {
                 ClaimProofOptional::claim_proof(SAMPLE_ROOT_TEST),
                 vec![],
             )
-            .execute(deps.as_mut(), AirdropId::Id(2))
+            .execute(deps.as_mut(), AirdropId::Id(3))
             .unwrap_err();
             assert_eq!(
                 err,
@@ -1058,12 +1097,12 @@ mod test {
 
             // check double spending
             let err = claims[0]
-                .execute(deps.as_mut(), AirdropId::Id(2))
+                .execute(deps.as_mut(), AirdropId::Id(3))
                 .unwrap_err();
             assert_eq!(
                 err,
                 ContractError::AlreadyClaimed {
-                    airdrop_id: 2,
+                    airdrop_id: 3,
                     claimer: Addr::unchecked(&claims[0].account)
                 }
             );
@@ -1073,7 +1112,7 @@ mod test {
             claim_mixed.merkle_proof = claims[2].merkle_proof.clone();
 
             let err = claim_mixed
-                .execute(deps.as_mut(), AirdropId::Id(2))
+                .execute(deps.as_mut(), AirdropId::Id(3))
                 .unwrap_err();
             assert_eq!(err, ContractError::InvalidProof {});
         }
@@ -1328,8 +1367,8 @@ mod test {
             setup(deps.as_mut());
 
             // register airdrop & claim
-            let claims = super::get_open_claims();
-            let claim_total_amount = claims
+            let open_claims = super::get_open_claims();
+            let claim_total_amount = open_claims
                 .iter()
                 .fold(Uint128::zero(), |acc, c| acc + Uint128::from(c.amount));
 
@@ -1339,71 +1378,246 @@ mod test {
                 claim_total_amount,
                 0u128,
                 false,
-                None,
+                Some("open_claim_test".to_string()),
             );
             super::execute_register(deps.as_mut(), "owner", &airdrop).unwrap();
 
-            for claim in claims.clone() {
-                claim.execute(deps.as_mut(), AirdropId::Id(0)).unwrap();
+            let bearer_claims = super::get_bearer_claims("claimer");
+            let claim_total_amount = bearer_claims
+                .iter()
+                .fold(Uint128::zero(), |acc, c| acc + Uint128::from(c.amount));
+
+            let airdrop = make_airdrop(
+                SAMPLE_ROOT_BEARER,
+                "uosmo",
+                claim_total_amount,
+                0u128,
+                true,
+                Some("bearer_claim_test".to_string()),
+            );
+            super::execute_register(deps.as_mut(), "owner", &airdrop).unwrap();
+
+            for idx in 0..open_claims.len() {
+                open_claims[idx]
+                    .execute(
+                        deps.as_mut(),
+                        AirdropId::Label("owner/open_claim_test".to_string()),
+                    )
+                    .unwrap();
+                bearer_claims[idx]
+                    .execute(
+                        deps.as_mut(),
+                        AirdropId::Label("owner/bearer_claim_test".to_string()),
+                    )
+                    .unwrap();
             }
 
-            // get claim
-            let unwrap_optional = |opt: ClaimProofOptional| match opt {
+            let unwrap_optional = |claim: &Claim| match &claim.claim_proof {
                 ClaimProofOptional::Account(acc) => {
-                    ClaimProof::Account(acc.unwrap_or_else(|| claims[0].account.clone()))
+                    ClaimProof::Account(acc.clone().unwrap_or_else(|| claim.account.to_string()))
                 }
-                ClaimProofOptional::ClaimProof(proof) => ClaimProof::ClaimProof(proof),
+                ClaimProofOptional::ClaimProof(proof) => ClaimProof::ClaimProof(proof.to_string()),
             };
 
+            // get by id
             let resp: GetClaimResponse = from_binary(
                 &query(
                     deps.as_ref(),
                     mock_env(),
                     QueryMsg::GetClaim {
                         id: AirdropId::Id(0),
-                        claim_proof: unwrap_optional(claims[0].claim_proof.clone()),
+                        claim_proof: unwrap_optional(&open_claims[0]),
                     },
                 )
                 .unwrap(),
             )
             .unwrap();
 
-            assert_eq!(
-                resp.claim_proof,
-                unwrap_optional(claims[0].claim_proof.clone())
-            );
-            assert_eq!(resp.amount, Uint128::from(claims[0].amount));
+            assert_eq!(resp.claim_proof, unwrap_optional(&open_claims[0]));
+            assert_eq!(resp.amount, Uint128::from(open_claims[0].amount));
 
-            // list claim
-            let resp: ListClaimsResponse = from_binary(
+            // get by label
+            let resp: GetClaimResponse = from_binary(
                 &query(
                     deps.as_ref(),
                     mock_env(),
-                    QueryMsg::ListClaims {
-                        id: AirdropId::Id(0),
-                        start_after: None,
-                        limit: None,
-                        order: None,
+                    QueryMsg::GetClaim {
+                        id: AirdropId::Label("owner/open_claim_test".to_string()),
+                        claim_proof: unwrap_optional(&open_claims[0]),
                     },
                 )
                 .unwrap(),
             )
             .unwrap();
 
-            // must sort & compare
-            let mut sorted_claims = claims.clone();
-            sorted_claims.sort_by(|a, b| a.account.cmp(&b.account));
+            assert_eq!(resp.claim_proof, unwrap_optional(&open_claims[0]));
+            assert_eq!(resp.amount, Uint128::from(open_claims[0].amount));
 
-            assert_eq!(
-                resp.0,
-                sorted_claims
-                    .into_iter()
-                    .map(|v| GetClaimResponse {
-                        amount: Uint128::from(v.amount),
-                        claim_proof: unwrap_optional(v.claim_proof)
-                    })
-                    .collect::<Vec<_>>()
+            // check label exists
+            let err = query(
+                deps.as_ref(),
+                mock_env(),
+                QueryMsg::GetClaim {
+                    id: AirdropId::Label("asdf".to_string()),
+                    claim_proof: unwrap_optional(&open_claims[0]),
+                },
             )
+            .unwrap_err();
+            assert!(matches!(
+                err,
+                ContractError::Std(StdError::NotFound { kind })
+                if kind == "label",
+            ));
+
+            // check claim exists
+            let err = query(
+                deps.as_ref(),
+                mock_env(),
+                QueryMsg::GetClaim {
+                    id: AirdropId::Label("owner/open_claim_test".to_string()),
+                    claim_proof: unwrap_optional(&bearer_claims[0]),
+                },
+            )
+            .unwrap_err();
+            assert!(matches!(
+                err,
+                ContractError::Std(StdError::NotFound { kind })
+                if kind == "claim",
+            ));
+
+            // list claim
+            let airdrop_ids = [
+                AirdropId::Id(0),
+                AirdropId::Label("owner/open_claim_test".to_string()),
+                AirdropId::Id(1),
+                AirdropId::Label("owner/bearer_claim_test".to_string()),
+            ];
+
+            let resps = airdrop_ids
+                .into_iter()
+                .map(|id| {
+                    from_binary(
+                        &query(
+                            deps.as_ref(),
+                            mock_env(),
+                            QueryMsg::ListClaims {
+                                id,
+                                start_after: None,
+                                limit: None,
+                                order: None,
+                            },
+                        )
+                        .unwrap(),
+                    )
+                    .unwrap()
+                })
+                .collect::<Vec<ListClaimsResponse>>();
+
+            let resp_open_id = resps.get(0).unwrap();
+            let resp_open_label = resps.get(1).unwrap();
+            let resp_bearer_id = resps.get(2).unwrap();
+            let resp_bearer_label = resps.get(3).unwrap();
+
+            // must sort & compare
+            let cmp_claims = |a: &Claim, b: &Claim| {
+                let a = unwrap_optional(a);
+                let b = unwrap_optional(b);
+
+                match (a, b) {
+                    (ClaimProof::Account(a), ClaimProof::Account(b)) => a.cmp(&b),
+                    (ClaimProof::ClaimProof(a), ClaimProof::ClaimProof(b)) => a.cmp(&b),
+                    _ => panic!("type doesn't match"),
+                }
+            };
+
+            let mut sorted_claims = open_claims;
+            sorted_claims.sort_by(|a, b| cmp_claims(a, b));
+
+            let expected_resps = sorted_claims
+                .into_iter()
+                .map(|v| GetClaimResponse {
+                    amount: Uint128::from(v.amount),
+                    claim_proof: unwrap_optional(&v),
+                })
+                .collect::<Vec<_>>();
+
+            assert_eq!(resp_open_id.0, expected_resps);
+            assert_eq!(resp_open_label.0, expected_resps);
+
+            let mut sorted_claims = bearer_claims;
+            sorted_claims.sort_by(|a, b| cmp_claims(a, b));
+
+            let expected_resps = sorted_claims
+                .into_iter()
+                .map(|v| GetClaimResponse {
+                    amount: Uint128::from(v.amount),
+                    claim_proof: unwrap_optional(&v),
+                })
+                .collect::<Vec<_>>();
+
+            assert_eq!(resp_bearer_id.0, expected_resps);
+            assert_eq!(resp_bearer_label.0, expected_resps);
+        }
+
+        #[test]
+        fn check_qualification() {
+            let mut deps = mock_dependencies();
+
+            setup(deps.as_mut());
+
+            let airdrop = make_airdrop(
+                SAMPLE_ROOT_OPEN,
+                "uosmo",
+                100000u128,
+                0u128,
+                false,
+                Some("airdrop".to_string()),
+            );
+            super::execute_register(deps.as_mut(), "owner", &airdrop).unwrap();
+
+            let unwrap_optional = |claim: &Claim| match &claim.claim_proof {
+                ClaimProofOptional::Account(acc) => {
+                    ClaimProof::Account(acc.clone().unwrap_or_else(|| claim.account.to_string()))
+                }
+                ClaimProofOptional::ClaimProof(proof) => ClaimProof::ClaimProof(proof.to_string()),
+            };
+
+            for claim in super::get_open_claims() {
+                let resp: CheckQualificationResponse = from_binary(
+                    &query(
+                        deps.as_ref(),
+                        mock_env(),
+                        QueryMsg::CheckQualification {
+                            id: AirdropId::Id(0),
+                            amount: Uint128::new(claim.amount),
+                            claim_proof: unwrap_optional(&claim),
+                            merkle_proof: claim.merkle_proof.clone(),
+                        },
+                    )
+                    .unwrap(),
+                )
+                .unwrap();
+                assert!(resp.0);
+            }
+
+            let bearer_claims = super::get_bearer_claims("claimer");
+            for claim in super::get_open_claims() {
+                let resp: CheckQualificationResponse = from_binary(
+                    &query(
+                        deps.as_ref(),
+                        mock_env(),
+                        QueryMsg::CheckQualification {
+                            id: AirdropId::Id(0),
+                            amount: Uint128::new(claim.amount),
+                            claim_proof: unwrap_optional(&claim),
+                            merkle_proof: bearer_claims[0].merkle_proof.clone(),
+                        },
+                    )
+                    .unwrap(),
+                )
+                .unwrap();
+                assert!(!resp.0);
+            }
         }
     }
 }
