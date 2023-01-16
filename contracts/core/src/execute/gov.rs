@@ -261,7 +261,7 @@ mod test {
         ));
         assert!(matches!(
             release(deps.as_mut(), env.clone(), info_gov.clone()).unwrap_err(),
-            ContractError::Std(StdError::NotFound { kind }) if kind == "ibc_core::state::PauseInfo",
+            ContractError::Std(StdError::NotFound { kind }) if kind == "ibcx_core::state::PauseInfo",
         ));
 
         PAUSED
