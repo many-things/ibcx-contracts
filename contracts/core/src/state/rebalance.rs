@@ -34,8 +34,7 @@ impl Rebalance {
             .collect::<Vec<_>>();
         if !f.is_empty() {
             return Err(ContractError::InvalidArgument(format!(
-                "cannot deflate non-portfolio asset: {:?}",
-                f
+                "cannot deflate non-portfolio asset: {f:?}",
             )));
         }
 
@@ -48,8 +47,7 @@ impl Rebalance {
             .collect::<Vec<_>>();
         if !f.is_empty() {
             return Err(ContractError::InvalidArgument(format!(
-                "duplicated coin: {:?}",
-                f
+                "duplicated coin: {f:?}",
             )));
         }
 

@@ -127,7 +127,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
             let core_config = core.get_config(&deps.querier)?;
 
             // input & output
-            let output = coin(output_amount.u128(), &core_config.denom);
+            let output = coin(output_amount.u128(), core_config.denom);
 
             let desired = core
                 .simulate_burn(&deps.querier, output.amount)?
