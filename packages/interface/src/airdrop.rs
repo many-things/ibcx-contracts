@@ -123,7 +123,7 @@ pub struct LatestAirdropResponse(pub u64);
 #[cw_serde]
 pub struct GetClaimResponse {
     pub amount: Uint128,
-    pub claim_proof: String,
+    pub claim_proof: ClaimProof,
 }
 
 #[cw_serde]
