@@ -540,7 +540,7 @@ mod test {
                 mock_info(
                     sender,
                     &[coin(
-                        amount.unwrap_or(airdrop.total_amount.u128()),
+                        amount.unwrap_or_else(|| airdrop.total_amount.u128()),
                         &airdrop.denom,
                     )],
                 ),
