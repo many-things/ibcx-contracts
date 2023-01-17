@@ -12,6 +12,16 @@ pub enum AirdropId {
     Label(String),
 }
 
+impl AirdropId {
+    pub fn id(id: u64) -> Self {
+        AirdropId::Id(id)
+    }
+
+    pub fn label(label: impl Into<String>) -> Self {
+        AirdropId::Label(label.into())
+    }
+}
+
 #[cw_serde]
 pub enum AirdropIdOptional {
     Id(Option<u64>),
@@ -111,6 +121,7 @@ pub struct GetAirdropResponse {
     pub denom: String,
     pub total_amount: Uint128,
     pub total_claimed: Uint128,
+    pub merkle_root: String,
     pub bearer: bool,
 }
 
