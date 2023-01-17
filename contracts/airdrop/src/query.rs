@@ -357,7 +357,7 @@ mod test {
             .into_iter()
             .map(|mut v| {
                 if let Some(label) = v.label {
-                    v.label = Some(format!("{SENDER_OWNER}/{}", label));
+                    v.label = Some(format!("{SENDER_OWNER}/{label}"));
                 }
 
                 v
@@ -403,7 +403,7 @@ mod test {
             assert_eq!(
                 resp_to_airdrop(resp),
                 Airdrop {
-                    label: Some(label.clone()),
+                    label: Some(label),
                     ..airdrop
                 }
             );
