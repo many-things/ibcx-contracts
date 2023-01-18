@@ -62,6 +62,7 @@ fn pause(
     let resp = Response::new().add_attributes(vec![
         attr("method", "gov::pause"),
         attr("executor", info.sender),
+        attr("expires_at", pause_info.expires_at.unwrap().to_string()),
     ]);
 
     Ok(resp)
@@ -181,119 +182,164 @@ mod test {
         Addr, Decimal, StdError,
     };
 
-    use crate::state::{PauseInfo, Token};
+    use crate::{
+        state::{PauseInfo, Token},
+        test::{SENDER_ABUSER, SENDER_GOV},
+    };
 
     use super::*;
 
     #[test]
-    fn test_pause() {
+    fn test_handle_msg_check_authority() {
         let mut deps = mock_dependencies();
-        let env = mock_env();
-        let now = env.block.time.seconds();
 
-        let gov = Addr::unchecked("gov");
-        let abu = Addr::unchecked("abu");
-
-        let info_gov = mock_info(gov.as_str(), &[]);
-        let info_abu = mock_info(abu.as_str(), &[]);
-
+        let gov = Addr::unchecked(SENDER_GOV);
         GOV.save(deps.as_mut().storage, &gov).unwrap();
-        PAUSED
-            .save(deps.as_mut().storage, &Default::default())
-            .unwrap();
 
-        let pause = |deps: DepsMut, env: Env, info: MessageInfo, expires_at: u64| {
-            handle_msg(deps, env, info, GovMsg::Pause { expires_at })
-        };
-
-        // check arguments
-        assert!(matches!(
-            pause(deps.as_mut(), env.clone(), info_gov.clone(), now - 1000).unwrap_err(),
-            ContractError::InvalidArgument(reason) if reason == "expires_at must be in the future",
-        ));
-        assert!(matches!(
-            pause(deps.as_mut(), env.clone(), info_abu.clone(), now - 1000).unwrap_err(),
-            ContractError::Unauthorized {},
-        ));
-
-        // check role
-        assert!(matches!(
-            pause(deps.as_mut(), env.clone(), info_abu, now + 1000).unwrap_err(),
-            ContractError::Unauthorized {},
-        ));
-        pause(deps.as_mut(), env.clone(), info_gov.clone(), now + 1000).unwrap();
-
-        // check already paused
-        assert!(matches!(
-            pause(deps.as_mut(), env, info_gov, now + 1000).unwrap_err(),
-            ContractError::Paused {},
-        ));
-
-        assert_eq!(
-            PAUSED.load(deps.as_ref().storage).unwrap(),
-            PauseInfo {
-                paused: true,
-                expires_at: Some(now + 1000),
-            }
-        );
+        let err = handle_msg(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(SENDER_ABUSER, &[]),
+            GovMsg::Release {},
+        )
+        .unwrap_err();
+        assert_eq!(err, ContractError::Unauthorized {});
     }
 
-    #[test]
-    fn test_release() {
-        let mut deps = mock_dependencies();
-        let env = mock_env();
-        let now = env.block.time.seconds();
+    mod pause_and_release {
 
-        let gov = Addr::unchecked("gov");
-        let info_gov = mock_info(gov.as_str(), &[]);
-        let abu = Addr::unchecked("abu");
-        let info_abu = mock_info(abu.as_str(), &[]);
+        use super::*;
 
-        GOV.save(deps.as_mut().storage, &gov).unwrap();
+        fn setup(deps: DepsMut, gov: Option<&str>) {
+            let gov = Addr::unchecked(gov.unwrap_or(SENDER_GOV));
+            GOV.save(deps.storage, &gov).unwrap();
+            PAUSED.save(deps.storage, &Default::default()).unwrap();
+        }
 
-        let release = |deps: DepsMut, env: Env, info: MessageInfo| {
-            handle_msg(deps, env, info, GovMsg::Release {})
-        };
+        fn assert_pause_resp(resp: Response, sender: &str, expires_at: u64) {
+            assert_eq!(
+                resp.attributes,
+                vec![
+                    attr("method", "gov::pause"),
+                    attr("executor", sender),
+                    attr("expires_at", expires_at.to_string())
+                ]
+            );
+        }
 
-        assert!(matches!(
-            release(deps.as_mut(), env.clone(), info_abu).unwrap_err(),
-            ContractError::Unauthorized {},
-        ));
-        assert!(matches!(
-            release(deps.as_mut(), env.clone(), info_gov.clone()).unwrap_err(),
-            ContractError::Std(StdError::NotFound { kind }) if kind == "ibcx_core::state::PauseInfo",
-        ));
-
-        PAUSED
-            .save(
-                deps.as_mut().storage,
-                &PauseInfo {
-                    paused: true,
-                    expires_at: Some(now - 1000),
-                },
+        fn assert_release_resp(resp: Response, sender: &str) {
+            assert_eq!(
+                resp.attributes,
+                vec![attr("method", "gov::release"), attr("executor", sender),]
             )
-            .unwrap();
-        assert!(matches!(
-            release(deps.as_mut(), env.clone(), info_gov.clone()).unwrap_err(),
-            ContractError::NotPaused {},
-        ));
+        }
 
-        PAUSED
-            .save(
-                deps.as_mut().storage,
-                &PauseInfo {
-                    paused: true,
-                    expires_at: Some(now + 1000),
-                },
-            )
-            .unwrap();
-        release(deps.as_mut(), env, info_gov).unwrap();
+        #[test]
+        fn test_pause_and_release() {
+            let mut deps = mock_dependencies();
 
-        PAUSED
-            .load(deps.as_ref().storage)
-            .unwrap()
-            .assert_not_paused()
-            .unwrap();
+            let env = mock_env();
+            let now = env.block.time.seconds();
+
+            setup(deps.as_mut(), Some(SENDER_GOV));
+
+            let expire = now + 1000;
+            let sender = mock_info(SENDER_GOV, &[]);
+
+            // pause
+            let resp = pause(deps.as_mut(), env.clone(), sender.clone(), expire).unwrap();
+            assert_pause_resp(resp, SENDER_GOV, expire);
+
+            let paused = PAUSED.load(deps.as_ref().storage).unwrap();
+            assert!(paused.paused);
+            assert_eq!(paused.expires_at, Some(expire));
+
+            // release
+            let resp = release(deps.as_mut(), env.clone(), sender).unwrap();
+            assert_release_resp(resp, SENDER_GOV);
+
+            let paused = PAUSED.load(deps.as_ref().storage).unwrap();
+            assert!(!paused.paused);
+            assert!(paused.expires_at.is_none());
+        }
+
+        #[test]
+        fn test_past_expiry() {
+            let mut deps = mock_dependencies();
+
+            let env = mock_env();
+            let now = env.block.time.seconds();
+
+            setup(deps.as_mut(), Some(SENDER_GOV));
+
+            let sender = mock_info(SENDER_GOV, &[]);
+            let err = pause(deps.as_mut(), env, sender, now - 1).unwrap_err();
+            assert!(
+                matches!(err, ContractError::InvalidArgument(msg) if msg == "expires_at must be in the future")
+            );
+        }
+
+        #[test]
+        fn test_double_pause() {
+            let mut deps = mock_dependencies();
+
+            let env = mock_env();
+            let now = env.block.time.seconds();
+
+            setup(deps.as_mut(), Some(SENDER_GOV));
+
+            let sender = mock_info(SENDER_GOV, &[]);
+
+            // first pause
+            pause(deps.as_mut(), env.clone(), sender.clone(), now + 1).unwrap();
+
+            // second pause
+            assert_eq!(
+                pause(deps.as_mut(), env, sender, now + 1).unwrap_err(),
+                ContractError::Paused {}
+            );
+        }
+
+        #[test]
+        fn test_not_found_pause_info() {
+            let mut deps = mock_dependencies();
+
+            let env = mock_env();
+
+            setup(deps.as_mut(), Some(SENDER_GOV));
+
+            let sender = mock_info(SENDER_GOV, &[]);
+
+            assert_eq!(
+                release(deps.as_mut(), env, sender).unwrap_err(),
+                ContractError::Std(StdError::not_found("ibcx_core::state::PauseInfo"))
+            );
+        }
+
+        #[test]
+        fn test_not_paused() {
+            let mut deps = mock_dependencies();
+
+            let env = mock_env();
+            let now = env.block.time.seconds();
+
+            setup(deps.as_mut(), Some(SENDER_GOV));
+
+            PAUSED
+                .save(
+                    deps.as_mut().storage,
+                    &PauseInfo {
+                        paused: true,
+                        expires_at: Some(now - 1000),
+                    },
+                )
+                .unwrap();
+
+            assert!(matches!(
+                release(deps.as_mut(), env.clone(), mock_info(SENDER_GOV, &[])).unwrap_err(),
+                ContractError::NotPaused {},
+            ));
+        }
     }
 
     #[test]
