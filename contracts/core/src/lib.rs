@@ -15,6 +15,7 @@ mod test {
     pub const SENDER_OWNER: &str = "owner";
     pub const SENDER_GOV: &str = "gov";
     pub const SENDER_ABUSER: &str = "abuser";
+    pub const SENDER_VALID: &str = "osmo10yaagy0faggta0085hkzr3ckq7p7z9996nrn0m";
 
     pub const DENOM_DEFAULT: &str = "uibcx";
     pub const DENOM_RESERVE: &str = "uosmo";
