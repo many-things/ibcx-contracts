@@ -11,26 +11,6 @@ use super::{RESERVE_DENOM, TOKEN};
 pub const ASSETS_PREFIX: &str = "assets";
 pub const ASSETS: Map<String, Decimal> = Map::new(ASSETS_PREFIX);
 
-pub fn assert_assets(
-    storage: &dyn Storage,
-    funds: Vec<Coin>,
-    desired: Uint128,
-) -> Result<Vec<Coin>, ContractError> {
-    get_assets(storage)?
-        .into_iter()
-        .map(|(denom, unit)| {
-            let received = match funds.iter().find(|v| v.denom == denom) {
-                Some(c) => c,
-                None => return Err(ContractError::InsufficientFunds(denom)),
-            };
-
-            let refund = received.amount.checked_sub(unit * desired)?;
-
-            Ok(coin(refund.u128(), denom))
-        })
-        .collect()
-}
-
 pub fn set_assets(
     storage: &mut dyn Storage,
     assets: Vec<(String, Decimal)>,
@@ -59,6 +39,26 @@ pub fn get_assets(storage: &dyn Storage) -> StdResult<Vec<(String, Decimal)>> {
         .range(storage, None, None, Order::Ascending)
         .take(MAX_LIMIT as usize)
         .collect::<StdResult<_>>()
+}
+
+pub fn assert_assets(
+    storage: &dyn Storage,
+    funds: Vec<Coin>,
+    desired: Uint128,
+) -> Result<Vec<Coin>, ContractError> {
+    get_assets(storage)?
+        .into_iter()
+        .map(|(denom, unit)| {
+            let received = match funds.iter().find(|v| v.denom == denom) {
+                Some(c) => c,
+                None => return Err(ContractError::InsufficientFunds(denom)),
+            };
+
+            let refund = received.amount.checked_sub(unit * desired)?;
+
+            Ok(coin(refund.u128(), denom))
+        })
+        .collect()
 }
 
 pub fn get_redeem_amounts(storage: &dyn Storage, desired: Uint128) -> StdResult<Vec<Coin>> {
@@ -132,6 +132,28 @@ mod test {
                 ("uusd".to_string(), Decimal::from_str("1.5").unwrap()),
             ]
         );
+    }
+
+    #[test]
+    fn test_assert_assets() {
+        let mut storage = MockStorage::new();
+
+        setup_test(&mut storage);
+
+        let refund = assert_assets(
+            &storage,
+            vec![
+                coin(12000, "ueur"),
+                coin(15000, "ukrw"),
+                coin(20000, "uusd"),
+            ],
+            Uint128::new(10000),
+        )
+        .unwrap();
+        assert_eq!(
+            refund,
+            vec![coin(2000, "ueur"), coin(3000, "ukrw"), coin(5000, "uusd"),]
+        )
     }
 
     #[test]
