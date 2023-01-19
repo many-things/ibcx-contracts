@@ -47,7 +47,7 @@ fn check_duplication(
     Ok(())
 }
 
-fn init(
+pub fn init(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
@@ -90,7 +90,7 @@ fn init(
     Ok(resp)
 }
 
-fn trade(
+pub fn trade(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -120,7 +120,7 @@ fn trade(
     }
 }
 
-fn deflate(
+pub fn deflate(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -249,7 +249,7 @@ fn deflate(
         ]))
 }
 
-fn inflate(
+pub fn inflate(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -331,7 +331,7 @@ fn inflate(
         ]))
 }
 
-fn finalize(deps: DepsMut, _env: Env, _info: MessageInfo) -> Result<Response, ContractError> {
+pub fn finalize(deps: DepsMut, _env: Env, _info: MessageInfo) -> Result<Response, ContractError> {
     let rebalance_id = LATEST_REBALANCE_ID.load(deps.storage)?;
     LATEST_REBALANCE_ID.save(deps.storage, &(rebalance_id + 1))?;
 
