@@ -88,20 +88,14 @@ pub fn get_redeem_amounts(storage: &dyn Storage, desired: Uint128) -> StdResult<
 
 #[cfg(test)]
 mod test {
-    use std::str::FromStr;
-
     use cosmwasm_std::testing::MockStorage;
 
-    use crate::{state::Token, test::register_assets};
+    use crate::{
+        state::Token,
+        test::{register_assets, to_assets},
+    };
 
     use super::*;
-
-    fn to_assets(assets: &[(&str, &str)]) -> Vec<(String, Decimal)> {
-        assets
-            .into_iter()
-            .map(|(k, v)| (k.to_string(), Decimal::from_str(v).unwrap()))
-            .collect()
-    }
 
     fn setup_test(storage: &mut dyn Storage) {
         TOKEN

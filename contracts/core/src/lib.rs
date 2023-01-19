@@ -26,6 +26,13 @@ mod test {
     pub const DENOM_DEFAULT: &str = "uibcx";
     pub const DENOM_RESERVE: &str = "uosmo";
 
+    pub fn to_assets(assets: &[(&str, &str)]) -> Vec<(String, Decimal)> {
+        assets
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), Decimal::from_str(v).unwrap()))
+            .collect()
+    }
+
     pub fn register_assets(storage: &mut dyn Storage, assets: &[(&str, &str)]) {
         for (denom, unit) in assets {
             ASSETS
