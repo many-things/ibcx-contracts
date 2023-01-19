@@ -29,24 +29,6 @@ pub fn handle_msg(
     }
 }
 
-fn check_duplication(
-    x: Vec<(String, Decimal)>,
-    y: Vec<(String, Decimal)>,
-) -> Result<(), ContractError> {
-    let mut y = y.into_iter();
-    let f = x
-        .into_iter()
-        .filter(|xc| y.any(|yc| yc.0 == xc.0))
-        .collect::<Vec<_>>();
-    if !f.is_empty() {
-        return Err(ContractError::InvalidArgument(format!(
-            "duplicated coin: {f:?}",
-        )));
-    }
-
-    Ok(())
-}
-
 pub fn init(
     deps: DepsMut,
     _env: Env,
@@ -67,8 +49,6 @@ pub fn init(
             return Err(ContractError::RebalanceNotFinalized {});
         }
     }
-
-    check_duplication(deflation.clone(), inflation.clone())?;
 
     let rebalance = Rebalance {
         manager: deps.api.addr_validate(&manager)?,
