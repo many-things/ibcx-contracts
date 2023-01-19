@@ -37,7 +37,7 @@ pub fn handle_msg(
     }
 }
 
-fn pause(
+pub fn pause(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -68,7 +68,7 @@ fn pause(
     Ok(resp)
 }
 
-fn release(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+pub fn release(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     PAUSED
         .load(deps.storage)?
         .refresh(deps.storage, &env)?
@@ -84,7 +84,7 @@ fn release(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, Contr
     Ok(resp)
 }
 
-fn update_gov(
+pub fn update_gov(
     deps: DepsMut,
     info: MessageInfo,
     new_gov: String,
@@ -100,7 +100,7 @@ fn update_gov(
     Ok(resp)
 }
 
-fn update_fee(
+pub fn update_fee(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -129,7 +129,7 @@ fn update_fee(
     Ok(resp)
 }
 
-fn update_reserve_denom(
+pub fn update_reserve_denom(
     deps: DepsMut,
     info: MessageInfo,
     new_denom: String,
@@ -155,7 +155,7 @@ fn update_reserve_denom(
     Ok(resp)
 }
 
-fn update_trade_info(
+pub fn update_trade_info(
     deps: DepsMut,
     info: MessageInfo,
     denom: String,
