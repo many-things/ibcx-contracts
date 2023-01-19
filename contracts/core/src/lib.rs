@@ -12,9 +12,11 @@ pub const REPLY_ID_DENOM_CREATION: u64 = 0;
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{Addr, Uint128};
+    use std::str::FromStr;
 
-    use crate::state;
+    use cosmwasm_std::{Addr, Decimal, Storage, Uint128};
+
+    use crate::state::{self, ASSETS};
 
     pub const SENDER_OWNER: &str = "owner";
     pub const SENDER_GOV: &str = "gov";
@@ -23,6 +25,18 @@ mod test {
 
     pub const DENOM_DEFAULT: &str = "uibcx";
     pub const DENOM_RESERVE: &str = "uosmo";
+
+    pub fn register_assets(storage: &mut dyn Storage, assets: &[(&str, &str)]) {
+        for (denom, unit) in assets {
+            ASSETS
+                .save(
+                    storage,
+                    denom.to_string(),
+                    &Decimal::from_str(unit).unwrap(),
+                )
+                .unwrap();
+        }
+    }
 
     pub fn default_fee() -> state::Fee {
         state::Fee {
