@@ -195,28 +195,10 @@ mod test {
 
     use crate::{
         state::{self, PauseInfo, Token},
-        test::{DENOM_DEFAULT, DENOM_RESERVE, SENDER_ABUSER, SENDER_GOV},
+        test::{DENOM_DEFAULT, SENDER_ABUSER, SENDER_GOV},
     };
 
     use super::*;
-
-    fn default_fee() -> state::Fee {
-        state::Fee {
-            collector: Addr::unchecked("collector"),
-            mint: Default::default(),
-            burn: Default::default(),
-            stream: Default::default(),
-            stream_last_collected_at: Default::default(),
-        }
-    }
-
-    fn default_token() -> Token {
-        Token {
-            denom: DENOM_DEFAULT.to_string(),
-            reserve_denom: DENOM_RESERVE.to_string(),
-            total_supply: Uint128::new(100),
-        }
-    }
 
     #[test]
     fn test_handle_msg_check_authority() {
@@ -375,7 +357,7 @@ mod test {
 
     mod update {
 
-        use crate::test::{SENDER_OWNER, SENDER_VALID};
+        use crate::test::{default_fee, default_token, SENDER_OWNER, SENDER_VALID};
 
         use super::*;
 

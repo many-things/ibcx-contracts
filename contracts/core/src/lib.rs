@@ -12,6 +12,10 @@ pub const REPLY_ID_DENOM_CREATION: u64 = 0;
 
 #[cfg(test)]
 mod test {
+    use cosmwasm_std::{Addr, Uint128};
+
+    use crate::state;
+
     pub const SENDER_OWNER: &str = "owner";
     pub const SENDER_GOV: &str = "gov";
     pub const SENDER_ABUSER: &str = "abuser";
@@ -19,4 +23,22 @@ mod test {
 
     pub const DENOM_DEFAULT: &str = "uibcx";
     pub const DENOM_RESERVE: &str = "uosmo";
+
+    pub fn default_fee() -> state::Fee {
+        state::Fee {
+            collector: Addr::unchecked("collector"),
+            mint: Default::default(),
+            burn: Default::default(),
+            stream: Default::default(),
+            stream_last_collected_at: Default::default(),
+        }
+    }
+
+    pub fn default_token() -> state::Token {
+        state::Token {
+            denom: DENOM_DEFAULT.to_string(),
+            reserve_denom: DENOM_RESERVE.to_string(),
+            total_supply: Uint128::new(100),
+        }
+    }
 }
