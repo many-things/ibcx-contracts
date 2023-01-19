@@ -52,7 +52,7 @@ mod test {
         state::Token {
             denom: DENOM_DEFAULT.to_string(),
             reserve_denom: DENOM_RESERVE.to_string(),
-            total_supply: Uint128::new(100),
+            total_supply: Uint128::new(100000),
         }
     }
 }
