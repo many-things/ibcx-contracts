@@ -26,6 +26,24 @@ pub struct Rebalance {
 }
 
 impl Rebalance {
+    pub fn get_deflation(&self, denom: &str) -> Result<(String, Decimal), ContractError> {
+        match self.deflation.iter().find(|v| v.0 == denom) {
+            Some(v) => Ok(v.clone()),
+            None => Err(ContractError::InvalidArgument(format!(
+                "cannot find deflation asset: {denom}",
+            ))),
+        }
+    }
+
+    pub fn get_inflation(&self, denom: &str) -> Result<(String, Decimal), ContractError> {
+        match self.inflation.iter().find(|v| v.0 == denom) {
+            Some(v) => Ok(v.clone()),
+            None => Err(ContractError::InvalidArgument(format!(
+                "cannot find inflation asset: {denom}",
+            ))),
+        }
+    }
+
     pub fn validate(&self, assets: Vec<(String, Decimal)>) -> Result<(), ContractError> {
         let prettify = |f: Vec<&(String, Decimal)>| {
             f.into_iter()
