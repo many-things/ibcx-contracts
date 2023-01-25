@@ -9,6 +9,8 @@ use crate::{
     state::{TradeInfo, ASSETS, GOV, PAUSED, RESERVE_DENOM, TOKEN, TRADE_INFOS},
 };
 
+use super::fee;
+
 pub fn handle_msg(
     deps: DepsMut,
     env: Env,
@@ -106,6 +108,8 @@ pub fn update_fee(
     info: MessageInfo,
     new_fee: Fee,
 ) -> Result<Response, ContractError> {
+    let msg = fee::realize_streaming_fee(deps.storage)?;
+
     let mut fee = FEE.load(deps.storage)?;
 
     fee.collector = deps.api.addr_validate(&new_fee.collector)?;
@@ -120,7 +124,7 @@ pub fn update_fee(
 
     FEE.save(deps.storage, &fee)?;
 
-    let resp = Response::new().add_attributes(vec![
+    let resp = Response::new().add_message(msg).add_attributes(vec![
         attr("method", "gov::update_fee"),
         attr("executor", info.sender),
         attr("new_fee", format!("{new_fee:?}")),
@@ -446,6 +450,7 @@ mod test {
                 FEE.load(deps.as_ref().storage).unwrap(),
                 state::Fee {
                     collector: Addr::unchecked(new_fee.collector),
+                    collected: vec![],
                     mint: new_fee.mint,
                     burn: new_fee.burn,
                     stream: new_fee.stream,

@@ -31,6 +31,7 @@ pub fn instantiate(
         deps.storage,
         &Fee {
             collector: deps.api.addr_validate(&msg.fee_strategy.collector)?,
+            collected: vec![],
             mint: msg.fee_strategy.mint,
             burn: msg.fee_strategy.burn,
             stream: msg.fee_strategy.stream,
@@ -63,6 +64,8 @@ pub fn execute(
     use crate::execute;
     use ExecuteMsg::*;
 
+    execute::collect_streaming_fee(deps.storage, env.block.time.seconds())?;
+
     match msg {
         Mint {
             amount,
@@ -70,6 +73,7 @@ pub fn execute(
             refund_to,
         } => execute::mint(deps, env, info, amount, receiver, refund_to),
         Burn { redeem_to } => execute::burn(deps, env, info, redeem_to),
+        Realize {} => execute::realize(deps, env, info),
         Gov(msg) => execute::handle_gov_msg(deps, env, info, msg),
         Rebalance(msg) => execute::handle_rebalance_msg(deps, env, info, msg),
     }

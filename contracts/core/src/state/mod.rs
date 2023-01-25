@@ -29,8 +29,11 @@ pub const PAUSED: Item<PauseInfo> = Item::new(PAUSED_KEY);
 #[cw_serde]
 pub struct Fee {
     pub collector: Addr,
+    pub collected: Vec<(String, Decimal)>,
     pub mint: Option<Decimal>,
     pub burn: Option<Decimal>,
+    // secondly rate
+    // ex) APY %0.15 = 1 - (1 + 0.0015)^(1 / (86400 * 365)) = 0.000000000047529
     pub stream: Option<Decimal>,
     pub stream_last_collected_at: u64,
 }
