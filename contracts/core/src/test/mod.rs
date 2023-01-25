@@ -55,6 +55,7 @@ pub fn register_assets(storage: &mut dyn Storage, assets: &[(&str, &str)]) {
 pub fn default_fee() -> state::Fee {
     state::Fee {
         collector: Addr::unchecked("collector"),
+        collected: vec![],
         mint: Default::default(),
         burn: Default::default(),
         stream: Default::default(),

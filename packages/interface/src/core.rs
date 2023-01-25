@@ -78,6 +78,7 @@ pub enum ExecuteMsg {
     Burn {
         redeem_to: Option<String>,
     }, // pub some ibc tokens to tx payload
+    Realize {},
 
     Gov(GovMsg),
     Rebalance(RebalanceMsg),

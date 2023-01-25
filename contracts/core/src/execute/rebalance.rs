@@ -1,9 +1,10 @@
-use cosmwasm_std::{attr, coin, Addr, Decimal, Env, MessageInfo, Storage, Uint128};
+use cosmwasm_std::{attr, coin, Addr, Decimal, Env, MessageInfo, Storage, SubMsg, Uint128};
 use cosmwasm_std::{DepsMut, Response};
 use ibcx_interface::core::{RebalanceMsg, RebalanceTradeMsg};
 
 use crate::{
     error::ContractError,
+    execute::fee,
     state::{
         get_assets, Rebalance, ASSETS, GOV, LATEST_REBALANCE_ID, REBALANCES, RESERVE_BUFFER,
         RESERVE_DENOM, TOKEN, TRADE_INFOS,
@@ -75,6 +76,14 @@ pub fn trade(
     info: MessageInfo,
     msg: RebalanceTradeMsg,
 ) -> Result<Response, ContractError> {
+    let realize_msg = fee::realize_streaming_fee(deps.storage)?;
+    let wrap = |resp: Result<Response, ContractError>| {
+        resp.map(|mut r| {
+            r.messages.insert(0, SubMsg::new(realize_msg));
+            r
+        })
+    };
+
     match msg {
         RebalanceTradeMsg::Deflate {
             denom,
@@ -86,9 +95,9 @@ pub fn trade(
             let reserve = token.reserve_denom;
 
             if reserve == denom {
-                deflate_reserve(deps, info, denom, amount)
+                wrap(deflate_reserve(deps, info, denom, amount))
             } else {
-                deflate(deps, env, info, denom, amount, max_amount_in)
+                wrap(deflate(deps, env, info, denom, amount, max_amount_in))
             }
         }
 
@@ -102,9 +111,9 @@ pub fn trade(
             let reserve = token.reserve_denom;
 
             if reserve == denom {
-                inflate_reserve(deps, info, denom, amount)
+                wrap(inflate_reserve(deps, info, denom, amount))
             } else {
-                inflate(deps, env, info, denom, amount, min_amount_out)
+                wrap(inflate(deps, env, info, denom, amount, min_amount_out))
             }
         }
     }
@@ -461,11 +470,11 @@ mod test {
     };
     use std::str::FromStr;
 
-    use crate::state::Token;
-    use crate::test::default_token;
     use crate::test::default_trade_info;
     use crate::test::mock_dependencies;
     use crate::test::{register_assets, to_assets, SENDER_GOV, SENDER_OWNER};
+    use crate::{state::Token, test::default_fee};
+    use crate::{state::FEE, test::default_token};
 
     use super::*;
 
@@ -488,6 +497,7 @@ mod test {
         LATEST_REBALANCE_ID.save(storage, &id).unwrap();
         REBALANCES.save(storage, id, &rebalance).unwrap();
         TOKEN.save(storage, &token).unwrap();
+        FEE.save(storage, &default_fee()).unwrap();
 
         (rebalance, token)
     }

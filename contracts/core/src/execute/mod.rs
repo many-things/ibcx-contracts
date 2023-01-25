@@ -1,102 +1,18 @@
+mod fee;
 mod gov;
 mod rebalance;
 
-use cosmwasm_std::{attr, coin, Addr, BankMsg, Coin, CosmosMsg, Env, MessageInfo, Uint128};
+use cosmwasm_std::{attr, coin, BankMsg, Env, MessageInfo, Uint128};
 use cosmwasm_std::{DepsMut, Response};
-use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgBurn, MsgMint};
 
-use crate::state::{Fee, FEE};
 use crate::{
     error::ContractError,
-    state::{assert_assets, get_redeem_amounts, PAUSED, TOKEN},
+    state::{assert_assets, get_redeem_amounts, FEE, PAUSED, TOKEN},
 };
 
+pub use crate::execute::fee::collect_streaming_fee;
 pub use crate::execute::gov::handle_msg as handle_gov_msg;
 pub use crate::execute::rebalance::handle_msg as handle_rebalance_msg;
-
-fn make_mint_msgs_with_fee_collection(
-    fee: Fee,
-    mint: Coin,
-    minter: &Addr,
-    receiver: &Addr,
-) -> Result<Vec<CosmosMsg>, ContractError> {
-    let mut msgs = vec![MsgMint {
-        sender: minter.clone().into_string(),
-        amount: Some(mint.clone().into()),
-    }
-    .into()];
-
-    if let Some(ratio) = fee.mint {
-        let fee_amount = (mint.amount * ratio).max(Uint128::one());
-
-        msgs.push(
-            BankMsg::Send {
-                to_address: fee.collector.to_string(),
-                amount: vec![coin(fee_amount.u128(), &mint.denom)],
-            }
-            .into(),
-        );
-
-        msgs.push(
-            BankMsg::Send {
-                to_address: receiver.to_string(),
-                amount: vec![coin(
-                    mint.amount.checked_sub(fee_amount)?.u128(),
-                    &mint.denom,
-                )],
-            }
-            .into(),
-        );
-    } else {
-        msgs.push(
-            BankMsg::Send {
-                to_address: receiver.to_string(),
-                amount: vec![mint],
-            }
-            .into(),
-        );
-    }
-
-    Ok(msgs)
-}
-
-fn make_burn_msgs_with_fee_collection(
-    fee: Fee,
-    burn: Coin,
-    burner: &Addr,
-) -> Result<Vec<CosmosMsg>, ContractError> {
-    let mut msgs = vec![];
-
-    if let Some(ratio) = fee.burn {
-        let fee_amount = (burn.amount * ratio).max(Uint128::one());
-
-        msgs.push(
-            BankMsg::Send {
-                to_address: fee.collector.to_string(),
-                amount: vec![coin(fee_amount.u128(), &burn.denom)],
-            }
-            .into(),
-        );
-
-        msgs.push(
-            MsgBurn {
-                sender: burner.to_string(),
-                amount: Some(coin(burn.amount.checked_sub(fee_amount)?.u128(), &burn.denom).into()),
-            }
-            .into(),
-        );
-    } else {
-        msgs.push(
-            MsgBurn {
-                sender: burner.to_string(),
-                amount: Some(burn.into()),
-            }
-            .into(),
-        );
-    }
-
-    Ok(msgs)
-}
 
 pub fn mint(
     deps: DepsMut,
@@ -132,7 +48,7 @@ pub fn mint(
     let refund_amount = refund.into_iter().filter(|v| !v.amount.is_zero()).collect();
 
     let resp = Response::new()
-        .add_messages(make_mint_msgs_with_fee_collection(
+        .add_messages(fee::make_mint_msgs_with_fee_collection(
             FEE.load(deps.storage)?,
             mint_amount,
             &env.contract.address,
@@ -187,7 +103,7 @@ pub fn burn(
         .unwrap_or_else(|| info.sender.clone());
 
     let resp = Response::new()
-        .add_messages(make_burn_msgs_with_fee_collection(
+        .add_messages(fee::make_burn_msgs_with_fee_collection(
             fee,
             coin(received.u128(), &token.denom),
             &env.contract.address,
@@ -206,19 +122,29 @@ pub fn burn(
     Ok(resp)
 }
 
+pub fn realize(deps: DepsMut, _env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+    let fee = FEE.load(deps.storage)?;
+    if fee.collector != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let msg = fee::realize_streaming_fee(deps.storage)?;
+
+    Ok(Response::new().add_message(msg).add_attributes(vec![
+        attr("method", "realize"),
+        attr("executor", info.sender),
+    ]))
+}
+
 #[cfg(test)]
 mod test {
 
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier, MockStorage},
-        Decimal, OwnedDeps, SubMsg,
+        OwnedDeps, SubMsg,
     };
 
-    use crate::{
-        execute::make_mint_msgs_with_fee_collection,
-        test::default_fee,
-        test::{default_token, register_assets},
-    };
+    use crate::test::{default_fee, default_token, register_assets};
 
     use super::*;
 
@@ -243,57 +169,6 @@ mod test {
     mod mint {
 
         use super::*;
-
-        #[test]
-        fn test_make_mint_msgs() {
-            let expected_mint_msg = MsgMint {
-                sender: "minter".to_string(),
-                amount: Some(coin(100, "uibcx").into()),
-            }
-            .into();
-            let fee_ratio = Decimal::from_ratio(10u128, 100u128);
-            let mint = coin(100, "uibcx");
-            let minter = Addr::unchecked("minter");
-            let receiver = Addr::unchecked("receiver");
-
-            // with mint fee
-            let fee = super::Fee {
-                mint: Some(fee_ratio),
-                ..default_fee()
-            };
-            let mut msgs =
-                make_mint_msgs_with_fee_collection(fee, mint.clone(), &minter, &receiver).unwrap();
-            assert_eq!(msgs.remove(0), expected_mint_msg);
-            assert_eq!(
-                msgs,
-                vec![
-                    BankMsg::Send {
-                        to_address: "collector".to_string(),
-                        amount: vec![coin(10, "uibcx")],
-                    }
-                    .into(),
-                    BankMsg::Send {
-                        to_address: "receiver".to_string(),
-                        amount: vec![coin(90, "uibcx")],
-                    }
-                    .into()
-                ]
-            );
-
-            // with no fee
-            let fee = default_fee();
-            let mut msgs =
-                make_mint_msgs_with_fee_collection(fee, mint, &minter, &receiver).unwrap();
-            assert_eq!(msgs.remove(0), expected_mint_msg);
-            assert_eq!(
-                msgs,
-                vec![BankMsg::Send {
-                    to_address: "receiver".to_string(),
-                    amount: vec![coin(100, "uibcx")],
-                }
-                .into()]
-            );
-        }
 
         #[test]
         fn test_mint() {
@@ -356,48 +231,6 @@ mod test {
 
     mod burn {
         use super::*;
-
-        #[test]
-        fn test_make_burn_msgs() {
-            // with burn fee
-            let fee_ratio = Decimal::from_ratio(10u128, 100u128);
-            let fee = super::Fee {
-                burn: Some(fee_ratio),
-                ..default_fee()
-            };
-            let burn = coin(100, "uibcx");
-            let burner = Addr::unchecked("burner");
-
-            let expected_msgs = vec![
-                BankMsg::Send {
-                    to_address: fee.collector.to_string(),
-                    amount: vec![coin(10, &burn.denom)],
-                }
-                .into(),
-                MsgBurn {
-                    sender: burner.to_string(),
-                    amount: Some(coin(90, &burn.denom).into()),
-                }
-                .into(),
-            ];
-
-            let msgs = make_burn_msgs_with_fee_collection(fee, burn, &burner).unwrap();
-            assert_eq!(msgs, expected_msgs);
-
-            // with no fee
-            let fee = default_fee();
-            let burn = coin(100, "uibcx");
-            let burner = Addr::unchecked("burner");
-
-            let expected_msgs = vec![MsgBurn {
-                sender: burner.to_string(),
-                amount: Some(burn.clone().into()),
-            }
-            .into()];
-
-            let msgs = make_burn_msgs_with_fee_collection(fee, burn, &burner).unwrap();
-            assert_eq!(msgs, expected_msgs);
-        }
 
         #[test]
         fn test_burn() {

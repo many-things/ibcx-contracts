@@ -446,6 +446,7 @@ mod test {
                 FEE.load(deps.as_ref().storage).unwrap(),
                 state::Fee {
                     collector: Addr::unchecked(new_fee.collector),
+                    collected: vec![],
                     mint: new_fee.mint,
                     burn: new_fee.burn,
                     stream: new_fee.stream,
