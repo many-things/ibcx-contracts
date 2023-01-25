@@ -1,5 +1,7 @@
 # IBCX Airdrop
 
+Generalized contract for manage multiple airdrops
+
 ## Instaintiation
 
 | There's no need to put some values into instantiate message. Just put empty json object.
