@@ -4,12 +4,13 @@ use ibcx_interface::core::{RebalanceMsg, RebalanceTradeMsg};
 
 use crate::{
     error::ContractError,
-    execute::fee,
     state::{
         get_assets, Rebalance, ASSETS, GOV, LATEST_REBALANCE_ID, REBALANCES, RESERVE_BUFFER,
         RESERVE_DENOM, TOKEN, TRADE_INFOS,
     },
 };
+
+use super::fee;
 
 pub fn handle_msg(
     deps: DepsMut,
