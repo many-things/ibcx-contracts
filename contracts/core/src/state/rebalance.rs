@@ -47,11 +47,9 @@ impl Rebalance {
     pub fn validate(&self, assets: Vec<(String, Decimal)>) -> Result<(), ContractError> {
         let prettify = |f: Vec<&(String, Decimal)>| {
             f.into_iter()
-                .map(|(denom, unit)| -> String {
-                    format!("(\"{}\",\"{}\")", denom, unit).to_string()
-                })
+                .map(|(denom, unit)| -> String { format!("(\"{}\",\"{}\")", denom, unit) })
                 .fold("[".to_string(), |acc, s| acc + &s + ",")
-                .trim_end_matches(",")
+                .trim_end_matches(',')
                 .to_string()
                 + "]"
         };
