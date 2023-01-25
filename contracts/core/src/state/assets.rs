@@ -121,7 +121,7 @@ mod test {
 
         // check limit exceeds
         let assets = to_assets(
-            &[("ukrw", "1.0")]
+            [("ukrw", "1.0")]
                 .repeat((MAX_LIMIT + 1).try_into().unwrap())
                 .as_slice(),
         );

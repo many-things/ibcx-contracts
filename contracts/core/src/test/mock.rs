@@ -2,9 +2,11 @@ use std::collections::BTreeMap;
 
 use cosmwasm_std::{Binary, ContractResult, QuerierResult, SystemResult};
 
+type StargateHandler<'a> = Box<dyn Fn(&Binary) -> QuerierResult + 'a>;
+
 #[derive(Default)]
 pub struct StargateQuerier<'a> {
-    pub handlers: BTreeMap<String, Box<dyn Fn(&Binary) -> QuerierResult + 'a>>,
+    pub handlers: BTreeMap<String, StargateHandler<'a>>,
 }
 
 impl<'a> StargateQuerier<'a> {

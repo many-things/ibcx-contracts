@@ -266,7 +266,7 @@ mod test {
             assert_eq!(paused.expires_at, Some(expire));
 
             // release
-            let resp = release(deps.as_mut(), env.clone(), sender).unwrap();
+            let resp = release(deps.as_mut(), env, sender).unwrap();
             assert_release_resp(resp, SENDER_GOV);
 
             let paused = PAUSED.load(deps.as_ref().storage).unwrap();
@@ -349,7 +349,7 @@ mod test {
                 .unwrap();
 
             assert!(matches!(
-                release(deps.as_mut(), env.clone(), mock_info(SENDER_GOV, &[])).unwrap_err(),
+                release(deps.as_mut(), env, mock_info(SENDER_GOV, &[])).unwrap_err(),
                 ContractError::NotPaused {},
             ));
         }
@@ -371,10 +371,10 @@ mod test {
             let gov = Addr::unchecked(gov.into());
             GOV.save(deps.storage, &gov).unwrap();
 
-            let fee = fee.unwrap_or(default_fee());
+            let fee = fee.unwrap_or_else(default_fee);
             FEE.save(deps.storage, &fee).unwrap();
 
-            let token = token.unwrap_or(default_token());
+            let token = token.unwrap_or_else(default_token);
             TOKEN.save(deps.storage, &token).unwrap();
 
             for (denom, unit) in assets {

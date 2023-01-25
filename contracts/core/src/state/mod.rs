@@ -129,7 +129,7 @@ mod test {
             expires_at: Some(env.block.time.seconds() - 1),
             ..info
         };
-        let info_after = info.clone().refresh(&mut storage, &env).unwrap();
+        let info_after = info.refresh(&mut storage, &env).unwrap();
         assert!(!info_after.paused);
         assert_eq!(info_after.expires_at, None);
         assert_eq!(PAUSED.load(&storage).unwrap(), info_after);

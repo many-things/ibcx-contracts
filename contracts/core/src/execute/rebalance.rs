@@ -413,7 +413,7 @@ pub fn inflate(
         ]))
 }
 
-pub fn finalize(deps: DepsMut, _env: Env, _info: MessageInfo) -> Result<Response, ContractError> {
+pub fn finalize(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     let rebalance_id = LATEST_REBALANCE_ID.load(deps.storage)?;
     LATEST_REBALANCE_ID.save(deps.storage, &(rebalance_id + 1))?;
 
@@ -441,7 +441,11 @@ pub fn finalize(deps: DepsMut, _env: Env, _info: MessageInfo) -> Result<Response
 
     REBALANCES.save(deps.storage, rebalance_id, &rebalance)?;
 
-    Ok(Default::default())
+    Ok(Response::new().add_attributes(vec![
+        attr("method", "finalize"),
+        attr("executor", info.sender),
+        attr("finalized_at", env.block.height.to_string()),
+    ]))
 }
 
 #[cfg(test)]
@@ -464,6 +468,29 @@ mod test {
     use crate::test::{register_assets, to_assets, SENDER_GOV, SENDER_OWNER};
 
     use super::*;
+
+    fn setup(
+        storage: &mut dyn Storage,
+        id: u64,
+        deflation: &[(&str, &str)],
+        inflation: &[(&str, &str)],
+        finalized: bool,
+    ) -> (Rebalance, Token) {
+        let rebalance = Rebalance {
+            manager: Addr::unchecked("manager"),
+            deflation: to_assets(deflation),
+            inflation: to_assets(inflation),
+            finalized,
+        };
+
+        let token = default_token();
+
+        LATEST_REBALANCE_ID.save(storage, &id).unwrap();
+        REBALANCES.save(storage, id, &rebalance).unwrap();
+        TOKEN.save(storage, &token).unwrap();
+
+        (rebalance, token)
+    }
 
     mod init {
 
@@ -561,29 +588,6 @@ mod test {
     mod trade {
 
         use super::*;
-
-        fn setup(
-            storage: &mut dyn Storage,
-            id: u64,
-            deflation: &[(&str, &str)],
-            inflation: &[(&str, &str)],
-            finalized: bool,
-        ) -> (Rebalance, Token) {
-            let rebalance = Rebalance {
-                manager: Addr::unchecked("manager"),
-                deflation: to_assets(deflation),
-                inflation: to_assets(inflation),
-                finalized,
-            };
-
-            let token = default_token();
-
-            LATEST_REBALANCE_ID.save(storage, &id).unwrap();
-            REBALANCES.save(storage, id, &rebalance).unwrap();
-            TOKEN.save(storage, &token).unwrap();
-
-            (rebalance, token)
-        }
 
         fn trade(
             deps: DepsMut,
@@ -1215,6 +1219,39 @@ mod test {
         use super::*;
 
         #[test]
-        fn test_finalize() {}
+        fn test_finalize() {
+            let mut deps = mock_dependencies();
+
+            setup(
+                deps.as_mut().storage,
+                1,
+                &[("ukrw", "1.2"), ("ujpy", "1.5"), ("uusd", "1.3")],
+                &[("uosmo", "1.0"), ("uatom", "3.14")],
+                false,
+            );
+
+            register_assets(
+                deps.as_mut().storage,
+                &[
+                    ("ukrw", "1.2"),
+                    ("ujpy", "1.5"),
+                    ("uusd", "1.3"),
+                    (RESERVE_DENOM, "0.0"),
+                ],
+            );
+
+            let res = finalize(deps.as_mut(), mock_env(), mock_info("manager", &[])).unwrap();
+
+            assert_eq!(
+                res.attributes,
+                vec![
+                    attr("method", "finalize"),
+                    attr("executor", "manager"),
+                    attr("finalized_at", mock_env().block.height.to_string())
+                ]
+            );
+
+            assert!(REBALANCES.load(deps.as_ref().storage, 1).unwrap().finalized);
+        }
     }
 }

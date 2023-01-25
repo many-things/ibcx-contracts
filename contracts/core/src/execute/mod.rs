@@ -315,7 +315,7 @@ mod test {
                 deps.as_mut(),
                 mock_env(),
                 info.clone(),
-                amount.clone(),
+                amount,
                 Some("receiver".to_string()),
                 Some("refund".to_string()),
             )
@@ -411,7 +411,7 @@ mod test {
             let resp = burn(
                 deps.as_mut(),
                 mock_env(),
-                info.clone(),
+                info,
                 Some("redeemer".to_string()),
             )
             .unwrap();

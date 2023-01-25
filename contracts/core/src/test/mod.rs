@@ -35,7 +35,7 @@ pub fn mock_dependencies() -> OwnedDeps<MockStorage, MockApi, CoreQuerier<'stati
 
 pub fn to_assets(assets: &[(&str, &str)]) -> Vec<(String, Decimal)> {
     assets
-        .into_iter()
+        .iter()
         .map(|(k, v)| (k.to_string(), Decimal::from_str(v).unwrap()))
         .collect()
 }
