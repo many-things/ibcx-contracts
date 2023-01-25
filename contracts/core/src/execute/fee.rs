@@ -114,7 +114,14 @@ pub fn collect_streaming_fee(storage: &mut dyn Storage, now: u64) -> Result<(), 
                 ASSETS.save(storage, denom, &after)?;
             }
 
-            FEE.save(storage, &Fee { collected, ..fee })?;
+            FEE.save(
+                storage,
+                &Fee {
+                    collected,
+                    stream_last_collected_at: now,
+                    ..fee
+                },
+            )?;
         }
     }
 
@@ -319,5 +326,6 @@ mod test {
             }
             .into()
         );
+        assert_eq!(FEE.load(&storage).unwrap().collected, vec![]);
     }
 }
