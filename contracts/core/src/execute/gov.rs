@@ -26,7 +26,7 @@ pub fn handle_msg(
         Release {} => release(deps, env, info),
 
         UpdateGov(new_gov) => update_gov(deps, info, new_gov),
-        UpdateFeeStrategy(new_fee) => update_fee(deps, info, new_fee),
+        UpdateFeeStrategy(new_fee) => update_fee(deps, env, info, new_fee),
         UpdateReserveDenom(new_denom) => update_reserve_denom(deps, info, new_denom),
         UpdateTradeInfo {
             denom,
@@ -37,7 +37,7 @@ pub fn handle_msg(
     }
 }
 
-fn pause(
+pub fn pause(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -62,12 +62,13 @@ fn pause(
     let resp = Response::new().add_attributes(vec![
         attr("method", "gov::pause"),
         attr("executor", info.sender),
+        attr("expires_at", pause_info.expires_at.unwrap().to_string()),
     ]);
 
     Ok(resp)
 }
 
-fn release(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+pub fn release(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     PAUSED
         .load(deps.storage)?
         .refresh(deps.storage, &env)?
@@ -83,7 +84,7 @@ fn release(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, Contr
     Ok(resp)
 }
 
-fn update_gov(
+pub fn update_gov(
     deps: DepsMut,
     info: MessageInfo,
     new_gov: String,
@@ -99,7 +100,12 @@ fn update_gov(
     Ok(resp)
 }
 
-fn update_fee(deps: DepsMut, info: MessageInfo, new_fee: Fee) -> Result<Response, ContractError> {
+pub fn update_fee(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    new_fee: Fee,
+) -> Result<Response, ContractError> {
     let mut fee = FEE.load(deps.storage)?;
 
     fee.collector = deps.api.addr_validate(&new_fee.collector)?;
@@ -109,6 +115,7 @@ fn update_fee(deps: DepsMut, info: MessageInfo, new_fee: Fee) -> Result<Response
     if let Some(stream) = new_fee.stream {
         fee.stream = Some(stream);
         // TODO: update fee
+        fee.stream_last_collected_at = env.block.time.seconds();
     }
 
     FEE.save(deps.storage, &fee)?;
@@ -122,7 +129,7 @@ fn update_fee(deps: DepsMut, info: MessageInfo, new_fee: Fee) -> Result<Response
     Ok(resp)
 }
 
-fn update_reserve_denom(
+pub fn update_reserve_denom(
     deps: DepsMut,
     info: MessageInfo,
     new_denom: String,
@@ -135,19 +142,20 @@ fn update_reserve_denom(
         ));
     }
 
-    token.reserve_denom = new_denom;
+    token.reserve_denom = new_denom.clone();
 
     TOKEN.save(deps.storage, &token)?;
 
     let resp = Response::new().add_attributes(vec![
         attr("method", "gov::update_reserve_denom"),
         attr("executor", info.sender),
+        attr("new_denom", new_denom),
     ]);
 
     Ok(resp)
 }
 
-fn update_trade_info(
+pub fn update_trade_info(
     deps: DepsMut,
     info: MessageInfo,
     denom: String,
@@ -157,9 +165,9 @@ fn update_trade_info(
 ) -> Result<Response, ContractError> {
     TRADE_INFOS.save(
         deps.storage,
-        denom,
+        denom.clone(),
         &TradeInfo {
-            routes,
+            routes: routes.clone(),
             cooldown,
             max_trade_amount,
             last_traded_at: None,
@@ -169,6 +177,10 @@ fn update_trade_info(
     let resp = Response::new().add_attributes(vec![
         attr("method", "gov::update_trade_info"),
         attr("executor", info.sender),
+        attr("denom", denom),
+        attr("routes", format!("{routes:?}")),
+        attr("cooldown", cooldown.to_string()),
+        attr("max_trade_amount", max_trade_amount.to_string()),
     ]);
 
     Ok(resp)
@@ -181,181 +193,360 @@ mod test {
         Addr, Decimal, StdError,
     };
 
-    use crate::state::{PauseInfo, Token};
+    use crate::{
+        state::{self, PauseInfo, Token},
+        test::{DENOM_DEFAULT, SENDER_ABUSER, SENDER_GOV},
+    };
 
     use super::*;
 
     #[test]
-    fn test_pause() {
+    fn test_handle_msg_check_authority() {
         let mut deps = mock_dependencies();
-        let env = mock_env();
-        let now = env.block.time.seconds();
 
-        let gov = Addr::unchecked("gov");
-        let abu = Addr::unchecked("abu");
-
-        let info_gov = mock_info(gov.as_str(), &[]);
-        let info_abu = mock_info(abu.as_str(), &[]);
-
+        let gov = Addr::unchecked(SENDER_GOV);
         GOV.save(deps.as_mut().storage, &gov).unwrap();
-        PAUSED
-            .save(deps.as_mut().storage, &Default::default())
-            .unwrap();
 
-        let pause = |deps: DepsMut, env: Env, info: MessageInfo, expires_at: u64| {
-            handle_msg(deps, env, info, GovMsg::Pause { expires_at })
-        };
+        let err = handle_msg(
+            deps.as_mut(),
+            mock_env(),
+            mock_info(SENDER_ABUSER, &[]),
+            GovMsg::Release {},
+        )
+        .unwrap_err();
+        assert_eq!(err, ContractError::Unauthorized {});
+    }
 
-        // check arguments
-        assert!(matches!(
-            pause(deps.as_mut(), env.clone(), info_gov.clone(), now - 1000).unwrap_err(),
-            ContractError::InvalidArgument(reason) if reason == "expires_at must be in the future",
-        ));
-        assert!(matches!(
-            pause(deps.as_mut(), env.clone(), info_abu.clone(), now - 1000).unwrap_err(),
-            ContractError::Unauthorized {},
-        ));
+    mod pause_and_release {
 
-        // check role
-        assert!(matches!(
-            pause(deps.as_mut(), env.clone(), info_abu, now + 1000).unwrap_err(),
-            ContractError::Unauthorized {},
-        ));
-        pause(deps.as_mut(), env.clone(), info_gov.clone(), now + 1000).unwrap();
+        use super::*;
 
-        // check already paused
-        assert!(matches!(
-            pause(deps.as_mut(), env, info_gov, now + 1000).unwrap_err(),
-            ContractError::Paused {},
-        ));
+        fn setup(deps: DepsMut, gov: Option<&str>) {
+            let gov = Addr::unchecked(gov.unwrap_or(SENDER_GOV));
+            GOV.save(deps.storage, &gov).unwrap();
+            PAUSED.save(deps.storage, &Default::default()).unwrap();
+        }
 
-        assert_eq!(
-            PAUSED.load(deps.as_ref().storage).unwrap(),
-            PauseInfo {
-                paused: true,
-                expires_at: Some(now + 1000),
+        fn assert_pause_resp(resp: Response, sender: &str, expires_at: u64) {
+            assert_eq!(
+                resp.attributes,
+                vec![
+                    attr("method", "gov::pause"),
+                    attr("executor", sender),
+                    attr("expires_at", expires_at.to_string())
+                ]
+            );
+        }
+
+        fn assert_release_resp(resp: Response, sender: &str) {
+            assert_eq!(
+                resp.attributes,
+                vec![attr("method", "gov::release"), attr("executor", sender),]
+            )
+        }
+
+        #[test]
+        fn test_pause_and_release() {
+            let mut deps = mock_dependencies();
+
+            let env = mock_env();
+            let now = env.block.time.seconds();
+
+            setup(deps.as_mut(), Some(SENDER_GOV));
+
+            let expire = now + 1000;
+            let sender = mock_info(SENDER_GOV, &[]);
+
+            // pause
+            let resp = pause(deps.as_mut(), env.clone(), sender.clone(), expire).unwrap();
+            assert_pause_resp(resp, SENDER_GOV, expire);
+
+            let paused = PAUSED.load(deps.as_ref().storage).unwrap();
+            assert!(paused.paused);
+            assert_eq!(paused.expires_at, Some(expire));
+
+            // release
+            let resp = release(deps.as_mut(), env, sender).unwrap();
+            assert_release_resp(resp, SENDER_GOV);
+
+            let paused = PAUSED.load(deps.as_ref().storage).unwrap();
+            assert!(!paused.paused);
+            assert!(paused.expires_at.is_none());
+        }
+
+        #[test]
+        fn test_past_expiry() {
+            let mut deps = mock_dependencies();
+
+            let env = mock_env();
+            let now = env.block.time.seconds();
+
+            setup(deps.as_mut(), Some(SENDER_GOV));
+
+            let sender = mock_info(SENDER_GOV, &[]);
+            let err = pause(deps.as_mut(), env, sender, now - 1).unwrap_err();
+            assert!(
+                matches!(err, ContractError::InvalidArgument(msg) if msg == "expires_at must be in the future")
+            );
+        }
+
+        #[test]
+        fn test_double_pause() {
+            let mut deps = mock_dependencies();
+
+            let env = mock_env();
+            let now = env.block.time.seconds();
+
+            setup(deps.as_mut(), Some(SENDER_GOV));
+
+            let sender = mock_info(SENDER_GOV, &[]);
+
+            // first pause
+            pause(deps.as_mut(), env.clone(), sender.clone(), now + 1).unwrap();
+
+            // second pause
+            assert_eq!(
+                pause(deps.as_mut(), env, sender, now + 1).unwrap_err(),
+                ContractError::Paused {}
+            );
+        }
+
+        #[test]
+        fn test_not_found_pause_info() {
+            let mut deps = mock_dependencies();
+
+            let env = mock_env();
+
+            setup(deps.as_mut(), Some(SENDER_GOV));
+
+            let sender = mock_info(SENDER_GOV, &[]);
+
+            PAUSED.remove(deps.as_mut().storage);
+
+            assert_eq!(
+                release(deps.as_mut(), env, sender).unwrap_err(),
+                ContractError::Std(StdError::not_found("ibcx_core::state::PauseInfo"))
+            );
+        }
+
+        #[test]
+        fn test_not_paused() {
+            let mut deps = mock_dependencies();
+
+            let env = mock_env();
+            let now = env.block.time.seconds();
+
+            setup(deps.as_mut(), Some(SENDER_GOV));
+
+            PAUSED
+                .save(
+                    deps.as_mut().storage,
+                    &PauseInfo {
+                        paused: true,
+                        expires_at: Some(now - 1000),
+                    },
+                )
+                .unwrap();
+
+            assert!(matches!(
+                release(deps.as_mut(), env, mock_info(SENDER_GOV, &[])).unwrap_err(),
+                ContractError::NotPaused {},
+            ));
+        }
+    }
+
+    mod update {
+
+        use crate::test::{default_fee, default_token, SENDER_OWNER, SENDER_VALID};
+
+        use super::*;
+
+        fn setup(
+            deps: DepsMut,
+            gov: impl Into<String>,
+            fee: Option<state::Fee>,
+            token: Option<Token>,
+            assets: &[(&str, Decimal)],
+        ) {
+            let gov = Addr::unchecked(gov.into());
+            GOV.save(deps.storage, &gov).unwrap();
+
+            let fee = fee.unwrap_or_else(default_fee);
+            FEE.save(deps.storage, &fee).unwrap();
+
+            let token = token.unwrap_or_else(default_token);
+            TOKEN.save(deps.storage, &token).unwrap();
+
+            for (denom, unit) in assets {
+                ASSETS
+                    .save(deps.storage, denom.to_string(), &unit.clone())
+                    .unwrap();
             }
-        );
-    }
+        }
 
-    #[test]
-    fn test_release() {
-        let mut deps = mock_dependencies();
-        let env = mock_env();
-        let now = env.block.time.seconds();
+        #[test]
+        fn test_update_gov() {
+            let mut deps = mock_dependencies();
 
-        let gov = Addr::unchecked("gov");
-        let info_gov = mock_info(gov.as_str(), &[]);
-        let abu = Addr::unchecked("abu");
-        let info_abu = mock_info(abu.as_str(), &[]);
+            setup(deps.as_mut(), SENDER_GOV, None, None, &[]);
 
-        GOV.save(deps.as_mut().storage, &gov).unwrap();
-
-        let release = |deps: DepsMut, env: Env, info: MessageInfo| {
-            handle_msg(deps, env, info, GovMsg::Release {})
-        };
-
-        assert!(matches!(
-            release(deps.as_mut(), env.clone(), info_abu).unwrap_err(),
-            ContractError::Unauthorized {},
-        ));
-        assert!(matches!(
-            release(deps.as_mut(), env.clone(), info_gov.clone()).unwrap_err(),
-            ContractError::Std(StdError::NotFound { kind }) if kind == "ibcx_core::state::PauseInfo",
-        ));
-
-        PAUSED
-            .save(
-                deps.as_mut().storage,
-                &PauseInfo {
-                    paused: true,
-                    expires_at: Some(now - 1000),
-                },
-            )
-            .unwrap();
-        assert!(matches!(
-            release(deps.as_mut(), env.clone(), info_gov.clone()).unwrap_err(),
-            ContractError::NotPaused {},
-        ));
-
-        PAUSED
-            .save(
-                deps.as_mut().storage,
-                &PauseInfo {
-                    paused: true,
-                    expires_at: Some(now + 1000),
-                },
-            )
-            .unwrap();
-        release(deps.as_mut(), env, info_gov).unwrap();
-
-        PAUSED
-            .load(deps.as_ref().storage)
-            .unwrap()
-            .assert_not_paused()
-            .unwrap();
-    }
-
-    #[test]
-    fn test_update_reserve_denom() {
-        let mut deps = mock_dependencies();
-        let env = mock_env();
-
-        let gov = Addr::unchecked("gov");
-        let info_gov = mock_info(gov.as_str(), &[]);
-        let abu = Addr::unchecked("abu");
-        let info_abu = mock_info(abu.as_str(), &[]);
-
-        GOV.save(deps.as_mut().storage, &gov).unwrap();
-        TOKEN
-            .save(
-                deps.as_mut().storage,
-                &Token {
-                    denom: "test".to_string(),
-                    reserve_denom: "reserve".to_string(),
-                    total_supply: Uint128::zero(),
-                },
-            )
-            .unwrap();
-        ASSETS
-            .save(
-                deps.as_mut().storage,
-                RESERVE_DENOM.to_string(),
-                &Decimal::from_ratio(10u128, 1u128),
+            let resp = update_gov(
+                deps.as_mut(),
+                mock_info(SENDER_GOV, &[]),
+                SENDER_OWNER.to_string(),
             )
             .unwrap();
 
-        let update_reserve_denom = |deps: DepsMut, info: MessageInfo, new_denom: String| {
-            handle_msg(
-                deps,
-                env.clone(),
-                info,
-                GovMsg::UpdateReserveDenom(new_denom),
-            )
-        };
+            assert_eq!(
+                resp.attributes,
+                vec![
+                    attr("method", "gov::update_gov"),
+                    attr("executor", SENDER_GOV),
+                    attr("new_gov", SENDER_OWNER),
+                ]
+            );
 
-        assert!(matches!(
-            update_reserve_denom(deps.as_mut(), info_abu, "no".to_string()).unwrap_err(),
-            ContractError::Unauthorized {},
-        ));
-        assert!(matches!(
-            update_reserve_denom(deps.as_mut(), info_gov.clone(), "no".to_string()).unwrap_err(),
-            ContractError::InvalidArgument(reason) if reason == "reserve_denom must be zero in portfolio",
-        ));
+            assert_eq!(
+                GOV.load(deps.as_ref().storage).unwrap().as_str(),
+                SENDER_OWNER
+            );
+        }
 
-        ASSETS
-            .save(
-                deps.as_mut().storage,
-                RESERVE_DENOM.to_string(),
-                &Decimal::zero(),
+        #[test]
+        fn test_update_fee_strategy() {
+            let mut deps = mock_dependencies();
+
+            setup(deps.as_mut(), SENDER_GOV, None, None, &[]);
+
+            let new_fee = Fee {
+                collector: SENDER_VALID.to_string(),
+                mint: Some(Decimal::from_ratio(10u128, 100u128)),
+                burn: Some(Decimal::from_ratio(5u128, 100u128)),
+                stream: Some(Decimal::from_ratio(1u128, 100u128)),
+            };
+
+            let resp = update_fee(
+                deps.as_mut(),
+                mock_env(),
+                mock_info(SENDER_GOV, &[]),
+                new_fee.clone(),
             )
             .unwrap();
 
-        update_reserve_denom(deps.as_mut(), info_gov, "yes".to_string()).unwrap();
+            assert_eq!(
+                resp.attributes,
+                vec![
+                    attr("method", "gov::update_fee"),
+                    attr("executor", SENDER_GOV),
+                    attr("new_fee", format!("{new_fee:?}"))
+                ]
+            );
 
-        assert_eq!(
-            TOKEN.load(deps.as_ref().storage).unwrap().reserve_denom,
-            "yes"
-        );
+            assert_eq!(
+                FEE.load(deps.as_ref().storage).unwrap(),
+                state::Fee {
+                    collector: Addr::unchecked(new_fee.collector),
+                    mint: new_fee.mint,
+                    burn: new_fee.burn,
+                    stream: new_fee.stream,
+                    stream_last_collected_at: mock_env().block.time.seconds(),
+                }
+            );
+        }
+
+        #[test]
+        fn test_update_reserve_denom() {
+            let mut deps = mock_dependencies();
+
+            // error
+            setup(
+                deps.as_mut(),
+                SENDER_GOV,
+                None,
+                None,
+                &[(RESERVE_DENOM, Decimal::one())],
+            );
+
+            assert_eq!(
+                update_reserve_denom(
+                    deps.as_mut(),
+                    mock_info(SENDER_GOV, &[]),
+                    DENOM_DEFAULT.to_string()
+                )
+                .unwrap_err(),
+                ContractError::InvalidArgument(
+                    "reserve_denom must be zero in portfolio".to_string()
+                )
+            );
+
+            // success
+            ASSETS
+                .save(
+                    deps.as_mut().storage,
+                    RESERVE_DENOM.to_string(),
+                    &Decimal::zero(),
+                )
+                .unwrap();
+
+            let resp = update_reserve_denom(
+                deps.as_mut(),
+                mock_info(SENDER_GOV, &[]),
+                DENOM_DEFAULT.to_string(),
+            )
+            .unwrap();
+
+            assert_eq!(
+                resp.attributes,
+                vec![
+                    attr("method", "gov::update_reserve_denom"),
+                    attr("executor", SENDER_GOV),
+                    attr("new_denom", DENOM_DEFAULT),
+                ]
+            );
+
+            assert_eq!(
+                TOKEN.load(deps.as_ref().storage).unwrap().reserve_denom,
+                DENOM_DEFAULT
+            );
+        }
+
+        #[test]
+        fn test_update_trade_info() {
+            let mut deps = mock_dependencies();
+
+            let resp = update_trade_info(
+                deps.as_mut(),
+                mock_info(SENDER_GOV, &[]),
+                DENOM_DEFAULT.to_string(),
+                SwapRoutes(vec![]),
+                86400,
+                Uint128::zero(),
+            )
+            .unwrap();
+
+            assert_eq!(
+                resp.attributes,
+                vec![
+                    attr("method", "gov::update_trade_info"),
+                    attr("executor", SENDER_GOV),
+                    attr("denom", DENOM_DEFAULT),
+                    attr("routes", format!("{:?}", SwapRoutes(vec![]))),
+                    attr("cooldown", 86400.to_string()),
+                    attr("max_trade_amount", Uint128::zero().to_string()),
+                ]
+            );
+
+            assert_eq!(
+                TRADE_INFOS
+                    .load(deps.as_ref().storage, DENOM_DEFAULT.to_string())
+                    .unwrap(),
+                TradeInfo {
+                    routes: SwapRoutes(vec![]),
+                    cooldown: 86400,
+                    max_trade_amount: Uint128::zero(),
+                    last_traded_at: None,
+                }
+            );
+        }
     }
 }

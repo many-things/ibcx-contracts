@@ -4,6 +4,7 @@ use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
 use crate::types::SwapRoutes;
 
 #[cw_serde]
+#[derive(Default)]
 pub struct Fee {
     pub collector: String,
     pub mint: Option<Decimal>,
@@ -12,6 +13,7 @@ pub struct Fee {
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct InstantiateMsg {
     pub gov: String,
     pub denom: String,
