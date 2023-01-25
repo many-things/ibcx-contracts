@@ -2,22 +2,19 @@
 
 [![test](https://github.com/many-things/ibcx-contracts/actions/workflows/tester.yaml/badge.svg)](https://github.com/many-things/ibcx-contracts/actions/workflows/tester.yaml) [![lint](https://github.com/many-things/ibcx-contracts/actions/workflows/linter.yaml/badge.svg)](https://github.com/many-things/ibcx-contracts/actions/workflows/linter.yaml) [![codecov](https://codecov.io/gh/many-things/ibcx-contracts/branch/main/graph/badge.svg?token=NWZGJ8MBHE)](https://codecov.io/gh/many-things/ibcx-contracts)
 
-## Testing
+## Interchain Index Token Protocol
 
-1. Run localnet
+A fully-collateralized index token backed by a cap-weighted basket of Cosmos ecosystem coins.
 
-   ```text
-   make localnet-start
-   ```
+## Components
 
-2. Deploy contracts
+| contract  | description                                  | path                                                    |
+| --------- | -------------------------------------------- | ------------------------------------------------------- |
+| Airdrop   | General contract manage airdrops             | [/contracts/airdrop](./contracts/airdrop/README.md)     |
+| Core      | IBCX core contract                           | [/contracts/core](./contracts/core/README.md)           |
+| Faucet    | RBAC frontend contract for `/x/tokenfactory` | [/contracts/faucet](./contracts/faucet/README.md)       |
+| Periphery | Helper contract for core contract            | [/contracts/periphery](./contracts/periphery/README.md) |
 
-   ```text
-   make deploy-local
-   ```
+## Deployments
 
-3. Use `beaker console` to interact
-
-   ```text
-   beaker console
-   ```
+Refer [state.json](./.beaker/state.json)
