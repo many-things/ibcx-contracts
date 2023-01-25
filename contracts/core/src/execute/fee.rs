@@ -301,6 +301,8 @@ mod test {
         collect_streaming_fee(&mut storage, now + (86400 * 365)).unwrap();
 
         let fee = FEE.load(&storage).unwrap();
+        assert_eq!(fee.stream_last_collected_at, now + (86400 * 365));
+
         let assets = get_assets(&storage).unwrap();
         for (denom, unit) in assets {
             let (_, collected) = fee.collected.iter().find(|(d, _)| d == &denom).unwrap();
