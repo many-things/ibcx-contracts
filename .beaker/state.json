@@ -1,7 +1,7 @@
 {
   "testnet": {
     "ibcx-faucet": {
-      "code_id": 4888,
+      "code_id": 5523,
       "addresses": {
         "default": "osmo1mhyd5n05ujg90y4e3jm2yc3cdk5gpjs40fpln32ny8vzywadcztsf87ru9"
       },
@@ -10,7 +10,7 @@
       }
     },
     "ibcx-core": {
-      "code_id": 4910,
+      "code_id": 5520,
       "addresses": {
         "default": "osmo13t90mkyvdnmn9wm8hfen6jk3hnlt8uqx8savlvjd5xghy5z6ye2qymy6cy"
       },
@@ -19,7 +19,7 @@
       }
     },
     "ibcx-periphery": {
-      "code_id": 4895,
+      "code_id": 5522,
       "addresses": {
         "default": "osmo1anv395rtl8hrtd2x38maplmkc0htzc8u7y3awq26nl7zupf99ruqpy03mj"
       },
@@ -28,7 +28,7 @@
       }
     },
     "ibcx-airdrop": {
-      "code_id": 4892,
+      "code_id": 5521,
       "addresses": {
         "default": "osmo1t62ek756dan7kdh945q84z3zmx64x2gdklflex4tnev7lzq3r9uqe3x0aa"
       },
