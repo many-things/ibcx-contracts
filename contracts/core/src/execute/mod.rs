@@ -7,7 +7,7 @@ use cosmwasm_std::{DepsMut, Response};
 
 use crate::{
     error::ContractError,
-    state::{assert_assets, get_redeem_amounts, FEE, PAUSED, TOKEN},
+    state::{assert_assets, get_assets, get_redeem_amounts, FEE, PAUSED, TOKEN},
 };
 
 pub use crate::execute::fee::collect_streaming_fee;
@@ -38,8 +38,9 @@ pub fn mint(
         .unwrap_or_else(|| info.sender.clone());
 
     let mut token = TOKEN.load(deps.storage)?;
-    // TODO: reflect streaming fee
-    let refund = assert_assets(deps.storage, info.funds, amount)?;
+
+    let assets = get_assets(deps.storage)?;
+    let refund = assert_assets(assets, info.funds, amount)?;
 
     token.total_supply = token.total_supply.checked_add(amount)?;
     TOKEN.save(deps.storage, &token)?;
@@ -84,7 +85,7 @@ pub fn burn(
     let received = cw_utils::must_pay(&info, &token.denom)?;
 
     let fee = FEE.load(deps.storage)?;
-    // TODO: reflect streaming fee
+
     let deducted = fee
         .burn
         .map(|ratio| {
@@ -92,7 +93,9 @@ pub fn burn(
             received.checked_sub(fee_amount).unwrap()
         })
         .unwrap_or(received);
-    let payback = get_redeem_amounts(deps.storage, deducted)?;
+
+    let assets = get_assets(deps.storage)?;
+    let payback = get_redeem_amounts(assets, &token.reserve_denom, deducted)?;
 
     token.total_supply = token.total_supply.checked_sub(received)?;
     TOKEN.save(deps.storage, &token)?;

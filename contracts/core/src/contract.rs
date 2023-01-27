@@ -109,6 +109,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
     match msg {
         GetBalance { account } => query::balance(deps, env, account),
         GetConfig {} => query::config(deps, env),
+        GetFee { time } => query::fee(deps, env, time),
         GetPauseInfo {} => query::pause_info(deps, env),
         GetPortfolio {} => query::portfolio(deps, env),
         SimulateMint { amount, funds } => query::simulate_mint(deps, env, amount, funds),

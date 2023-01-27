@@ -5,8 +5,8 @@ use cosmwasm_std::{
 };
 
 use crate::core::{
-    ExecuteMsg, GetConfigResponse, GetPauseInfoResponse, GetPortfolioResponse, QueryMsg,
-    SimulateBurnResponse, SimulateMintResponse,
+    ExecuteMsg, GetConfigResponse, GetFeeResponse, GetPauseInfoResponse, GetPortfolioResponse,
+    QueryMsg, SimulateBurnResponse, SimulateMintResponse,
 };
 
 /// IbcCore is a wrapper around Addr that provides a lot of helpers
@@ -48,6 +48,25 @@ impl IbcCore {
         CQ: CustomQuery,
     {
         let msg = QueryMsg::GetConfig {};
+
+        querier.query(
+            &WasmQuery::Smart {
+                contract_addr: self.addr().into(),
+                msg: to_binary(&msg)?,
+            }
+            .into(),
+        )
+    }
+
+    pub fn get_fee<CQ>(
+        &self,
+        querier: &QuerierWrapper<CQ>,
+        time: Option<u64>,
+    ) -> StdResult<GetFeeResponse>
+    where
+        CQ: CustomQuery,
+    {
+        let msg = QueryMsg::GetFee { time };
 
         querier.query(
             &WasmQuery::Smart {

@@ -2,19 +2,16 @@ use std::collections::BTreeMap;
 
 use cosmwasm_std::{coin, Coin, Decimal, Order, StdResult, Storage, Uint128};
 use cw_storage_plus::Map;
-use ibcx_interface::MAX_LIMIT;
+use ibcx_interface::{types::Units, MAX_LIMIT};
 
 use crate::error::ContractError;
 
-use super::{RESERVE_DENOM, TOKEN};
+use super::RESERVE_DENOM;
 
 pub const ASSETS_PREFIX: &str = "assets";
 pub const ASSETS: Map<String, Decimal> = Map::new(ASSETS_PREFIX);
 
-pub fn set_assets(
-    storage: &mut dyn Storage,
-    assets: Vec<(String, Decimal)>,
-) -> Result<(), ContractError> {
+pub fn set_assets(storage: &mut dyn Storage, assets: Units) -> Result<(), ContractError> {
     if assets.len() > MAX_LIMIT as usize {
         return Err(ContractError::InvalidAssetLength { limit: MAX_LIMIT });
     }
@@ -34,7 +31,7 @@ pub fn set_assets(
     Ok(())
 }
 
-pub fn get_assets(storage: &dyn Storage) -> StdResult<Vec<(String, Decimal)>> {
+pub fn get_assets(storage: &dyn Storage) -> StdResult<Units> {
     ASSETS
         .range(storage, None, None, Order::Ascending)
         .take(MAX_LIMIT as usize)
@@ -42,11 +39,11 @@ pub fn get_assets(storage: &dyn Storage) -> StdResult<Vec<(String, Decimal)>> {
 }
 
 pub fn assert_assets(
-    storage: &dyn Storage,
+    assets: Units,
     funds: Vec<Coin>,
     desired: Uint128,
 ) -> Result<Vec<Coin>, ContractError> {
-    get_assets(storage)?
+    assets
         .into_iter()
         .map(|(denom, unit)| {
             let received = match funds.iter().find(|v| v.denom == denom) {
@@ -64,18 +61,20 @@ pub fn assert_assets(
         .collect()
 }
 
-pub fn get_redeem_amounts(storage: &dyn Storage, desired: Uint128) -> StdResult<Vec<Coin>> {
-    let mut assets: BTreeMap<_, _> = get_assets(storage)?
+pub fn get_redeem_amounts(
+    assets: Units,
+    reserve_denom: &str,
+    desired: Uint128,
+) -> StdResult<Vec<Coin>> {
+    let mut assets: BTreeMap<_, _> = assets
         .into_iter()
         .map(|(denom, unit)| (denom, unit * desired))
         .collect();
 
-    let token = TOKEN.load(storage)?;
-
-    if assets.contains_key(&token.reserve_denom) || assets.contains_key(RESERVE_DENOM) {
+    if assets.contains_key(reserve_denom) || assets.contains_key(RESERVE_DENOM) {
         let reserve_unit = assets.get(RESERVE_DENOM).copied().unwrap_or_default();
         assets
-            .entry(token.reserve_denom)
+            .entry(reserve_denom.to_string())
             .and_modify(|v| *v += reserve_unit)
             .or_insert(reserve_unit);
     }
@@ -91,7 +90,7 @@ mod test {
     use cosmwasm_std::testing::MockStorage;
 
     use crate::{
-        state::Token,
+        state::{Token, TOKEN},
         test::{register_assets, to_assets},
     };
 
@@ -178,7 +177,7 @@ mod test {
         setup_test(&mut storage);
 
         let refund = assert_assets(
-            &storage,
+            get_assets(&storage).unwrap(),
             vec![
                 coin(12000, "ueur"),
                 coin(15000, "ukrw"),
@@ -192,7 +191,8 @@ mod test {
             vec![coin(2000, "ueur"), coin(3000, "ukrw"), coin(5000, "uusd"),]
         );
 
-        let err = assert_assets(&storage, vec![], Uint128::new(10000)).unwrap_err();
+        let err =
+            assert_assets(get_assets(&storage).unwrap(), vec![], Uint128::new(10000)).unwrap_err();
         assert_eq!(err, ContractError::InsufficientFunds("ueur".to_string()));
     }
 
@@ -203,7 +203,12 @@ mod test {
         setup_test(&mut storage);
 
         assert_eq!(
-            get_redeem_amounts(&storage, Uint128::new(10)).unwrap(),
+            get_redeem_amounts(
+                get_assets(&storage).unwrap(),
+                RESERVE_DENOM,
+                Uint128::new(10)
+            )
+            .unwrap(),
             vec![coin(10, "ueur"), coin(12, "ukrw"), coin(15, "uusd"),]
         );
     }

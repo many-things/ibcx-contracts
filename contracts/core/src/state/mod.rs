@@ -4,6 +4,7 @@ mod rebalance;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Env, StdResult, Storage, Uint128};
 use cw_storage_plus::Item;
+use ibcx_interface::types::Units;
 
 use crate::error::ContractError;
 
@@ -29,13 +30,55 @@ pub const PAUSED: Item<PauseInfo> = Item::new(PAUSED_KEY);
 #[cw_serde]
 pub struct Fee {
     pub collector: Addr,
-    pub collected: Vec<(String, Decimal)>,
+    pub collected: Units,
     pub mint: Option<Decimal>,
     pub burn: Option<Decimal>,
     // secondly rate
     // ex) APY %0.15 = 1 - (1 + 0.0015)^(1 / (86400 * 365)) = 0.000000000047529
     pub stream: Option<Decimal>,
     pub stream_last_collected_at: u64,
+}
+
+impl Fee {
+    pub fn calculate_streaming_fee(
+        &self,
+        assets: Units,
+        now: u64,
+    ) -> Result<(Units, Option<Units>), ContractError> {
+        if let Some(stream) = self.stream {
+            let elapsed = now - self.stream_last_collected_at;
+            if elapsed > 0 {
+                // 1. fetch rate & add one - ex) 1 + 0.000000000047529 => 1.000000000047529
+                // 2. pow elapsed time - ex) (1.000000000047529)^86400 => 1.000004106521961
+                // 3. subtract one - ex) 1.000004106521961 - 1 => 0.000004106521961
+                let rate = (Decimal::one() + stream)
+                    .checked_pow(elapsed as u32)?
+                    .checked_sub(Decimal::one())?;
+
+                let applied = assets
+                    .into_iter()
+                    .map(|(denom, unit)| {
+                        let after = unit.checked_mul(Decimal::one().checked_sub(rate)?)?;
+                        Ok((denom, after, unit.checked_sub(after)?))
+                    })
+                    .collect::<Result<Vec<_>, ContractError>>()?;
+
+                let (after, fee) =
+                    applied
+                        .into_iter()
+                        .fold((vec![], vec![]), |mut acc, (denom, after, fee)| {
+                            acc.0.push((denom.clone(), after));
+                            acc.1.push((denom, fee));
+                            acc
+                        });
+
+                return Ok((after, Some(fee)));
+            }
+        }
+
+        // return assets
+        Ok((assets, None))
+    }
 }
 
 #[cw_serde]
