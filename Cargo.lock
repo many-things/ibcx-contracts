@@ -560,7 +560,7 @@ dependencies = [
 
 [[package]]
 name = "ibcx-utils"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cosmwasm-std",
  "cw2 1.0.0",
