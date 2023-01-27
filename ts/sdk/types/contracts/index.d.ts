@@ -4,29 +4,24 @@
 * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
 */
 import * as _1 from "./Airdrop.client";
-import * as _3 from "./Compat.client";
-import * as _5 from "./Core.client";
-import * as _7 from "./Faucet.client";
-import * as _9 from "./Periphery.client";
+import * as _3 from "./Core.client";
+import * as _5 from "./Faucet.client";
+import * as _7 from "./Periphery.client";
 export declare namespace contracts {
     const Airdrop: {
         AirdropQueryClient: typeof _1.AirdropQueryClient;
         AirdropClient: typeof _1.AirdropClient;
     };
-    const Compat: {
-        CompatQueryClient: typeof _3.CompatQueryClient;
-        CompatClient: typeof _3.CompatClient;
-    };
     const Core: {
-        CoreQueryClient: typeof _5.CoreQueryClient;
-        CoreClient: typeof _5.CoreClient;
+        CoreQueryClient: typeof _3.CoreQueryClient;
+        CoreClient: typeof _3.CoreClient;
     };
     const Faucet: {
-        FaucetQueryClient: typeof _7.FaucetQueryClient;
-        FaucetClient: typeof _7.FaucetClient;
+        FaucetQueryClient: typeof _5.FaucetQueryClient;
+        FaucetClient: typeof _5.FaucetClient;
     };
     const Periphery: {
-        PeripheryClient: typeof _9.PeripheryClient;
+        PeripheryClient: typeof _7.PeripheryClient;
     };
 }
 //# sourceMappingURL=index.d.ts.map

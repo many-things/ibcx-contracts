@@ -5,7 +5,6 @@
 */
 export type Decimal = string;
 export interface InstantiateMsg {
-    compat: string;
     denom: string;
     fee_strategy: Fee;
     gov: string;
@@ -29,6 +28,8 @@ export type ExecuteMsg = {
         redeem_to?: string | null;
     };
 } | {
+    realize: {};
+} | {
     gov: GovMsg;
 } | {
     rebalance: RebalanceMsg;
@@ -42,8 +43,6 @@ export type GovMsg = {
     release: {};
 } | {
     update_gov: string;
-} | {
-    update_compat: string;
 } | {
     update_fee_strategy: Fee;
 } | {
@@ -92,6 +91,10 @@ export type QueryMsg = {
 } | {
     get_config: {};
 } | {
+    get_fee: {
+        time?: number | null;
+    };
+} | {
     get_pause_info: {};
 } | {
     get_portfolio: {};
@@ -112,16 +115,16 @@ export interface Coin {
 }
 export type Addr = string;
 export interface GetConfigResponse {
-    compat: Addr;
     denom: string;
-    fee_strategy: FeeResponse;
     gov: Addr;
     reserve_denom: string;
 }
-export interface FeeResponse {
+export interface GetFeeResponse {
     burn?: Decimal | null;
+    collected: [string, Decimal][];
     collector: Addr;
     mint?: Decimal | null;
+    realized: [string, Uint128][];
     stream?: Decimal | null;
     stream_last_collected_at: number;
 }

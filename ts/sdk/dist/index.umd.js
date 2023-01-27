@@ -142,12 +142,12 @@
                 });
             }); };
             this.getClaim = function (_a) {
-                var account = _a.account, id = _a.id;
+                var claimProof = _a.claimProof, id = _a.id;
                 return __awaiter(_this, void 0, void 0, function () {
                     return __generator(this, function (_b) {
                         return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
                                 get_claim: {
-                                    account: account,
+                                    claim_proof: claimProof,
                                     id: id
                                 }
                             })];
@@ -170,13 +170,12 @@
                 });
             };
             this.checkQualification = function (_a) {
-                var amount = _a.amount, beneficiary = _a.beneficiary, claimProof = _a.claimProof, id = _a.id, merkleProof = _a.merkleProof;
+                var amount = _a.amount, claimProof = _a.claimProof, id = _a.id, merkleProof = _a.merkleProof;
                 return __awaiter(_this, void 0, void 0, function () {
                     return __generator(this, function (_b) {
                         return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
                                 check_qualification: {
                                     amount: amount,
-                                    beneficiary: beneficiary,
                                     claim_proof: claimProof,
                                     id: id,
                                     merkle_proof: merkleProof
@@ -200,14 +199,14 @@
         __extends(AirdropClient, _super);
         function AirdropClient(client, sender, contractAddress) {
             var _this = _super.call(this, client, contractAddress) || this;
-            _this.regsiter = function (_a, fee, memo, funds) {
+            _this.register = function (_a, fee, memo, funds) {
                 var bearer = _a.bearer, denom = _a.denom, label = _a.label, merkleRoot = _a.merkleRoot;
                 if (fee === void 0) { fee = "auto"; }
                 return __awaiter(_this, void 0, void 0, function () {
                     return __generator(this, function (_b) {
                         switch (_b.label) {
                             case 0: return [4 /*yield*/, this.client.execute(this.sender, this.contractAddress, {
-                                    regsiter: {
+                                    register: {
                                         bearer: bearer,
                                         denom: denom,
                                         label: label,
@@ -236,7 +235,7 @@
                 });
             };
             _this.claim = function (_a, fee, memo, funds) {
-                var amount = _a.amount, beneficiary = _a.beneficiary, claimProof = _a.claimProof, id = _a.id, merkleProof = _a.merkleProof;
+                var amount = _a.amount, claimProof = _a.claimProof, id = _a.id, merkleProof = _a.merkleProof;
                 if (fee === void 0) { fee = "auto"; }
                 return __awaiter(_this, void 0, void 0, function () {
                     return __generator(this, function (_b) {
@@ -244,7 +243,6 @@
                             case 0: return [4 /*yield*/, this.client.execute(this.sender, this.contractAddress, {
                                     claim: {
                                         amount: amount,
-                                        beneficiary: beneficiary,
                                         claim_proof: claimProof,
                                         id: id,
                                         merkle_proof: merkleProof
@@ -255,12 +253,26 @@
                     });
                 });
             };
+            _this.multiClaim = function (fee, memo, funds) {
+                if (fee === void 0) { fee = "auto"; }
+                return __awaiter(_this, void 0, void 0, function () {
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0: return [4 /*yield*/, this.client.execute(this.sender, this.contractAddress, {
+                                    multi_claim: {}
+                                }, fee, memo, funds)];
+                            case 1: return [2 /*return*/, _a.sent()];
+                        }
+                    });
+                });
+            };
             _this.client = client;
             _this.sender = sender;
             _this.contractAddress = contractAddress;
-            _this.regsiter = _this.regsiter.bind(_this);
+            _this.register = _this.register.bind(_this);
             _this.fund = _this.fund.bind(_this);
             _this.claim = _this.claim.bind(_this);
+            _this.multiClaim = _this.multiClaim.bind(_this);
             return _this;
         }
         return AirdropClient;
@@ -279,101 +291,6 @@
     */
 
     var _2 = /*#__PURE__*/Object.freeze({
-        __proto__: null
-    });
-
-    /**
-    * This file was automatically generated by @cosmwasm/ts-codegen@0.16.5.
-    * DO NOT MODIFY IT BY HAND. Instead, modify the source JSONSchema file,
-    * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
-    */
-    var CompatQueryClient = /** @class */ (function () {
-        function CompatQueryClient(client, contractAddress) {
-            var _this = this;
-            this.queryMode = function () { return __awaiter(_this, void 0, void 0, function () {
-                return __generator(this, function (_a) {
-                    return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
-                            query_mode: {}
-                        })];
-                });
-            }); };
-            this.estimateSwapExactAmountIn = function (_a) {
-                var amount = _a.amount, mode = _a.mode, routes = _a.routes, sender = _a.sender;
-                return __awaiter(_this, void 0, void 0, function () {
-                    return __generator(this, function (_b) {
-                        return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
-                                estimate_swap_exact_amount_in: {
-                                    amount: amount,
-                                    mode: mode,
-                                    routes: routes,
-                                    sender: sender
-                                }
-                            })];
-                    });
-                });
-            };
-            this.estimateSwapExactAmountOut = function (_a) {
-                var amount = _a.amount, mode = _a.mode, routes = _a.routes, sender = _a.sender;
-                return __awaiter(_this, void 0, void 0, function () {
-                    return __generator(this, function (_b) {
-                        return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
-                                estimate_swap_exact_amount_out: {
-                                    amount: amount,
-                                    mode: mode,
-                                    routes: routes,
-                                    sender: sender
-                                }
-                            })];
-                    });
-                });
-            };
-            this.client = client;
-            this.contractAddress = contractAddress;
-            this.queryMode = this.queryMode.bind(this);
-            this.estimateSwapExactAmountIn = this.estimateSwapExactAmountIn.bind(this);
-            this.estimateSwapExactAmountOut = this.estimateSwapExactAmountOut.bind(this);
-        }
-        return CompatQueryClient;
-    }());
-    var CompatClient = /** @class */ (function (_super) {
-        __extends(CompatClient, _super);
-        function CompatClient(client, sender, contractAddress) {
-            var _this = _super.call(this, client, contractAddress) || this;
-            _this.switchQueryMode = function (fee, memo, funds) {
-                if (fee === void 0) { fee = "auto"; }
-                return __awaiter(_this, void 0, void 0, function () {
-                    return __generator(this, function (_a) {
-                        switch (_a.label) {
-                            case 0: return [4 /*yield*/, this.client.execute(this.sender, this.contractAddress, {
-                                    switch_query_mode: {}
-                                }, fee, memo, funds)];
-                            case 1: return [2 /*return*/, _a.sent()];
-                        }
-                    });
-                });
-            };
-            _this.client = client;
-            _this.sender = sender;
-            _this.contractAddress = contractAddress;
-            _this.switchQueryMode = _this.switchQueryMode.bind(_this);
-            return _this;
-        }
-        return CompatClient;
-    }(CompatQueryClient));
-
-    var _3 = /*#__PURE__*/Object.freeze({
-        __proto__: null,
-        CompatQueryClient: CompatQueryClient,
-        CompatClient: CompatClient
-    });
-
-    /**
-    * This file was automatically generated by @cosmwasm/ts-codegen@0.16.5.
-    * DO NOT MODIFY IT BY HAND. Instead, modify the source JSONSchema file,
-    * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
-    */
-
-    var _4 = /*#__PURE__*/Object.freeze({
         __proto__: null
     });
 
@@ -404,6 +321,18 @@
                         })];
                 });
             }); };
+            this.getFee = function (_a) {
+                var time = _a.time;
+                return __awaiter(_this, void 0, void 0, function () {
+                    return __generator(this, function (_b) {
+                        return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
+                                get_fee: {
+                                    time: time
+                                }
+                            })];
+                    });
+                });
+            };
             this.getPauseInfo = function () { return __awaiter(_this, void 0, void 0, function () {
                 return __generator(this, function (_a) {
                     return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
@@ -447,6 +376,7 @@
             this.contractAddress = contractAddress;
             this.getBalance = this.getBalance.bind(this);
             this.getConfig = this.getConfig.bind(this);
+            this.getFee = this.getFee.bind(this);
             this.getPauseInfo = this.getPauseInfo.bind(this);
             this.getPortfolio = this.getPortfolio.bind(this);
             this.simulateMint = this.simulateMint.bind(this);
@@ -492,6 +422,19 @@
                     });
                 });
             };
+            _this.realize = function (fee, memo, funds) {
+                if (fee === void 0) { fee = "auto"; }
+                return __awaiter(_this, void 0, void 0, function () {
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0: return [4 /*yield*/, this.client.execute(this.sender, this.contractAddress, {
+                                    realize: {}
+                                }, fee, memo, funds)];
+                            case 1: return [2 /*return*/, _a.sent()];
+                        }
+                    });
+                });
+            };
             _this.gov = function (fee, memo, funds) {
                 if (fee === void 0) { fee = "auto"; }
                 return __awaiter(_this, void 0, void 0, function () {
@@ -523,6 +466,7 @@
             _this.contractAddress = contractAddress;
             _this.mint = _this.mint.bind(_this);
             _this.burn = _this.burn.bind(_this);
+            _this.realize = _this.realize.bind(_this);
             _this.gov = _this.gov.bind(_this);
             _this.rebalance = _this.rebalance.bind(_this);
             return _this;
@@ -530,7 +474,7 @@
         return CoreClient;
     }(CoreQueryClient));
 
-    var _5 = /*#__PURE__*/Object.freeze({
+    var _3 = /*#__PURE__*/Object.freeze({
         __proto__: null,
         CoreQueryClient: CoreQueryClient,
         CoreClient: CoreClient
@@ -542,7 +486,7 @@
     * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
     */
 
-    var _6 = /*#__PURE__*/Object.freeze({
+    var _4 = /*#__PURE__*/Object.freeze({
         __proto__: null
     });
 
@@ -779,7 +723,7 @@
         return FaucetClient;
     }(FaucetQueryClient));
 
-    var _7 = /*#__PURE__*/Object.freeze({
+    var _5 = /*#__PURE__*/Object.freeze({
         __proto__: null,
         FaucetQueryClient: FaucetQueryClient,
         FaucetClient: FaucetClient
@@ -791,7 +735,7 @@
     * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
     */
 
-    var _8 = /*#__PURE__*/Object.freeze({
+    var _6 = /*#__PURE__*/Object.freeze({
         __proto__: null
     });
 
@@ -850,7 +794,7 @@
         return PeripheryClient;
     }());
 
-    var _9 = /*#__PURE__*/Object.freeze({
+    var _7 = /*#__PURE__*/Object.freeze({
         __proto__: null,
         PeripheryClient: PeripheryClient
     });
@@ -863,10 +807,9 @@
     var contracts;
     (function (contracts) {
         contracts.Airdrop = __assign(__assign({}, _0), _1);
-        contracts.Compat = __assign(__assign({}, _2), _3);
-        contracts.Core = __assign(__assign({}, _4), _5);
-        contracts.Faucet = __assign(__assign({}, _6), _7);
-        contracts.Periphery = __assign(__assign({}, _8), _9);
+        contracts.Core = __assign(__assign({}, _2), _3);
+        contracts.Faucet = __assign(__assign({}, _4), _5);
+        contracts.Periphery = __assign(__assign({}, _6), _7);
     })(contracts || (contracts = {}));
 
     var index = /*#__PURE__*/Object.freeze({

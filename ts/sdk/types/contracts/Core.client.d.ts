@@ -5,13 +5,16 @@
 */
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { StdFee } from "@cosmjs/amino";
-import { Uint128, Coin, GetConfigResponse, GetPauseInfoResponse, GetPortfolioResponse, SimulateBurnResponse, SimulateMintResponse } from "./Core.types";
+import { Uint128, Coin, GetConfigResponse, GetFeeResponse, GetPauseInfoResponse, GetPortfolioResponse, SimulateBurnResponse, SimulateMintResponse } from "./Core.types";
 export interface CoreReadOnlyInterface {
     contractAddress: string;
     getBalance: ({ account }: {
         account: string;
     }) => Promise<Uint128>;
     getConfig: () => Promise<GetConfigResponse>;
+    getFee: ({ time }: {
+        time?: number;
+    }) => Promise<GetFeeResponse>;
     getPauseInfo: () => Promise<GetPauseInfoResponse>;
     getPortfolio: () => Promise<GetPortfolioResponse>;
     simulateMint: ({ amount, funds }: {
@@ -30,6 +33,9 @@ export declare class CoreQueryClient implements CoreReadOnlyInterface {
         account: string;
     }) => Promise<Uint128>;
     getConfig: () => Promise<GetConfigResponse>;
+    getFee: ({ time }: {
+        time?: number;
+    }) => Promise<GetFeeResponse>;
     getPauseInfo: () => Promise<GetPauseInfoResponse>;
     getPortfolio: () => Promise<GetPortfolioResponse>;
     simulateMint: ({ amount, funds }: {
@@ -51,6 +57,7 @@ export interface CoreInterface extends CoreReadOnlyInterface {
     burn: ({ redeemTo }: {
         redeemTo?: string;
     }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+    realize: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
     gov: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
     rebalance: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
@@ -67,6 +74,7 @@ export declare class CoreClient extends CoreQueryClient implements CoreInterface
     burn: ({ redeemTo }: {
         redeemTo?: string;
     }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+    realize: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
     gov: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
     rebalance: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
