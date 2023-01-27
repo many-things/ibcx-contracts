@@ -17,7 +17,7 @@ impl<C: CustomQuery + DeserializeOwned> Querier for CoreQuerier<'_, C> {
             Ok(v) => v,
             Err(e) => {
                 return SystemResult::Err(SystemError::InvalidRequest {
-                    error: format!("Parsing query request: {}", e),
+                    error: format!("Parsing query request: {e}"),
                     request: bin_request.into(),
                 })
             }
