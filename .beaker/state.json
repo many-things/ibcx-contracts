@@ -28,18 +28,9 @@
       }
     },
     "ibcx-airdrop": {
-      "code_id": 5521,
+      "code_id": 5546,
       "addresses": {
         "default": "osmo1t62ek756dan7kdh945q84z3zmx64x2gdklflex4tnev7lzq3r9uqe3x0aa"
-      },
-      "proposal": {
-        "store_code": null
-      }
-    },
-    "ibcx-compat": {
-      "code_id": 4889,
-      "addresses": {
-        "default": "osmo147p0eg2rcqlkch4updkhray8er9k79dmyr5vgqva3mt49wqwyt3sm597qf"
       },
       "proposal": {
         "store_code": null
