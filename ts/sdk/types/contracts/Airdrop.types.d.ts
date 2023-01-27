@@ -6,7 +6,7 @@
 export interface InstantiateMsg {
 }
 export type ExecuteMsg = {
-    regsiter: {
+    register: {
         bearer?: boolean | null;
         denom: string;
         label?: string | null;
@@ -17,13 +17,9 @@ export type ExecuteMsg = {
         id: AirdropId;
     };
 } | {
-    claim: {
-        amount: Uint128;
-        beneficiary?: string | null;
-        claim_proof?: string | null;
-        id: AirdropId;
-        merkle_proof: string[];
-    };
+    claim: ClaimPayload;
+} | {
+    multi_claim: ClaimPayload[];
 };
 export type AirdropId = {
     id: number;
@@ -31,6 +27,17 @@ export type AirdropId = {
     label: string;
 };
 export type Uint128 = string;
+export type ClaimProofOptional = {
+    account: string | null;
+} | {
+    claim_proof: string;
+};
+export interface ClaimPayload {
+    amount: Uint128;
+    claim_proof: ClaimProofOptional;
+    id: AirdropId;
+    merkle_proof: string[];
+}
 export type QueryMsg = {
     get_airdrop: {
         id: AirdropId;
@@ -45,7 +52,7 @@ export type QueryMsg = {
     latest_airdrop_id: {};
 } | {
     get_claim: {
-        account: string;
+        claim_proof: ClaimProof;
         id: AirdropId;
     };
 } | {
@@ -58,8 +65,7 @@ export type QueryMsg = {
 } | {
     check_qualification: {
         amount: Uint128;
-        beneficiary?: string | null;
-        claim_proof?: string | null;
+        claim_proof: ClaimProof;
         id: AirdropId;
         merkle_proof: string[];
     };
@@ -70,6 +76,11 @@ export type AirdropIdOptional = {
 } | {
     label: string | null;
 };
+export type ClaimProof = {
+    account: string;
+} | {
+    claim_proof: string;
+};
 export interface MigrateMsg {
 }
 export type CheckQualificationResponse = boolean;
@@ -78,13 +89,13 @@ export interface GetAirdropResponse {
     denom: string;
     id: number;
     label?: string | null;
+    merkle_root: string;
     total_amount: Uint128;
     total_claimed: Uint128;
 }
-export type Addr = string;
 export interface GetClaimResponse {
-    account: Addr;
     amount: Uint128;
+    claim_proof: ClaimProof;
 }
 export type LatestAirdropResponse = number;
 export type ListAirdropsResponse = GetAirdropResponse[];

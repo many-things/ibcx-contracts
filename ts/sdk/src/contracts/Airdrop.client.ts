@@ -6,7 +6,7 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { InstantiateMsg, ExecuteMsg, AirdropId, Uint128, QueryMsg, RangeOrder, AirdropIdOptional, MigrateMsg, CheckQualificationResponse, GetAirdropResponse, Addr, GetClaimResponse, LatestAirdropResponse, ListAirdropsResponse, ListClaimsResponse } from "./Airdrop.types";
+import { InstantiateMsg, ExecuteMsg, AirdropId, Uint128, ClaimProofOptional, ClaimPayload, QueryMsg, RangeOrder, AirdropIdOptional, ClaimProof, MigrateMsg, CheckQualificationResponse, GetAirdropResponse, GetClaimResponse, LatestAirdropResponse, ListAirdropsResponse, ListClaimsResponse } from "./Airdrop.types";
 export interface AirdropReadOnlyInterface {
   contractAddress: string;
   getAirdrop: ({
@@ -25,10 +25,10 @@ export interface AirdropReadOnlyInterface {
   }) => Promise<ListAirdropsResponse>;
   latestAirdropId: () => Promise<LatestAirdropResponse>;
   getClaim: ({
-    account,
+    claimProof,
     id
   }: {
-    account: string;
+    claimProof: ClaimProof;
     id: AirdropId;
   }) => Promise<GetClaimResponse>;
   listClaims: ({
@@ -44,14 +44,12 @@ export interface AirdropReadOnlyInterface {
   }) => Promise<ListClaimsResponse>;
   checkQualification: ({
     amount,
-    beneficiary,
     claimProof,
     id,
     merkleProof
   }: {
     amount: Uint128;
-    beneficiary?: string;
-    claimProof?: string;
+    claimProof: ClaimProof;
     id: AirdropId;
     merkleProof: string[];
   }) => Promise<CheckQualificationResponse>;
@@ -105,15 +103,15 @@ export class AirdropQueryClient implements AirdropReadOnlyInterface {
     });
   };
   getClaim = async ({
-    account,
+    claimProof,
     id
   }: {
-    account: string;
+    claimProof: ClaimProof;
     id: AirdropId;
   }): Promise<GetClaimResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
       get_claim: {
-        account,
+        claim_proof: claimProof,
         id
       }
     });
@@ -140,21 +138,18 @@ export class AirdropQueryClient implements AirdropReadOnlyInterface {
   };
   checkQualification = async ({
     amount,
-    beneficiary,
     claimProof,
     id,
     merkleProof
   }: {
     amount: Uint128;
-    beneficiary?: string;
-    claimProof?: string;
+    claimProof: ClaimProof;
     id: AirdropId;
     merkleProof: string[];
   }): Promise<CheckQualificationResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
       check_qualification: {
         amount,
-        beneficiary,
         claim_proof: claimProof,
         id,
         merkle_proof: merkleProof
@@ -165,7 +160,7 @@ export class AirdropQueryClient implements AirdropReadOnlyInterface {
 export interface AirdropInterface extends AirdropReadOnlyInterface {
   contractAddress: string;
   sender: string;
-  regsiter: ({
+  register: ({
     bearer,
     denom,
     label,
@@ -183,17 +178,16 @@ export interface AirdropInterface extends AirdropReadOnlyInterface {
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
   claim: ({
     amount,
-    beneficiary,
     claimProof,
     id,
     merkleProof
   }: {
     amount: Uint128;
-    beneficiary?: string;
-    claimProof?: string;
+    claimProof: ClaimProofOptional;
     id: AirdropId;
     merkleProof: string[];
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  multiClaim: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
 export class AirdropClient extends AirdropQueryClient implements AirdropInterface {
   client: SigningCosmWasmClient;
@@ -205,12 +199,13 @@ export class AirdropClient extends AirdropQueryClient implements AirdropInterfac
     this.client = client;
     this.sender = sender;
     this.contractAddress = contractAddress;
-    this.regsiter = this.regsiter.bind(this);
+    this.register = this.register.bind(this);
     this.fund = this.fund.bind(this);
     this.claim = this.claim.bind(this);
+    this.multiClaim = this.multiClaim.bind(this);
   }
 
-  regsiter = async ({
+  register = async ({
     bearer,
     denom,
     label,
@@ -222,7 +217,7 @@ export class AirdropClient extends AirdropQueryClient implements AirdropInterfac
     merkleRoot: string;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
-      regsiter: {
+      register: {
         bearer,
         denom,
         label,
@@ -243,25 +238,27 @@ export class AirdropClient extends AirdropQueryClient implements AirdropInterfac
   };
   claim = async ({
     amount,
-    beneficiary,
     claimProof,
     id,
     merkleProof
   }: {
     amount: Uint128;
-    beneficiary?: string;
-    claimProof?: string;
+    claimProof: ClaimProofOptional;
     id: AirdropId;
     merkleProof: string[];
   }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       claim: {
         amount,
-        beneficiary,
         claim_proof: claimProof,
         id,
         merkle_proof: merkleProof
       }
+    }, fee, memo, funds);
+  };
+  multiClaim = async (fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      multi_claim: {}
     }, fee, memo, funds);
   };
 }
