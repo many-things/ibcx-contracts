@@ -476,7 +476,7 @@ dependencies = [
 
 [[package]]
 name = "ibcx-airdrop"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -495,7 +495,7 @@ dependencies = [
 
 [[package]]
 name = "ibcx-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -512,7 +512,7 @@ dependencies = [
 
 [[package]]
 name = "ibcx-faucet"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -529,7 +529,7 @@ dependencies = [
 
 [[package]]
 name = "ibcx-interface"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -543,7 +543,7 @@ dependencies = [
 
 [[package]]
 name = "ibcx-periphery"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
