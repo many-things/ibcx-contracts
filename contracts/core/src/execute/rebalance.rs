@@ -246,8 +246,7 @@ pub fn deflate(
     let amount_gap = origin_unit.checked_sub(target_unit)? * token.total_supply;
     if amount_gap < amount {
         return Err(ContractError::InvalidArgument(format!(
-            "insufficient amount: {}",
-            amount_gap,
+            "insufficient amount: {amount_gap}",
         )));
     }
 
