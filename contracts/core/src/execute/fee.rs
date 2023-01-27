@@ -1,4 +1,4 @@
-use cosmwasm_std::{coin, coins, Addr, BankMsg, Coin, CosmosMsg, Decimal, Storage, Uint128};
+use cosmwasm_std::{coin, coins, Addr, BankMsg, Coin, CosmosMsg, Storage, Uint128};
 use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgBurn, MsgMint};
 
 use crate::{
@@ -89,39 +89,21 @@ pub fn make_burn_msgs_with_fee_collection(
 
 pub fn collect_streaming_fee(storage: &mut dyn Storage, now: u64) -> Result<(), ContractError> {
     let fee = FEE.load(storage)?;
-    if let Some(stream) = fee.stream {
-        let elapsed = now - fee.stream_last_collected_at;
-        if elapsed > 0 {
-            // 1. fetch rate & add one - ex) 1 + 0.000000000047529 => 1.000000000047529
-            // 2. pow elapsed time - ex) (1.000000000047529)^86400 => 1.000004106521961
-            // 3. subtract one - ex) 1.000004106521961 - 1 => 0.000004106521961
-            let rate = (Decimal::one() + stream)
-                .checked_pow(elapsed as u32)?
-                .checked_sub(Decimal::one())?;
 
-            let assets = get_assets(storage)?;
-            let applied = assets
-                .iter()
-                .map(|(denom, unit)| {
-                    let after = unit.checked_mul(Decimal::one().checked_sub(rate)?)?;
-                    Ok((denom.clone(), after, unit.checked_sub(after)?))
-                })
-                .collect::<Result<Vec<_>, ContractError>>()?;
+    let assets = get_assets(storage)?;
+    let (assets, collected) = fee.calculate_streaming_fee(assets, now)?;
+    if let Some(collected) = collected {
+        FEE.save(
+            storage,
+            &Fee {
+                collected,
+                stream_last_collected_at: now,
+                ..fee
+            },
+        )?;
 
-            let mut collected = vec![];
-            for (denom, after, fee) in applied {
-                collected.push((denom.clone(), fee));
-                ASSETS.save(storage, denom, &after)?;
-            }
-
-            FEE.save(
-                storage,
-                &Fee {
-                    collected,
-                    stream_last_collected_at: now,
-                    ..fee
-                },
-            )?;
+        for (denom, unit) in assets {
+            ASSETS.save(storage, denom, &unit)?;
         }
     }
 
@@ -161,7 +143,10 @@ mod test {
 
     use std::str::FromStr;
 
-    use cosmwasm_std::testing::{mock_env, MockStorage};
+    use cosmwasm_std::{
+        testing::{mock_env, MockStorage},
+        Decimal,
+    };
 
     use crate::{
         state::RESERVE_DENOM,
@@ -286,12 +271,14 @@ mod test {
         // nothing happened
         FEE.save(&mut storage, &fee).unwrap();
         collect_streaming_fee(&mut storage, now).unwrap();
+        assert_eq!(FEE.load(&storage).unwrap().stream_last_collected_at, 0);
 
         // nothing happened
         fee.stream = Some(rate);
         fee.stream_last_collected_at = now;
         FEE.save(&mut storage, &fee).unwrap();
         collect_streaming_fee(&mut storage, now).unwrap();
+        assert_eq!(FEE.load(&storage).unwrap().stream_last_collected_at, now);
 
         // 1 year after
         let origin_assets = get_assets(&storage).unwrap();

@@ -1,6 +1,6 @@
 use cosmwasm_std::{to_binary, Coin, Deps, Env, QueryResponse, Uint128};
 use ibcx_interface::core::{
-    FeeResponse, GetConfigResponse, GetPauseInfoResponse, GetPortfolioResponse,
+    GetConfigResponse, GetFeeResponse, GetPauseInfoResponse, GetPortfolioResponse,
     SimulateBurnResponse, SimulateMintResponse,
 };
 
@@ -20,19 +20,35 @@ pub fn balance(deps: Deps, _env: Env, account: String) -> Result<QueryResponse, 
 pub fn config(deps: Deps, _env: Env) -> Result<QueryResponse, ContractError> {
     let gov = GOV.load(deps.storage)?;
     let token = TOKEN.load(deps.storage)?;
-    let fee = FEE.load(deps.storage)?;
 
     Ok(to_binary(&GetConfigResponse {
         gov,
         denom: token.denom,
         reserve_denom: token.reserve_denom,
-        fee_strategy: FeeResponse {
-            collector: fee.collector,
-            mint: fee.mint,
-            burn: fee.burn,
-            stream: fee.stream,
-            stream_last_collected_at: fee.stream_last_collected_at,
-        },
+    })?)
+}
+
+pub fn fee(deps: Deps, env: Env, time: Option<u64>) -> Result<QueryResponse, ContractError> {
+    let time = time.unwrap_or_else(|| env.block.time.seconds());
+    let token = TOKEN.load(deps.storage)?;
+    let fee = FEE.load(deps.storage)?;
+    let (_, collected) = fee.calculate_streaming_fee(get_assets(deps.storage)?, time)?;
+
+    let collected = collected.unwrap_or_default();
+    let realized = collected
+        .clone()
+        .into_iter()
+        .map(|(denom, unit)| (denom, token.total_supply * unit))
+        .collect::<Vec<_>>();
+
+    Ok(to_binary(&GetFeeResponse {
+        collector: fee.collector,
+        collected,
+        realized,
+        mint: fee.mint,
+        burn: fee.burn,
+        stream: fee.stream,
+        stream_last_collected_at: fee.stream_last_collected_at,
     })?)
 }
 
@@ -45,23 +61,34 @@ pub fn pause_info(deps: Deps, _env: Env) -> Result<QueryResponse, ContractError>
     })?)
 }
 
-pub fn portfolio(deps: Deps, _env: Env) -> Result<QueryResponse, ContractError> {
+pub fn portfolio(deps: Deps, env: Env) -> Result<QueryResponse, ContractError> {
     let token = TOKEN.load(deps.storage)?;
+    let fee = FEE.load(deps.storage)?;
+
+    let now = env.block.time.seconds();
+    let assets = get_assets(deps.storage)?;
+    let (assets, _) = fee.calculate_streaming_fee(assets, now)?;
 
     Ok(to_binary(&GetPortfolioResponse {
         total_supply: token.total_supply,
-        assets: get_redeem_amounts(deps.storage, token.total_supply)?,
-        units: get_assets(deps.storage)?,
+        units: assets.clone(),
+        assets: get_redeem_amounts(assets, &token.reserve_denom, token.total_supply)?,
     })?)
 }
 
 pub fn simulate_mint(
     deps: Deps,
-    _env: Env,
+    env: Env,
     amount: Uint128,
     funds: Vec<Coin>,
 ) -> Result<QueryResponse, ContractError> {
-    let refund_amount = assert_assets(deps.storage, funds, amount)?;
+    let fee = FEE.load(deps.storage)?;
+
+    let now = env.block.time.seconds();
+    let assets = get_assets(deps.storage)?;
+    let (assets, _) = fee.calculate_streaming_fee(assets, now)?;
+
+    let refund_amount = assert_assets(assets, funds, amount)?;
 
     Ok(to_binary(&SimulateMintResponse {
         mint_amount: amount,
@@ -71,10 +98,17 @@ pub fn simulate_mint(
 
 pub fn simulate_burn(
     deps: Deps,
-    _env: Env,
+    env: Env,
     amount: Uint128,
 ) -> Result<QueryResponse, ContractError> {
-    let redeem_amount = get_redeem_amounts(deps.storage, amount)?;
+    let token = TOKEN.load(deps.storage)?;
+    let fee = FEE.load(deps.storage)?;
+
+    let now = env.block.time.seconds();
+    let assets = get_assets(deps.storage)?;
+    let (assets, _) = fee.calculate_streaming_fee(assets, now)?;
+
+    let redeem_amount = get_redeem_amounts(assets, &token.reserve_denom, amount)?;
 
     Ok(to_binary(&SimulateBurnResponse {
         burn_amount: amount,

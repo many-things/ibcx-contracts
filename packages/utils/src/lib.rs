@@ -26,3 +26,26 @@ where
 
     Ok(())
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use cosmwasm_std::testing::MockStorage;
+
+    #[test]
+    fn test_store_version() {
+        let mut storage = MockStorage::default();
+
+        cw2::set_contract_version(&mut storage, "test_contract", "0.1.0").unwrap();
+        store_version(&mut storage, "test_contract", "0.1.1").unwrap();
+
+        assert_eq!(
+            store_version(&mut storage, "test_contract", "0.0.9").unwrap_err(),
+            StdError::generic_err("contract version must be greater than current")
+        );
+        assert_eq!(
+            store_version(&mut storage, "another_test_contract", "0.1.1").unwrap_err(),
+            StdError::generic_err("contract name mismatch")
+        );
+    }
+}

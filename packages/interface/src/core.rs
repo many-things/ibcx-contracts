@@ -1,7 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
 
-use crate::types::SwapRoutes;
+use crate::types::{SwapRoutes, Units};
 
 #[cw_serde]
 #[derive(Default)]
@@ -18,7 +18,7 @@ pub struct InstantiateMsg {
     pub gov: String,
     pub denom: String,
     pub reserve_denom: String,
-    pub initial_assets: Vec<(String, Decimal)>,
+    pub initial_assets: Units,
     pub fee_strategy: Fee,
 }
 
@@ -61,8 +61,8 @@ pub enum RebalanceTradeMsg {
 pub enum RebalanceMsg {
     Init {
         manager: String,
-        deflation: Vec<(String, Decimal)>, // target units
-        inflation: Vec<(String, Decimal)>, // conversion weights
+        deflation: Units, // target units
+        inflation: Units, // conversion weights
     },
     Trade(RebalanceTradeMsg),
     Finalize {},
@@ -93,6 +93,9 @@ pub enum QueryMsg {
     #[returns(GetConfigResponse)]
     GetConfig {},
 
+    #[returns(GetFeeResponse)]
+    GetFee { time: Option<u64> },
+
     #[returns(GetPauseInfoResponse)]
     GetPauseInfo {},
 
@@ -107,20 +110,21 @@ pub enum QueryMsg {
 }
 
 #[cw_serde]
-pub struct FeeResponse {
-    pub collector: Addr,
-    pub mint: Option<Decimal>,
-    pub burn: Option<Decimal>,
-    pub stream: Option<Decimal>,
-    pub stream_last_collected_at: u64,
-}
-
-#[cw_serde]
 pub struct GetConfigResponse {
     pub gov: Addr,
     pub denom: String,
     pub reserve_denom: String,
-    pub fee_strategy: FeeResponse,
+}
+
+#[cw_serde]
+pub struct GetFeeResponse {
+    pub collector: Addr,
+    pub collected: Units,
+    pub realized: Vec<(String, Uint128)>,
+    pub mint: Option<Decimal>,
+    pub burn: Option<Decimal>,
+    pub stream: Option<Decimal>,
+    pub stream_last_collected_at: u64,
 }
 
 #[cw_serde]
@@ -133,7 +137,7 @@ pub struct GetPauseInfoResponse {
 pub struct GetPortfolioResponse {
     pub total_supply: Uint128,
     pub assets: Vec<Coin>,
-    pub units: Vec<(String, Decimal)>,
+    pub units: Units,
 }
 
 #[cw_serde]
