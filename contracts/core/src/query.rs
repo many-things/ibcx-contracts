@@ -89,8 +89,8 @@ pub fn simulate_mint(
     let assets = get_assets(deps.storage)?;
     let (assets, _) = fee.calculate_streaming_fee(assets, now)?;
 
+    let amount_spent = get_redeem_amounts(assets.clone(), &token.reserve_denom, amount)?;
     let amount_with_fee = fee.mint.map(|v| amount * v).unwrap_or(amount);
-    let amount_spent = get_redeem_amounts(assets.clone(), &token.reserve_denom, amount_with_fee)?;
     let refund_amount = funds
         .map(|v| assert_assets(assets, v, amount_with_fee))
         .transpose()?
