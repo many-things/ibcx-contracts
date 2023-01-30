@@ -131,4 +131,6 @@ pub struct GetRoleResponse {
 pub struct ListRolesResponse(pub Vec<(String, String, bool)>);
 
 #[cw_serde]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub force: Option<bool>,
+}

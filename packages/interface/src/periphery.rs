@@ -62,4 +62,6 @@ pub struct SimulateBurnExactAmountInResponse {
 }
 
 #[cw_serde]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub force: Option<bool>,
+}
