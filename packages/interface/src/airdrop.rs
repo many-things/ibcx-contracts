@@ -144,4 +144,6 @@ pub struct ListClaimsResponse(pub Vec<GetClaimResponse>);
 pub struct CheckQualificationResponse(pub bool);
 
 #[cw_serde]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub force: Option<bool>,
+}
