@@ -88,10 +88,11 @@ pub fn simulate_mint(
     let assets = get_assets(deps.storage)?;
     let (assets, _) = fee.calculate_streaming_fee(assets, now)?;
 
-    let refund_amount = assert_assets(assets, funds, amount)?;
+    let amount_with_fee = fee.mint.map(|v| amount * v).unwrap_or(amount);
+    let refund_amount = assert_assets(assets, funds, amount_with_fee)?;
 
     Ok(to_binary(&SimulateMintResponse {
-        mint_amount: amount,
+        mint_amount: amount_with_fee, // recognize user to mint entire amount
         refund_amount,
     })?)
 }
@@ -108,10 +109,11 @@ pub fn simulate_burn(
     let assets = get_assets(deps.storage)?;
     let (assets, _) = fee.calculate_streaming_fee(assets, now)?;
 
-    let redeem_amount = get_redeem_amounts(assets, &token.reserve_denom, amount)?;
+    let amount_with_fee = fee.burn.map(|v| amount * v).unwrap_or(amount);
+    let redeem_amount = get_redeem_amounts(assets, &token.reserve_denom, amount_with_fee)?;
 
     Ok(to_binary(&SimulateBurnResponse {
-        burn_amount: amount,
+        burn_amount: amount, // recognize user to burn entire amount
         redeem_amount,
     })?)
 }
