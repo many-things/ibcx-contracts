@@ -25,16 +25,14 @@ pub fn mint_exact_amount_out(
     let max_input = coin(max_input_amount.u128(), &input_asset);
     let output = coin(output_amount.u128(), core_config.denom);
 
-    let desired = core
-        .simulate_burn(&deps.querier, output.amount)?
-        .redeem_amount;
+    let sim_resp = core.simulate_mint(&deps.querier, output.amount, None)?;
 
     let (swap_msgs, _) = make_mint_swap_exact_out_msgs(
         &deps.querier,
         &env.contract.address,
         &info.sender,
         swap_info,
-        desired.clone(),
+        sim_resp.fund_spent.clone(),
         &max_input,
     )?;
 
@@ -44,7 +42,7 @@ pub fn mint_exact_amount_out(
             receiver: Some(info.sender.to_string()),
             refund_to: Some(info.sender.to_string()),
         },
-        desired,
+        sim_resp.fund_spent,
     )?;
 
     let resp = Response::new()
