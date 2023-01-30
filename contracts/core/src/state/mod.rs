@@ -55,22 +55,15 @@ impl Fee {
                     .checked_pow(elapsed as u32)?
                     .checked_sub(Decimal::one())?;
 
-                let applied = assets
+                let (after, fee) = assets
                     .into_iter()
                     .map(|(denom, unit)| {
                         let after = unit.checked_mul(Decimal::one().checked_sub(rate)?)?;
-                        Ok((denom, after, unit.checked_sub(after)?))
+                        Ok(((denom.clone(), after), (denom, unit.checked_sub(after)?)))
                     })
-                    .collect::<Result<Vec<_>, ContractError>>()?;
-
-                let (after, fee) =
-                    applied
-                        .into_iter()
-                        .fold((vec![], vec![]), |mut acc, (denom, after, fee)| {
-                            acc.0.push((denom.clone(), after));
-                            acc.1.push((denom, fee));
-                            acc
-                        });
+                    .collect::<Result<Vec<_>, ContractError>>()?
+                    .into_iter()
+                    .unzip();
 
                 return Ok((after, Some(fee)));
             }

@@ -80,20 +80,26 @@ pub fn simulate_mint(
     deps: Deps,
     env: Env,
     amount: Uint128,
-    funds: Vec<Coin>,
+    funds: Option<Vec<Coin>>,
 ) -> Result<QueryResponse, ContractError> {
+    let token = TOKEN.load(deps.storage)?;
     let fee = FEE.load(deps.storage)?;
 
     let now = env.block.time.seconds();
     let assets = get_assets(deps.storage)?;
     let (assets, _) = fee.calculate_streaming_fee(assets, now)?;
 
+    let amount_spent = get_redeem_amounts(assets.clone(), &token.reserve_denom, amount)?;
     let amount_with_fee = fee.mint.map(|v| amount * v).unwrap_or(amount);
-    let refund_amount = assert_assets(assets, funds, amount_with_fee)?;
+    let refund_amount = funds
+        .map(|v| assert_assets(assets, v, amount_with_fee))
+        .transpose()?
+        .unwrap_or_default();
 
     Ok(to_binary(&SimulateMintResponse {
         mint_amount: amount_with_fee, // recognize user to mint entire amount
         refund_amount,
+        fund_spent: amount_spent,
     })?)
 }
 

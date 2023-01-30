@@ -129,23 +129,20 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
             // input & output
             let output = coin(output_amount.u128(), core_config.denom);
 
-            let desired = core
-                .simulate_burn(&deps.querier, output.amount)?
-                .redeem_amount;
+            let sim_resp = core.simulate_mint(&deps.querier, output.amount, None)?;
 
             let (_, refund) = make_mint_swap_exact_out_msgs(
                 &deps.querier,
                 &env.contract.address,
                 &env.contract.address,
                 swap_info,
-                desired.clone(),
+                sim_resp.fund_spent.clone(),
                 &input_asset,
             )?;
 
-            let sim_resp = core.simulate_mint(&deps.querier, output_amount, desired)?;
-
             Ok(to_binary(&SimulateMintExactAmountOutResponse {
                 mint_amount: sim_resp.mint_amount,
+                mint_spend_amount: sim_resp.fund_spent,
                 mint_refund_amount: sim_resp.refund_amount,
                 swap_refund_amount: coin(refund.u128(), &input_asset.denom),
             })?)

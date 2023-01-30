@@ -103,7 +103,10 @@ pub enum QueryMsg {
     GetPortfolio {},
 
     #[returns(SimulateMintResponse)]
-    SimulateMint { amount: Uint128, funds: Vec<Coin> },
+    SimulateMint {
+        amount: Uint128,
+        funds: Option<Vec<Coin>>,
+    },
 
     #[returns(SimulateBurnResponse)]
     SimulateBurn { amount: Uint128 },
@@ -144,6 +147,7 @@ pub struct GetPortfolioResponse {
 pub struct SimulateMintResponse {
     pub mint_amount: Uint128,
     pub refund_amount: Vec<Coin>,
+    pub fund_spent: Vec<Coin>,
 }
 
 #[cw_serde]
