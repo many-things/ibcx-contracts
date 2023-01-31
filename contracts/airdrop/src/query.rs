@@ -12,9 +12,23 @@ use ibcx_interface::{
 
 use crate::{
     error::ContractError,
-    state::{AIRDROPS, CLAIM_LOGS, LABELS, LATEST_AIRDROP_ID},
+    state::{Airdrop, AIRDROPS, CLAIM_LOGS, LABELS, LATEST_AIRDROP_ID},
     verify_merkle_proof,
 };
+
+fn airdrop_to_resp(id: u64, airdrop: Airdrop) -> GetAirdropResponse {
+    GetAirdropResponse {
+        id,
+        creator: airdrop.creator.to_string(),
+        label: airdrop.label,
+        denom: airdrop.denom,
+        total_amount: airdrop.total_amount,
+        total_claimed: airdrop.total_claimed,
+        merkle_root: airdrop.merkle_root,
+        bearer: airdrop.bearer,
+        closed: airdrop.closed,
+    }
+}
 
 pub fn get_airdrop(deps: Deps, id: AirdropId) -> Result<QueryResponse, ContractError> {
     let airdrop_id = match id {
@@ -27,15 +41,7 @@ pub fn get_airdrop(deps: Deps, id: AirdropId) -> Result<QueryResponse, ContractE
         .load(deps.storage, airdrop_id)
         .map_err(|_| StdError::not_found("airdrop"))?;
 
-    Ok(to_binary(&GetAirdropResponse {
-        id: airdrop_id,
-        label: airdrop.label,
-        denom: airdrop.denom,
-        total_amount: airdrop.total_amount,
-        total_claimed: airdrop.total_claimed,
-        merkle_root: airdrop.merkle_root,
-        bearer: airdrop.bearer,
-    })?)
+    Ok(to_binary(&airdrop_to_resp(airdrop_id, airdrop))?)
 }
 
 pub fn list_airdrops(
@@ -60,15 +66,7 @@ pub fn list_airdrops(
                 .map(|item| {
                     let (k, v) = item?;
 
-                    Ok(GetAirdropResponse {
-                        id: k,
-                        label: v.label,
-                        denom: v.denom,
-                        total_amount: v.total_amount,
-                        total_claimed: v.total_claimed,
-                        merkle_root: v.merkle_root,
-                        bearer: v.bearer,
-                    })
+                    Ok(airdrop_to_resp(k, v))
                 })
                 .collect::<StdResult<_>>()?
         }
@@ -83,19 +81,11 @@ pub fn list_airdrops(
                 .range(deps.storage, min, max, order)
                 .take(limit)
                 .map(|item| {
-                    let (k, v) = item?;
+                    let (_, v) = item?;
 
                     let airdrop = AIRDROPS.load(deps.storage, v)?;
 
-                    Ok(GetAirdropResponse {
-                        id: v,
-                        label: Some(k),
-                        denom: airdrop.denom,
-                        total_amount: airdrop.total_amount,
-                        total_claimed: airdrop.total_claimed,
-                        merkle_root: airdrop.merkle_root,
-                        bearer: airdrop.bearer,
-                    })
+                    Ok(airdrop_to_resp(v, airdrop))
                 })
                 .collect::<StdResult<_>>()?
         }
@@ -268,6 +258,7 @@ mod test {
             .fold(Uint128::zero(), |acc, c| acc + Uint128::from(c.amount));
 
         let airdrop = make_airdrop(
+            sender,
             if is_bearer {
                 SAMPLE_ROOT_BEARER
             } else {
@@ -305,12 +296,14 @@ mod test {
 
         fn resp_to_airdrop(resp: GetAirdropResponse) -> Airdrop {
             Airdrop {
+                creator: Addr::unchecked(resp.creator),
                 label: resp.label,
                 denom: resp.denom,
                 total_amount: resp.total_amount,
                 total_claimed: resp.total_claimed,
                 merkle_root: resp.merkle_root,
                 bearer: resp.bearer,
+                closed: resp.closed,
             }
         }
 

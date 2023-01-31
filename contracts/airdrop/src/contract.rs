@@ -39,6 +39,7 @@ pub fn execute(
         Fund { id } => execute::fund(deps, info, id),
         Claim(payload) => execute::claim(deps, info, payload),
         MultiClaim(payload) => execute::multi_claim(deps, info, payload),
+        Close { id } => execute::close(deps, info, id),
     }
 }
 

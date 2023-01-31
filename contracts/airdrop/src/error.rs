@@ -24,6 +24,9 @@ pub enum ContractError {
     #[error("{0}")]
     FromHexError(#[from] hex::FromHexError),
 
+    #[error("Unauthorized")]
+    Unauthorized {},
+
     #[error("Key already exists. {key:?}")]
     KeyAlreadyExists { typ: String, key: String },
 

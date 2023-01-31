@@ -73,6 +73,10 @@ pub enum ExecuteMsg {
 
     Claim(ClaimPayload),
     MultiClaim(Vec<ClaimPayload>),
+
+    Close {
+        id: AirdropId,
+    },
 }
 
 #[cw_serde]
@@ -117,12 +121,14 @@ pub enum QueryMsg {
 #[cw_serde]
 pub struct GetAirdropResponse {
     pub id: u64,
+    pub creator: String,
     pub label: Option<String>,
     pub denom: String,
     pub total_amount: Uint128,
     pub total_claimed: Uint128,
     pub merkle_root: String,
     pub bearer: bool,
+    pub closed: bool,
 }
 
 #[cw_serde]

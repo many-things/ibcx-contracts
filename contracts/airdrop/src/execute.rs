@@ -42,12 +42,14 @@ pub fn register(
         deps.storage,
         airdrop_id,
         &Airdrop {
+            creator: info.sender.clone(),
             merkle_root: merkle_root.clone(),
             denom,
             total_amount: received,
             total_claimed: Uint128::zero(),
             bearer: bearer.unwrap_or(false),
             label: label.clone(),
+            closed: false,
         },
     )?;
 
@@ -66,7 +68,11 @@ pub fn fund(deps: DepsMut, info: MessageInfo, id: AirdropId) -> Result<Response,
         AirdropId::Id(id) => id,
         AirdropId::Label(label) => LABELS.load(deps.storage, &label)?,
     };
+
     let mut airdrop = AIRDROPS.load(deps.storage, airdrop_id)?;
+    if airdrop.creator != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
 
     let received = cw_utils::must_pay(&info, &airdrop.denom)?;
     airdrop.total_amount = airdrop.total_amount.checked_add(received)?;
@@ -216,10 +222,40 @@ pub fn multi_claim(
     Ok(Response::new().add_messages(msgs).add_attributes(vec![
         attr("action", "multi_claim"),
         attr("executor", info.sender),
-        attr("airdrop_ids", format!("{airdrop_ids:?}",)),
-        attr("beneficiaries", format!("{beneficiaries:?}",)),
-        attr("amounts", format!("{amounts:?}",)),
+        attr("airdrop_ids", format!("{airdrop_ids:?}")),
+        attr("beneficiaries", format!("{beneficiaries:?}")),
+        attr("amounts", format!("{amounts:?}")),
     ]))
+}
+
+pub fn close(deps: DepsMut, info: MessageInfo, id: AirdropId) -> Result<Response, ContractError> {
+    let airdrop_id = match id {
+        AirdropId::Id(id) => id,
+        AirdropId::Label(label) => LABELS.load(deps.storage, &label)?,
+    };
+
+    let mut airdrop = AIRDROPS.load(deps.storage, airdrop_id)?;
+    if airdrop.creator != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let redeem_amount = airdrop.total_amount.checked_sub(airdrop.total_claimed)?;
+
+    airdrop.closed = true;
+
+    AIRDROPS.save(deps.storage, airdrop_id, &airdrop)?;
+
+    Ok(Response::new()
+        .add_message(BankMsg::Send {
+            to_address: info.sender.to_string(),
+            amount: coins(redeem_amount.u128(), airdrop.denom),
+        })
+        .add_attributes(vec![
+            attr("method", "close"),
+            attr("executor", info.sender),
+            attr("airdrop_id", airdrop_id.to_string()),
+            attr("redeemed", redeem_amount.to_string()),
+        ]))
 }
 
 #[cfg(test)]
@@ -272,7 +308,15 @@ mod test {
             setup(deps.as_mut());
 
             // raw
-            let airdrop = make_airdrop(SAMPLE_ROOT_TEST, "uosmo", 1000000u128, 0u128, false, None);
+            let airdrop = make_airdrop(
+                SENDER_OWNER,
+                SAMPLE_ROOT_TEST,
+                "uosmo",
+                1000000u128,
+                0u128,
+                false,
+                None,
+            );
             let resp = register(
                 deps.as_mut(),
                 mock_info(
@@ -301,6 +345,7 @@ mod test {
             // with bearer
             let label = "label".to_string();
             let airdrop = make_airdrop(
+                SENDER_OWNER,
                 SAMPLE_ROOT_TEST,
                 "uatom",
                 2000000000u128,
@@ -346,6 +391,7 @@ mod test {
             // with bearer
             let label = "label".to_string();
             let airdrop = make_airdrop(
+                SENDER_OWNER,
                 SAMPLE_ROOT_TEST,
                 "uatom",
                 2000000000u128,
@@ -397,6 +443,7 @@ mod test {
 
         fn setup(deps: DepsMut, label: &str) -> Airdrop {
             let airdrop = make_airdrop(
+                SENDER_OWNER,
                 SAMPLE_ROOT_TEST,
                 "uosmo",
                 1000000u128,
@@ -523,6 +570,7 @@ mod test {
                 .fold(Uint128::zero(), |acc, c| acc + Uint128::from(c.amount));
 
             let airdrop = make_airdrop(
+                sender,
                 if is_bearer {
                     SAMPLE_ROOT_BEARER
                 } else {
