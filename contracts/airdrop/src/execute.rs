@@ -73,6 +73,9 @@ pub fn fund(deps: DepsMut, info: MessageInfo, id: AirdropId) -> Result<Response,
     if airdrop.creator != info.sender {
         return Err(ContractError::Unauthorized {});
     }
+    if airdrop.closed {
+        return Err(ContractError::AirdropClosed {});
+    }
 
     let received = cw_utils::must_pay(&info, &airdrop.denom)?;
     airdrop.total_amount = airdrop.total_amount.checked_add(received)?;
@@ -115,6 +118,10 @@ fn _claim(
 
     // verify merkle proof (from https://github.com/cosmwasm/cw-tokens/blob/master/contracts/cw20-merkle-airdrop/src/contract.rs)
     let mut airdrop = AIRDROPS.load(storage, airdrop_id)?;
+    if airdrop.closed {
+        return Err(ContractError::AirdropClosed {});
+    }
+
     if airdrop.bearer != bearer_expected {
         return Err(ContractError::InvalidArguments {
             arg: "claim_proof".to_string(),
@@ -237,6 +244,9 @@ pub fn close(deps: DepsMut, info: MessageInfo, id: AirdropId) -> Result<Response
     let mut airdrop = AIRDROPS.load(deps.storage, airdrop_id)?;
     if airdrop.creator != info.sender {
         return Err(ContractError::Unauthorized {});
+    }
+    if airdrop.closed {
+        return Err(ContractError::AirdropClosed {});
     }
 
     let redeem_amount = airdrop.total_amount.checked_sub(airdrop.total_claimed)?;

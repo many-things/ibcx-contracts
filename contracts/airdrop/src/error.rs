@@ -39,6 +39,9 @@ pub enum ContractError {
     #[error("Invalid proof")]
     InvalidProof {},
 
+    #[error("Airdrop has closed")]
+    AirdropClosed {},
+
     #[error("Invalid arguments. arg:{arg:?}, reason:{reason:?}")]
     InvalidArguments { arg: String, reason: String },
 
