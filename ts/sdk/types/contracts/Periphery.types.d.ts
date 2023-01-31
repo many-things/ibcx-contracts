@@ -28,5 +28,6 @@ export interface SwapRoute {
     token_denom: string;
 }
 export interface MigrateMsg {
+    force?: boolean | null;
 }
 //# sourceMappingURL=Periphery.types.d.ts.map

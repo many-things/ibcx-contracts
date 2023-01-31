@@ -83,7 +83,9 @@ export type QueryMsg = {
   };
 };
 export type RangeOrder = "asc" | "desc";
-export interface MigrateMsg {}
+export interface MigrateMsg {
+  force?: boolean | null;
+}
 export type GetLastTokenIdResponse = number;
 export interface GetRoleResponse {
   account: string;

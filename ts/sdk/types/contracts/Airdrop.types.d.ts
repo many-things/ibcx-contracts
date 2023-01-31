@@ -82,6 +82,7 @@ export type ClaimProof = {
     claim_proof: string;
 };
 export interface MigrateMsg {
+    force?: boolean | null;
 }
 export type CheckQualificationResponse = boolean;
 export interface GetAirdropResponse {

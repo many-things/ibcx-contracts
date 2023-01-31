@@ -27,4 +27,6 @@ export interface SwapRoute {
   pool_id: number;
   token_denom: string;
 }
-export interface MigrateMsg {}
+export interface MigrateMsg {
+  force?: boolean | null;
+}
