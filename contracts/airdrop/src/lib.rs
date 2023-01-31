@@ -47,7 +47,7 @@ pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{testing::mock_info, DepsMut, Response, Uint128};
+    use cosmwasm_std::{testing::mock_info, Addr, DepsMut, Response, Uint128};
     use ibcx_interface::airdrop::{AirdropId, ClaimPayload, ClaimProofOptional};
 
     use crate::{error::ContractError, execute, state::Airdrop};
@@ -62,6 +62,7 @@ mod test {
         "e05ed933574870cefefffa975dfbad8fc4f0924086f8d6f96c9017a5731bb5fa";
 
     pub fn make_airdrop(
+        creator: impl Into<String>,
         merkle_root: impl Into<String>,
         denom: impl Into<String>,
         total_amount: impl Into<Uint128>,
@@ -70,12 +71,14 @@ mod test {
         label: Option<String>,
     ) -> Airdrop {
         Airdrop {
+            creator: Addr::unchecked(creator),
             merkle_root: merkle_root.into(),
             denom: denom.into(),
             total_amount: total_amount.into(),
             total_claimed: total_claimed.into(),
             bearer,
             label,
+            closed: false,
         }
     }
 

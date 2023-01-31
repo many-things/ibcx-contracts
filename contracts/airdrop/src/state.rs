@@ -1,15 +1,17 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Addr, Uint128};
 use cw_storage_plus::{Item, Map};
 
 #[cw_serde]
 pub struct Airdrop {
+    pub creator: Addr,
     pub merkle_root: String,
     pub denom: String,
     pub total_amount: Uint128,
     pub total_claimed: Uint128,
     pub label: Option<String>,
     pub bearer: bool,
+    pub closed: bool,
 }
 
 pub const LATEST_AIRDROP_KEY: &str = "latest_airdrop";

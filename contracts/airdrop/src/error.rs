@@ -24,6 +24,9 @@ pub enum ContractError {
     #[error("{0}")]
     FromHexError(#[from] hex::FromHexError),
 
+    #[error("Unauthorized")]
+    Unauthorized {},
+
     #[error("Key already exists. {key:?}")]
     KeyAlreadyExists { typ: String, key: String },
 
@@ -35,6 +38,9 @@ pub enum ContractError {
 
     #[error("Invalid proof")]
     InvalidProof {},
+
+    #[error("Airdrop has closed")]
+    AirdropClosed {},
 
     #[error("Invalid arguments. arg:{arg:?}, reason:{reason:?}")]
     InvalidArguments { arg: String, reason: String },
