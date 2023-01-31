@@ -840,4 +840,70 @@ mod test {
             assert_eq!(err, ContractError::InvalidProof {});
         }
     }
+
+    mod close {
+        use cosmwasm_std::SubMsg;
+
+        use super::*;
+
+        #[test]
+        fn test_close() {
+            let mut deps = mock_dependencies();
+
+            super::setup(deps.as_mut());
+
+            let airdrop = make_airdrop(
+                SENDER_OWNER,
+                SAMPLE_ROOT_TEST,
+                "uosmo",
+                100u128,
+                0u128,
+                false,
+                None,
+            );
+
+            register(
+                deps.as_mut(),
+                mock_info(
+                    SENDER_OWNER,
+                    &[coin(airdrop.total_amount.u128(), &airdrop.denom)],
+                ),
+                airdrop.merkle_root.clone(),
+                airdrop.denom.clone(),
+                airdrop.label.clone(),
+                Some(airdrop.bearer),
+            )
+            .unwrap();
+
+            assert_eq!(
+                close(deps.as_mut(), mock_info("anyone", &[]), AirdropId::id(0)).unwrap_err(),
+                ContractError::Unauthorized {}
+            );
+
+            let resp = close(
+                deps.as_mut(),
+                mock_info(SENDER_OWNER, &[]),
+                AirdropId::id(0),
+            )
+            .unwrap();
+
+            assert_eq!(
+                resp.attributes,
+                vec![
+                    attr("method", "close"),
+                    attr("executor", SENDER_OWNER),
+                    attr("airdrop_id", "0"),
+                    attr("redeemed", "100")
+                ]
+            );
+
+            assert_eq!(
+                resp.messages.first().unwrap(),
+                &SubMsg::new(BankMsg::Send {
+                    to_address: SENDER_OWNER.to_string(),
+                    amount: vec![coin(100u128, &airdrop.denom)],
+                })
+            );
+        }
+    }
 }
