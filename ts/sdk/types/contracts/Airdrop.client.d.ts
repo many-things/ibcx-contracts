@@ -83,6 +83,9 @@ export interface AirdropInterface extends AirdropReadOnlyInterface {
         merkleProof: string[];
     }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
     multiClaim: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+    close: ({ id }: {
+        id: AirdropId;
+    }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
 export declare class AirdropClient extends AirdropQueryClient implements AirdropInterface {
     client: SigningCosmWasmClient;
@@ -105,5 +108,8 @@ export declare class AirdropClient extends AirdropQueryClient implements Airdrop
         merkleProof: string[];
     }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
     multiClaim: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+    close: ({ id }: {
+        id: AirdropId;
+    }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
 //# sourceMappingURL=Airdrop.client.d.ts.map

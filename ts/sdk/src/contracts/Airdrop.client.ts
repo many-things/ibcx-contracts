@@ -188,6 +188,11 @@ export interface AirdropInterface extends AirdropReadOnlyInterface {
     merkleProof: string[];
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
   multiClaim: (fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  close: ({
+    id
+  }: {
+    id: AirdropId;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
 export class AirdropClient extends AirdropQueryClient implements AirdropInterface {
   client: SigningCosmWasmClient;
@@ -203,6 +208,7 @@ export class AirdropClient extends AirdropQueryClient implements AirdropInterfac
     this.fund = this.fund.bind(this);
     this.claim = this.claim.bind(this);
     this.multiClaim = this.multiClaim.bind(this);
+    this.close = this.close.bind(this);
   }
 
   register = async ({
@@ -259,6 +265,17 @@ export class AirdropClient extends AirdropQueryClient implements AirdropInterfac
   multiClaim = async (fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       multi_claim: {}
+    }, fee, memo, funds);
+  };
+  close = async ({
+    id
+  }: {
+    id: AirdropId;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      close: {
+        id
+      }
     }, fee, memo, funds);
   };
 }
