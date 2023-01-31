@@ -20,6 +20,10 @@ export type ExecuteMsg = {
     claim: ClaimPayload;
 } | {
     multi_claim: ClaimPayload[];
+} | {
+    close: {
+        id: AirdropId;
+    };
 };
 export type AirdropId = {
     id: number;
@@ -87,6 +91,8 @@ export interface MigrateMsg {
 export type CheckQualificationResponse = boolean;
 export interface GetAirdropResponse {
     bearer: boolean;
+    closed: boolean;
+    creator: string;
     denom: string;
     id: number;
     label?: string | null;

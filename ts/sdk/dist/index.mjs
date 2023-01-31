@@ -260,6 +260,22 @@ var AirdropClient = /** @class */ (function (_super) {
                 });
             });
         };
+        _this.close = function (_a, fee, memo, funds) {
+            var id = _a.id;
+            if (fee === void 0) { fee = "auto"; }
+            return __awaiter(_this, void 0, void 0, function () {
+                return __generator(this, function (_b) {
+                    switch (_b.label) {
+                        case 0: return [4 /*yield*/, this.client.execute(this.sender, this.contractAddress, {
+                                close: {
+                                    id: id
+                                }
+                            }, fee, memo, funds)];
+                        case 1: return [2 /*return*/, _b.sent()];
+                    }
+                });
+            });
+        };
         _this.client = client;
         _this.sender = sender;
         _this.contractAddress = contractAddress;
@@ -267,6 +283,7 @@ var AirdropClient = /** @class */ (function (_super) {
         _this.fund = _this.fund.bind(_this);
         _this.claim = _this.claim.bind(_this);
         _this.multiClaim = _this.multiClaim.bind(_this);
+        _this.close = _this.close.bind(_this);
         return _this;
     }
     return AirdropClient;
