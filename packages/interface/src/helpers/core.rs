@@ -119,7 +119,10 @@ impl IbcCore {
     where
         CQ: CustomQuery,
     {
-        let msg = QueryMsg::SimulateMint { amount, funds };
+        let msg = QueryMsg::SimulateMint {
+            amount,
+            funds: funds.unwrap_or_default(),
+        };
 
         querier.query(
             &WasmQuery::Smart {

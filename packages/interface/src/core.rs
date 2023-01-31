@@ -103,10 +103,7 @@ pub enum QueryMsg {
     GetPortfolio {},
 
     #[returns(SimulateMintResponse)]
-    SimulateMint {
-        amount: Uint128,
-        funds: Option<Vec<Coin>>,
-    },
+    SimulateMint { amount: Uint128, funds: Vec<Coin> },
 
     #[returns(SimulateBurnResponse)]
     SimulateBurn { amount: Uint128 },
