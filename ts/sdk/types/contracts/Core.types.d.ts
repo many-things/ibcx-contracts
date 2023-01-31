@@ -142,6 +142,7 @@ export interface SimulateBurnResponse {
     redeem_amount: Coin[];
 }
 export interface SimulateMintResponse {
+    fund_spent: Coin[];
     mint_amount: Uint128;
     refund_amount: Coin[];
 }
