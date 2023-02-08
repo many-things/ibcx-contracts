@@ -1,6 +1,7 @@
 import { MerkleTree } from "merkletreejs";
 import SHA256 from "crypto-js/sha256";
 import { writeFileSync } from "fs";
+import path from "path";
 
 type InputData = [{ address: string; amount: string }] | string[];
 
@@ -16,7 +17,7 @@ console.log(` - Airdrop ID  : ${airdropId}`);
 console.log(` - Input file  : ${inputFile}`);
 console.log(` - Output file : ${outputFile}`);
 
-const inputData: InputData = require(inputFile);
+const inputData: InputData = require(path.join(process.cwd(), inputFile));
 const leaves =
   inputData[0] instanceof Object
     ? (inputData as { address: string; amount: string }[])
@@ -47,6 +48,9 @@ const proofs = leaves.map(({ address, amount }) => {
   };
 });
 
-writeFileSync(outputFile, JSON.stringify({ airdropId, proofs }, null, 2));
+writeFileSync(
+  path.join(process.cwd(), outputFile),
+  JSON.stringify({ airdropId, proofs }, null, 2)
+);
 
 console.log("Done");
