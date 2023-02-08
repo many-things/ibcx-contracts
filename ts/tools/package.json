@@ -6,6 +6,9 @@
     "name": "frostornge <frostornge@gmail.com>"
   },
   "license": "MIT OR Apache-2.0",
+  "scripts": {
+    "start": "ts-node src/index.ts"
+  },
   "dependencies": {
     "crypto-js": "^4.1.1",
     "merkletreejs": "^0.3.9"
