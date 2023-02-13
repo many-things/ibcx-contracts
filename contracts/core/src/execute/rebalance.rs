@@ -20,6 +20,15 @@ pub fn handle_msg(
 ) -> Result<Response, ContractError> {
     use RebalanceMsg::*;
 
+    // Can we check here that the denom we pass down already exsists in the
+    // asset list?
+    //
+    // Alternatively, only call save on ASSETS using a helper function that does
+    // that check.
+    //
+    // This is because inserting a new asset may modify the order, and it seems
+    // to me that we are relying in the order of the assets in a few places.
+
     match msg {
         Init {
             manager,

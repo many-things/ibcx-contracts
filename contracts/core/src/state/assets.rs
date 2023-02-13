@@ -12,6 +12,7 @@ pub const ASSETS_PREFIX: &str = "assets";
 pub const ASSETS: Map<String, Decimal> = Map::new(ASSETS_PREFIX);
 
 pub fn set_assets(storage: &mut dyn Storage, assets: Units) -> Result<(), ContractError> {
+    // Do we need to check that the cotract actually has received these assets before storing them?
     if assets.len() > MAX_LIMIT as usize {
         return Err(ContractError::InvalidAssetLength { limit: MAX_LIMIT });
     }
@@ -38,6 +39,7 @@ pub fn get_assets(storage: &dyn Storage) -> StdResult<Units> {
         .collect::<StdResult<_>>()
 }
 
+// What does "asserting" the assets mean?
 pub fn assert_assets(
     assets: Units,
     funds: Vec<Coin>,

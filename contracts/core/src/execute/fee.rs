@@ -87,6 +87,9 @@ pub fn make_burn_msgs_with_fee_collection(
     Ok(msgs)
 }
 
+// It's unclear to me what this function is doing. How does it affect the fees
+// currently in the storage. It seems to be overriding them and not updating
+// them
 pub fn collect_streaming_fee(storage: &mut dyn Storage, now: u64) -> Result<(), ContractError> {
     let fee = FEE.load(storage)?;
 

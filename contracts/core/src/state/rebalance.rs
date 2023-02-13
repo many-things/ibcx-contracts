@@ -25,6 +25,8 @@ pub struct Rebalance {
     pub finalized: bool,
 }
 
+// Some explanation of the mechanism design here would be useful.
+
 impl Rebalance {
     pub fn get_deflation(&self, denom: &str) -> Result<(String, Decimal), ContractError> {
         match self.deflation.iter().find(|v| v.0 == denom) {

@@ -40,9 +40,12 @@ pub fn mint(
     let mut token = TOKEN.load(deps.storage)?;
 
     let assets = get_assets(deps.storage)?;
+    // What does the refund represent? I'm assuming what's left after the cost
+    // of minting amount has been deducted, but it doesn't seem like amount and
+    // funds represent same denom (do they?)
     let refund = assert_assets(assets, info.funds, amount)?;
 
-    token.total_supply = token.total_supply.checked_add(amount)?;
+    token.total_supply = token.total_supply.checked_add(amount)?; // Adding amount to TOKEN, so I assume that's its denom
     TOKEN.save(deps.storage, &token)?;
 
     let mint_amount = coin(amount.u128(), &token.denom);
@@ -131,6 +134,7 @@ pub fn realize(deps: DepsMut, _env: Env, info: MessageInfo) -> Result<Response, 
         return Err(ContractError::Unauthorized {});
     }
 
+    // similar to other comments. Need some more information to understand streaming fees
     let msg = fee::realize_streaming_fee(deps.storage)?;
 
     Ok(Response::new().add_message(msg).add_attributes(vec![
@@ -141,6 +145,7 @@ pub fn realize(deps: DepsMut, _env: Env, info: MessageInfo) -> Result<Response, 
 
 #[cfg(test)]
 mod test {
+    // Can you add comments to the tests explaining what each is supposed to test?
 
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier, MockStorage},

@@ -27,24 +27,34 @@ pub const TOKEN: Item<Token> = Item::new(TOKEN_KEY);
 pub const PAUSED_KEY: &str = "paused";
 pub const PAUSED: Item<PauseInfo> = Item::new(PAUSED_KEY);
 
+// General code comment: It's unclear what some of the structs/fields are
+// supposed to represent. Having code comments on these would go a long way to
+// making the contract easier to review.
+//
+// This is particularly important for all STATE / storage related structs.
+
 #[cw_serde]
 pub struct Fee {
     pub collector: Addr,
-    pub collected: Units,
+    pub collected: Units, // Which tokens does this represent? Is it assumed they're in the same order as the assets?
     pub mint: Option<Decimal>,
     pub burn: Option<Decimal>,
     // secondly rate
     // ex) APY %0.15 = 1 - (1 + 0.0015)^(1 / (86400 * 365)) = 0.000000000047529
-    pub stream: Option<Decimal>,
+    pub stream: Option<Decimal>, // Whats a stram?
     pub stream_last_collected_at: u64,
 }
 
 impl Fee {
+    // What's a straming fee?
     pub fn calculate_streaming_fee(
         &self,
         assets: Units,
         now: u64,
     ) -> Result<(Units, Option<Units>), ContractError> {
+        // IIUC this calculates a fee to be taken on every execute call and
+        // returns the amount of assets minus that fee along with the fee that should be taken.
+
         if let Some(stream) = self.stream {
             let elapsed = now - self.stream_last_collected_at;
             if elapsed > 0 {

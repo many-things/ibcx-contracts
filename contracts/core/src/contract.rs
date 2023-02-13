@@ -39,6 +39,7 @@ pub fn instantiate(
         },
     )?;
     PAUSED.save(deps.storage, &Default::default())?;
+    // Don't we need to check that the contract has received the ammount of to be set here?
     set_assets(deps.storage, msg.initial_assets)?;
 
     let resp = Response::new()
@@ -64,6 +65,7 @@ pub fn execute(
     use crate::execute;
     use ExecuteMsg::*;
 
+    // Shouldn't any funds sent to the contract be stored in ASSETS before this is called?
     execute::collect_streaming_fee(deps.storage, env.block.time.seconds())?;
 
     match msg {
