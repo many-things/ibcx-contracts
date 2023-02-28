@@ -57,8 +57,8 @@ pub fn init(
         inflation,
         finalized: false,
     };
-    let assets = get_units(deps.storage)?;
-    rebalance.validate(assets)?;
+    let units = get_units(deps.storage)?;
+    rebalance.validate(units)?;
     REBALANCES.save(deps.storage, rebalance_id, &rebalance)?;
 
     let resp = Response::new().add_attributes(vec![
