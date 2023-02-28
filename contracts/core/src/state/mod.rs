@@ -1,5 +1,5 @@
-mod assets;
 mod rebalance;
+mod units;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Env, StdResult, Storage, Uint128};
@@ -8,10 +8,10 @@ use ibcx_interface::types::Units;
 
 use crate::error::ContractError;
 
-pub use crate::state::assets::{assert_units, get_redeem_amounts, get_units, set_units, UNITS};
 pub use crate::state::rebalance::{
     Rebalance, TradeInfo, LATEST_REBALANCE_ID, REBALANCES, RESERVE_BUFFER, TRADE_INFOS,
 };
+pub use crate::state::units::{assert_units, get_redeem_amounts, get_units, set_units, UNITS};
 
 pub const RESERVE_DENOM: &str = "reserve";
 
