@@ -31,7 +31,7 @@ pub fn instantiate(
         deps.storage,
         &Fee {
             collector: deps.api.addr_validate(&msg.fee_strategy.collector)?,
-            collected: vec![],
+            stream_collected: vec![],
             mint: msg.fee_strategy.mint,
             burn: msg.fee_strategy.burn,
             stream: msg.fee_strategy.stream,

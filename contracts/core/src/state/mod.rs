@@ -29,20 +29,21 @@ pub const PAUSED: Item<PauseInfo> = Item::new(PAUSED_KEY);
 
 #[cw_serde]
 pub struct Fee {
+    // address of fee collector
     pub collector: Addr,
-    pub collected: Units,
     pub mint: Option<Decimal>,
     pub burn: Option<Decimal>,
     // secondly rate
     // ex) APY %0.15 = 1 - (1 + 0.0015)^(1 / (86400 * 365)) = 0.000000000047529
     pub stream: Option<Decimal>,
+    pub stream_collected: Units,
     pub stream_last_collected_at: u64,
 }
 
 impl Fee {
     pub fn calculate_streaming_fee(
         &self,
-        assets: Units,
+        units: Units,
         now: u64,
     ) -> Result<(Units, Option<Units>), ContractError> {
         if let Some(stream) = self.stream {
@@ -55,7 +56,7 @@ impl Fee {
                     .checked_pow(elapsed as u32)?
                     .checked_sub(Decimal::one())?;
 
-                let (after, fee) = assets
+                let (after, fee) = units
                     .into_iter()
                     .map(|(denom, unit)| {
                         let after = unit.checked_mul(Decimal::one().checked_sub(rate)?)?;
@@ -69,8 +70,8 @@ impl Fee {
             }
         }
 
-        // return assets
-        Ok((assets, None))
+        // return units
+        Ok((units, None))
     }
 }
 

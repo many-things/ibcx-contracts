@@ -324,7 +324,11 @@ mod test {
 
         let assets = get_units(&storage).unwrap();
         for (denom, unit) in assets {
-            let (_, collected) = fee.collected.iter().find(|(d, _)| d == &denom).unwrap();
+            let (_, collected) = fee
+                .stream_collected
+                .iter()
+                .find(|(d, _)| d == &denom)
+                .unwrap();
             let (_, origin) = origin_assets.iter().find(|(d, _)| d == &denom).unwrap();
 
             assert_eq!(origin, unit + collected);
@@ -340,13 +344,13 @@ mod test {
             BankMsg::Send {
                 to_address: fee.collector.to_string(),
                 amount: fee
-                    .collected
+                    .stream_collected
                     .iter()
                     .map(|(denom, unit)| coin((*unit * token.total_supply).u128(), denom))
                     .collect::<Vec<_>>()
             }
             .into()
         );
-        assert_eq!(FEE.load(&storage).unwrap().collected, vec![]);
+        assert_eq!(FEE.load(&storage).unwrap().stream_collected, vec![]);
     }
 }
