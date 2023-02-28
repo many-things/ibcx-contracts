@@ -31,6 +31,19 @@ pub fn handle_msg(
     }
 }
 
+/// initialize the rebalance
+/// deflation: target unit of each denom to decrease
+/// inflation: weight of each denom to distribute
+///
+/// basic flow of rebalance
+///
+///=========================================
+/// [ DEFLATION ]            [ INFLATION ]
+///-----------------------------------------
+///     | A  ==\             /==>  D |
+///     | B  ===> [RESERVE] ====>  E |
+///     | C  ==/             \==>  F |
+///=========================================
 pub fn init(
     deps: DepsMut,
     info: MessageInfo,
@@ -38,10 +51,12 @@ pub fn init(
     deflation: Vec<(String, Decimal)>,
     inflation: Vec<(String, Decimal)>,
 ) -> Result<Response, ContractError> {
+    // only governance can execute this
     if info.sender != GOV.load(deps.storage)? {
         return Err(ContractError::Unauthorized {});
     }
 
+    // check if there is a ongoing rebalance
     let rebalance_id = LATEST_REBALANCE_ID
         .may_load(deps.storage)?
         .unwrap_or_default();
@@ -51,14 +66,19 @@ pub fn init(
         }
     }
 
+    // make new rebalance
     let rebalance = Rebalance {
         manager: deps.api.addr_validate(&manager)?,
         deflation,
         inflation,
         finalized: false,
     };
+
+    // fetch current units and validate new rebalance
     let units = get_units(deps.storage)?;
     rebalance.validate(units)?;
+
+    // save
     REBALANCES.save(deps.storage, rebalance_id, &rebalance)?;
 
     let resp = Response::new().add_attributes(vec![
@@ -71,13 +91,17 @@ pub fn init(
     Ok(resp)
 }
 
+// deflate / inflate the target denom
 pub fn trade(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: RebalanceTradeMsg,
 ) -> Result<Response, ContractError> {
+    // realize streaming fee before rebalance to cleanup latest states
     let realize_msg = fee::realize_streaming_fee(deps.storage)?;
+
+    // make message wrapper to place the realize msg at the top
     let wrap = |resp: Result<Response, ContractError>| {
         resp.map(|mut r| {
             r.messages.insert(0, SubMsg::new(realize_msg));
