@@ -18,7 +18,7 @@ pub struct InstantiateMsg {
     pub gov: String,
     pub denom: String,
     pub reserve_denom: String,
-    pub initial_assets: Units,
+    pub initial_units: Units,
     pub fee_strategy: Fee,
 }
 

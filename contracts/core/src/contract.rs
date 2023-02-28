@@ -39,7 +39,7 @@ pub fn instantiate(
         },
     )?;
     PAUSED.save(deps.storage, &Default::default())?;
-    set_units(deps.storage, msg.initial_assets)?;
+    set_units(deps.storage, msg.initial_units)?;
 
     let resp = Response::new()
         .add_submessage(SubMsg::reply_on_success(
