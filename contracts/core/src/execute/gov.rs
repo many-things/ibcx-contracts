@@ -6,7 +6,7 @@ use ibcx_interface::{core::GovMsg, types::SwapRoutes};
 use crate::state::FEE;
 use crate::{
     error::ContractError,
-    state::{TradeInfo, ASSETS, GOV, PAUSED, RESERVE_DENOM, TOKEN, TRADE_INFOS},
+    state::{TradeInfo, GOV, PAUSED, RESERVE_DENOM, TOKEN, TRADE_INFOS, UNITS},
 };
 
 use super::fee;
@@ -139,7 +139,7 @@ pub fn update_reserve_denom(
     new_denom: String,
 ) -> Result<Response, ContractError> {
     let mut token = TOKEN.load(deps.storage)?;
-    let unit = ASSETS.load(deps.storage, RESERVE_DENOM.to_string())?;
+    let unit = UNITS.load(deps.storage, RESERVE_DENOM.to_string())?;
     if !unit.is_zero() {
         return Err(ContractError::InvalidArgument(
             "reserve_denom must be zero in portfolio".to_string(),
@@ -382,7 +382,7 @@ mod test {
             TOKEN.save(deps.storage, &token).unwrap();
 
             for (denom, unit) in assets {
-                ASSETS
+                UNITS
                     .save(deps.storage, denom.to_string(), &unit.clone())
                     .unwrap();
             }
@@ -485,7 +485,7 @@ mod test {
             );
 
             // success
-            ASSETS
+            UNITS
                 .save(
                     deps.as_mut().storage,
                     RESERVE_DENOM.to_string(),

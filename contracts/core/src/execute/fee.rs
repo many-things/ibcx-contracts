@@ -3,7 +3,7 @@ use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgBurn, MsgMint};
 
 use crate::{
     error::ContractError,
-    state::{get_assets, Fee, ASSETS, FEE, TOKEN},
+    state::{get_units, Fee, FEE, TOKEN, UNITS},
 };
 
 pub fn make_mint_msgs_with_fee_collection(
@@ -90,7 +90,7 @@ pub fn make_burn_msgs_with_fee_collection(
 pub fn collect_streaming_fee(storage: &mut dyn Storage, now: u64) -> Result<(), ContractError> {
     let fee = FEE.load(storage)?;
 
-    let assets = get_assets(storage)?;
+    let assets = get_units(storage)?;
     let (assets, collected) = fee.calculate_streaming_fee(assets, now)?;
     if let Some(collected) = collected {
         FEE.save(
@@ -103,7 +103,7 @@ pub fn collect_streaming_fee(storage: &mut dyn Storage, now: u64) -> Result<(), 
         )?;
 
         for (denom, unit) in assets {
-            ASSETS.save(storage, denom, &unit)?;
+            UNITS.save(storage, denom, &unit)?;
         }
     }
 
@@ -150,7 +150,7 @@ mod test {
 
     use crate::{
         state::RESERVE_DENOM,
-        test::{default_fee, default_token, register_assets},
+        test::{default_fee, default_token, register_units},
     };
 
     use super::*;
@@ -254,7 +254,7 @@ mod test {
         let env = mock_env();
         let now = env.block.time.seconds();
 
-        register_assets(
+        register_units(
             &mut storage,
             &[
                 ("ukrw", "1.0"),
@@ -281,7 +281,7 @@ mod test {
         assert_eq!(FEE.load(&storage).unwrap().stream_last_collected_at, now);
 
         // 1 year after
-        let origin_assets = get_assets(&storage).unwrap();
+        let origin_assets = get_units(&storage).unwrap();
 
         fee.stream_last_collected_at = now;
         FEE.save(&mut storage, &fee).unwrap();
@@ -290,7 +290,7 @@ mod test {
         let fee = FEE.load(&storage).unwrap();
         assert_eq!(fee.stream_last_collected_at, now + (86400 * 365));
 
-        let assets = get_assets(&storage).unwrap();
+        let assets = get_units(&storage).unwrap();
         for (denom, unit) in assets {
             let (_, collected) = fee.collected.iter().find(|(d, _)| d == &denom).unwrap();
             let (_, origin) = origin_assets.iter().find(|(d, _)| d == &denom).unwrap();

@@ -6,7 +6,7 @@ use ibcx_interface::core::{
 
 use crate::{
     error::ContractError,
-    state::{assert_assets, get_assets, get_redeem_amounts, FEE, GOV, PAUSED, TOKEN},
+    state::{assert_units, get_redeem_amounts, get_units, FEE, GOV, PAUSED, TOKEN},
 };
 
 pub fn balance(deps: Deps, _env: Env, account: String) -> Result<QueryResponse, ContractError> {
@@ -32,7 +32,7 @@ pub fn fee(deps: Deps, env: Env, time: Option<u64>) -> Result<QueryResponse, Con
     let time = time.unwrap_or_else(|| env.block.time.seconds());
     let token = TOKEN.load(deps.storage)?;
     let fee = FEE.load(deps.storage)?;
-    let (_, collected) = fee.calculate_streaming_fee(get_assets(deps.storage)?, time)?;
+    let (_, collected) = fee.calculate_streaming_fee(get_units(deps.storage)?, time)?;
 
     let collected = collected.unwrap_or_default();
     let realized = collected
@@ -66,7 +66,7 @@ pub fn portfolio(deps: Deps, env: Env) -> Result<QueryResponse, ContractError> {
     let fee = FEE.load(deps.storage)?;
 
     let now = env.block.time.seconds();
-    let assets = get_assets(deps.storage)?;
+    let assets = get_units(deps.storage)?;
     let (assets, _) = fee.calculate_streaming_fee(assets, now)?;
 
     Ok(to_binary(&GetPortfolioResponse {
@@ -86,13 +86,13 @@ pub fn simulate_mint(
     let fee = FEE.load(deps.storage)?;
 
     let now = env.block.time.seconds();
-    let assets = get_assets(deps.storage)?;
+    let assets = get_units(deps.storage)?;
     let (assets, _) = fee.calculate_streaming_fee(assets, now)?;
 
     let amount_spent = get_redeem_amounts(assets.clone(), &token.reserve_denom, amount)?;
     let amount_with_fee = fee.mint.map(|v| amount * v).unwrap_or(amount);
     let refund_amount = if !funds.is_empty() {
-        assert_assets(assets, funds, amount_with_fee)?
+        assert_units(assets, funds, amount_with_fee)?
     } else {
         vec![]
     };
@@ -113,7 +113,7 @@ pub fn simulate_burn(
     let fee = FEE.load(deps.storage)?;
 
     let now = env.block.time.seconds();
-    let assets = get_assets(deps.storage)?;
+    let assets = get_units(deps.storage)?;
     let (assets, _) = fee.calculate_streaming_fee(assets, now)?;
 
     let amount_with_fee = fee.burn.map(|v| amount * v).unwrap_or(amount);

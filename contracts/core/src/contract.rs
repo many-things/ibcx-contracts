@@ -4,7 +4,7 @@ use cosmwasm_std::{Env, MessageInfo, QueryResponse, Uint128};
 use ibcx_interface::core::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgCreateDenom, MsgCreateDenomResponse};
 
-use crate::state::{set_assets, Fee, Token, FEE, GOV, TOKEN};
+use crate::state::{set_units, Fee, Token, FEE, GOV, TOKEN};
 use crate::REPLY_ID_DENOM_CREATION;
 use crate::{error::ContractError, state::PAUSED, CONTRACT_NAME, CONTRACT_VERSION};
 
@@ -39,7 +39,7 @@ pub fn instantiate(
         },
     )?;
     PAUSED.save(deps.storage, &Default::default())?;
-    set_assets(deps.storage, msg.initial_assets)?;
+    set_units(deps.storage, msg.initial_assets)?;
 
     let resp = Response::new()
         .add_submessage(SubMsg::reply_on_success(

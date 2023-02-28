@@ -7,7 +7,7 @@ use cosmwasm_std::{DepsMut, Response};
 
 use crate::{
     error::ContractError,
-    state::{assert_assets, get_assets, get_redeem_amounts, FEE, PAUSED, TOKEN},
+    state::{assert_units, get_redeem_amounts, get_units, FEE, PAUSED, TOKEN},
 };
 
 pub use crate::execute::fee::collect_streaming_fee;
@@ -39,8 +39,8 @@ pub fn mint(
 
     let mut token = TOKEN.load(deps.storage)?;
 
-    let assets = get_assets(deps.storage)?;
-    let refund = assert_assets(assets, info.funds, amount)?;
+    let assets = get_units(deps.storage)?;
+    let refund = assert_units(assets, info.funds, amount)?;
 
     token.total_supply = token.total_supply.checked_add(amount)?;
     TOKEN.save(deps.storage, &token)?;
@@ -94,7 +94,7 @@ pub fn burn(
         })
         .unwrap_or(received);
 
-    let assets = get_assets(deps.storage)?;
+    let assets = get_units(deps.storage)?;
     let payback = get_redeem_amounts(assets, &token.reserve_denom, deducted)?;
 
     token.total_supply = token.total_supply.checked_sub(received)?;
@@ -147,7 +147,7 @@ mod test {
         OwnedDeps, SubMsg,
     };
 
-    use crate::test::{default_fee, default_token, register_assets};
+    use crate::test::{default_fee, default_token, register_units};
 
     use super::*;
 
@@ -158,7 +158,7 @@ mod test {
         FEE.save(deps.as_mut().storage, &default_fee()).unwrap();
         TOKEN.save(deps.as_mut().storage, &default_token()).unwrap();
 
-        register_assets(
+        register_units(
             deps.as_mut().storage,
             &[
                 ("ujpy", "1.0"),

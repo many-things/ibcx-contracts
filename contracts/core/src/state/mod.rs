@@ -8,7 +8,7 @@ use ibcx_interface::types::Units;
 
 use crate::error::ContractError;
 
-pub use crate::state::assets::{assert_assets, get_assets, get_redeem_amounts, set_assets, ASSETS};
+pub use crate::state::assets::{assert_units, get_redeem_amounts, get_units, set_units, UNITS};
 pub use crate::state::rebalance::{
     Rebalance, TradeInfo, LATEST_REBALANCE_ID, REBALANCES, RESERVE_BUFFER, TRADE_INFOS,
 };
