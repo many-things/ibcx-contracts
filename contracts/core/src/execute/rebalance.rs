@@ -31,19 +31,19 @@ pub fn handle_msg(
     }
 }
 
-/// initialize the rebalance
-/// deflation: target unit of each denom to decrease
-/// inflation: weight of each denom to distribute
-///
-/// basic flow of rebalance
-///
-///=========================================
-/// [ DEFLATION ]            [ INFLATION ]
-///-----------------------------------------
-///     | A  ==\             /==>  D |
-///     | B  ===> [RESERVE] ====>  E |
-///     | C  ==/             \==>  F |
-///=========================================
+// initialize the rebalance
+// deflation: target unit of each denom to decrease
+// inflation: weight of each denom to distribute
+//
+// basic flow of rebalance
+//
+//=========================================
+// [ DEFLATION ]            [ INFLATION ]
+//-----------------------------------------
+//     | A  --\             /-->  D |
+//     | B  ---> [RESERVE] ---->  E |
+//     | C  --/             \-->  F |
+//=========================================
 pub fn init(
     deps: DepsMut,
     info: MessageInfo,
