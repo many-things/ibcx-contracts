@@ -128,7 +128,7 @@ mod test {
     use super::*;
 
     mod rebalance {
-        use crate::test::to_assets;
+        use crate::test::to_units;
 
         use super::*;
 
@@ -137,13 +137,13 @@ mod test {
             // check current asset
             let rebalance = Rebalance {
                 manager: Addr::unchecked("manager"),
-                deflation: to_assets(&[("ukrw", "0.5"), ("ujpy", "0.7"), ("ueur", "0.3")]),
+                deflation: to_units(&[("ukrw", "0.5"), ("ujpy", "0.7"), ("ueur", "0.3")]),
                 inflation: vec![],
                 finalized: false,
             };
 
             let err = rebalance
-                .validate(to_assets(&[("uusd", "0.5"), ("ukrw", "0.7")]))
+                .validate(to_units(&[("uusd", "0.5"), ("ukrw", "0.7")]))
                 .unwrap_err();
             assert_eq!(
                 err,
@@ -156,13 +156,13 @@ mod test {
             // check overflow
             let rebalance = Rebalance {
                 manager: Addr::unchecked("manager"),
-                deflation: to_assets(&[("ukrw", "1.0")]),
+                deflation: to_units(&[("ukrw", "1.0")]),
                 inflation: vec![],
                 finalized: false,
             };
 
             let err = rebalance
-                .validate(to_assets(&[("uusd", "0.5"), ("ukrw", "0.7")]))
+                .validate(to_units(&[("uusd", "0.5"), ("ukrw", "0.7")]))
                 .unwrap_err();
             assert_eq!(
                 err,
@@ -174,13 +174,13 @@ mod test {
             // check duplication
             let rebalance = Rebalance {
                 manager: Addr::unchecked("manager"),
-                deflation: to_assets(&[("ukrw", "1.0")]),
-                inflation: to_assets(&[("ukrw", "1.0")]),
+                deflation: to_units(&[("ukrw", "1.0")]),
+                inflation: to_units(&[("ukrw", "1.0")]),
                 finalized: false,
             };
 
             let err = rebalance
-                .validate(to_assets(&[("uusd", "0.5"), ("ukrw", "1.2")]))
+                .validate(to_units(&[("uusd", "0.5"), ("ukrw", "1.2")]))
                 .unwrap_err();
             assert_eq!(
                 err,
@@ -190,12 +190,12 @@ mod test {
             // ok
             let rebalance = Rebalance {
                 manager: Addr::unchecked("manager"),
-                deflation: to_assets(&[("ukrw", "0.5"), ("ujpy", "0.7")]),
-                inflation: to_assets(&[("uusd", "0.5"), ("ueur", "0.7")]),
+                deflation: to_units(&[("ukrw", "0.5"), ("ujpy", "0.7")]),
+                inflation: to_units(&[("uusd", "0.5"), ("ueur", "0.7")]),
                 finalized: false,
             };
             rebalance
-                .validate(to_assets(&[("ukrw", "0.7"), ("ujpy", "1.0")]))
+                .validate(to_units(&[("ukrw", "0.7"), ("ujpy", "1.0")]))
                 .unwrap();
         }
     }

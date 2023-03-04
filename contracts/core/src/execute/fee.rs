@@ -1,26 +1,36 @@
 use cosmwasm_std::{coin, coins, Addr, BankMsg, Coin, CosmosMsg, Storage, Uint128};
 use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgBurn, MsgMint};
+use std::collections::BTreeMap;
 
 use crate::{
     error::ContractError,
-    state::{get_assets, Fee, ASSETS, FEE, TOKEN},
+    state::{get_units, Fee, FEE, TOKEN, UNITS},
 };
 
+/// # Notice
+/// * minter must be address of contract itself.
+/// * receiver usally is address of info.sender
+/// * returns set of CosmosMsgs to be executed
 pub fn make_mint_msgs_with_fee_collection(
     fee: Fee,
     mint: Coin,
     minter: &Addr,
     receiver: &Addr,
 ) -> Result<Vec<CosmosMsg>, ContractError> {
+    // mint tokens to minter
     let mut msgs = vec![MsgMint {
         sender: minter.clone().into_string(),
         amount: Some(mint.clone().into()),
     }
     .into()];
 
+    // if mint fee is set, deduct the total mint amount to its ratio and send to collector and the rest to the minter
+    // if mint fee is not set, send the total mint amount to the minter
     if let Some(ratio) = fee.mint {
+        // calcalate the fee amount
         let fee_amount = (mint.amount * ratio).max(Uint128::one());
 
+        // send fee to collector
         msgs.push(
             BankMsg::Send {
                 to_address: fee.collector.to_string(),
@@ -29,6 +39,7 @@ pub fn make_mint_msgs_with_fee_collection(
             .into(),
         );
 
+        // send the rest to receiver
         msgs.push(
             BankMsg::Send {
                 to_address: receiver.to_string(),
@@ -37,6 +48,7 @@ pub fn make_mint_msgs_with_fee_collection(
             .into(),
         );
     } else {
+        // send all to receiver
         msgs.push(
             BankMsg::Send {
                 to_address: receiver.to_string(),
@@ -49,6 +61,9 @@ pub fn make_mint_msgs_with_fee_collection(
     Ok(msgs)
 }
 
+/// # Notice
+/// * burner must be address of contract itself.
+/// * returns set of CosmosMsgs to be executed
 pub fn make_burn_msgs_with_fee_collection(
     fee: Fee,
     burn: Coin,
@@ -56,9 +71,13 @@ pub fn make_burn_msgs_with_fee_collection(
 ) -> Result<Vec<CosmosMsg>, ContractError> {
     let mut msgs = vec![];
 
+    // if burn fee is set, deduct the total received amount to its ratio and send to collector and burns remaining amount
+    // if mint fee is not set, burn the total received amount
     if let Some(ratio) = fee.burn {
+        // calcalate the fee amount
         let fee_amount = (burn.amount * ratio).max(Uint128::one());
 
+        // send fee to collector
         msgs.push(
             BankMsg::Send {
                 to_address: fee.collector.to_string(),
@@ -67,6 +86,7 @@ pub fn make_burn_msgs_with_fee_collection(
             .into(),
         );
 
+        // burn the rest
         msgs.push(
             MsgBurn {
                 sender: burner.to_string(),
@@ -75,6 +95,7 @@ pub fn make_burn_msgs_with_fee_collection(
             .into(),
         );
     } else {
+        // burn all
         msgs.push(
             MsgBurn {
                 sender: burner.to_string(),
@@ -87,53 +108,64 @@ pub fn make_burn_msgs_with_fee_collection(
     Ok(msgs)
 }
 
+// calculates streaming fee and aggregate into fee state
 pub fn collect_streaming_fee(storage: &mut dyn Storage, now: u64) -> Result<(), ContractError> {
-    let fee = FEE.load(storage)?;
+    let mut fee = FEE.load(storage)?;
 
-    let assets = get_assets(storage)?;
-    let (assets, collected) = fee.calculate_streaming_fee(assets, now)?;
+    let units = get_units(storage)?;
+    // get units after deduction and collected units
+    let (units, collected) = fee.calculate_streaming_fee(units, now)?;
+
+    // if nothing collected, do nothing
     if let Some(collected) = collected {
-        FEE.save(
-            storage,
-            &Fee {
-                collected,
-                stream_last_collected_at: now,
-                ..fee
-            },
-        )?;
+        // merge previous collected units and current collected units.
+        // use BTreeMap to keep order of denom - or not, it probably can cause consensus error
+        let mut merge: BTreeMap<_, _> = fee.stream_collected.into_iter().collect();
+        for (denom, unit) in collected {
+            // upsert denom's collected unit
+            merge
+                .entry(denom)
+                .and_modify(|e| *e += unit)
+                .or_insert(unit);
+        }
 
-        for (denom, unit) in assets {
-            ASSETS.save(storage, denom, &unit)?;
+        // update fee state
+        fee.stream_collected = merge.into_iter().collect();
+        fee.stream_last_collected_at = now;
+        FEE.save(storage, &fee)?;
+
+        // update units state to deducted ones
+        for (denom, unit) in units {
+            UNITS.save(storage, denom, &unit)?;
         }
     }
 
     Ok(())
 }
 
-// must call collect_streaming_fee before call this function
+// notice: must call collect_streaming_fee before call this function
 pub fn realize_streaming_fee(storage: &mut dyn Storage) -> Result<CosmosMsg, ContractError> {
-    let fee = FEE.load(storage)?;
+    // state loader
+    let mut fee = FEE.load(storage)?;
     let token = TOKEN.load(storage)?;
+
+    // calculate collected unit and convert it to realize amount
     let collected = fee
-        .collected
+        .stream_collected
         .iter()
         .map(|(denom, unit)| coin((*unit * token.total_supply).u128(), denom))
         .collect::<Vec<_>>();
 
+    // make send msg to transfer collected fees
     let msg = BankMsg::Send {
         to_address: fee.collector.to_string(),
         amount: collected,
     }
     .into();
 
-    // empty pending fee
-    FEE.save(
-        storage,
-        &Fee {
-            collected: vec![],
-            ..fee
-        },
-    )?;
+    // empty pending fee and save
+    fee.stream_collected = vec![];
+    FEE.save(storage, &fee)?;
 
     Ok(msg)
 }
@@ -150,7 +182,7 @@ mod test {
 
     use crate::{
         state::RESERVE_DENOM,
-        test::{default_fee, default_token, register_assets},
+        test::{default_fee, default_token, register_units},
     };
 
     use super::*;
@@ -254,7 +286,7 @@ mod test {
         let env = mock_env();
         let now = env.block.time.seconds();
 
-        register_assets(
+        register_units(
             &mut storage,
             &[
                 ("ukrw", "1.0"),
@@ -281,7 +313,7 @@ mod test {
         assert_eq!(FEE.load(&storage).unwrap().stream_last_collected_at, now);
 
         // 1 year after
-        let origin_assets = get_assets(&storage).unwrap();
+        let origin_assets = get_units(&storage).unwrap();
 
         fee.stream_last_collected_at = now;
         FEE.save(&mut storage, &fee).unwrap();
@@ -290,9 +322,13 @@ mod test {
         let fee = FEE.load(&storage).unwrap();
         assert_eq!(fee.stream_last_collected_at, now + (86400 * 365));
 
-        let assets = get_assets(&storage).unwrap();
+        let assets = get_units(&storage).unwrap();
         for (denom, unit) in assets {
-            let (_, collected) = fee.collected.iter().find(|(d, _)| d == &denom).unwrap();
+            let (_, collected) = fee
+                .stream_collected
+                .iter()
+                .find(|(d, _)| d == &denom)
+                .unwrap();
             let (_, origin) = origin_assets.iter().find(|(d, _)| d == &denom).unwrap();
 
             assert_eq!(origin, unit + collected);
@@ -308,13 +344,13 @@ mod test {
             BankMsg::Send {
                 to_address: fee.collector.to_string(),
                 amount: fee
-                    .collected
+                    .stream_collected
                     .iter()
                     .map(|(denom, unit)| coin((*unit * token.total_supply).u128(), denom))
                     .collect::<Vec<_>>()
             }
             .into()
         );
-        assert_eq!(FEE.load(&storage).unwrap().collected, vec![]);
+        assert_eq!(FEE.load(&storage).unwrap().stream_collected, vec![]);
     }
 }

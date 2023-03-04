@@ -9,7 +9,7 @@ use cosmwasm_std::{
 };
 use ibcx_interface::types::SwapRoutes;
 
-use crate::state::{self, ASSETS};
+use crate::state::{self, UNITS};
 
 use self::{mock::StargateQuerier, querier::CoreQuerier};
 
@@ -33,16 +33,16 @@ pub fn mock_dependencies() -> OwnedDeps<MockStorage, MockApi, CoreQuerier<'stati
     }
 }
 
-pub fn to_assets(assets: &[(&str, &str)]) -> Vec<(String, Decimal)> {
+pub fn to_units(assets: &[(&str, &str)]) -> Vec<(String, Decimal)> {
     assets
         .iter()
         .map(|(k, v)| (k.to_string(), Decimal::from_str(v).unwrap()))
         .collect()
 }
 
-pub fn register_assets(storage: &mut dyn Storage, assets: &[(&str, &str)]) {
+pub fn register_units(storage: &mut dyn Storage, assets: &[(&str, &str)]) {
     for (denom, unit) in assets {
-        ASSETS
+        UNITS
             .save(
                 storage,
                 denom.to_string(),
@@ -55,7 +55,7 @@ pub fn register_assets(storage: &mut dyn Storage, assets: &[(&str, &str)]) {
 pub fn default_fee() -> state::Fee {
     state::Fee {
         collector: Addr::unchecked("collector"),
-        collected: vec![],
+        stream_collected: vec![],
         mint: Default::default(),
         burn: Default::default(),
         stream: Default::default(),

@@ -5,8 +5,8 @@ use ibcx_interface::core::{RebalanceMsg, RebalanceTradeMsg};
 use crate::{
     error::ContractError,
     state::{
-        get_assets, Rebalance, ASSETS, GOV, LATEST_REBALANCE_ID, REBALANCES, RESERVE_BUFFER,
-        RESERVE_DENOM, TOKEN, TRADE_INFOS,
+        get_units, Rebalance, GOV, LATEST_REBALANCE_ID, REBALANCES, RESERVE_BUFFER, RESERVE_DENOM,
+        TOKEN, TRADE_INFOS, UNITS,
     },
 };
 
@@ -31,6 +31,19 @@ pub fn handle_msg(
     }
 }
 
+// initialize the rebalance
+// deflation: target unit of each denom to decrease
+// inflation: weight of each denom to distribute
+//
+// basic flow of rebalance
+//
+//=========================================
+// [ DEFLATION ]            [ INFLATION ]
+//-----------------------------------------
+//     | A  --\             /-->  D |
+//     | B  ---> [RESERVE] ---->  E |
+//     | C  --/             \-->  F |
+//=========================================
 pub fn init(
     deps: DepsMut,
     info: MessageInfo,
@@ -38,10 +51,12 @@ pub fn init(
     deflation: Vec<(String, Decimal)>,
     inflation: Vec<(String, Decimal)>,
 ) -> Result<Response, ContractError> {
+    // only governance can execute this
     if info.sender != GOV.load(deps.storage)? {
         return Err(ContractError::Unauthorized {});
     }
 
+    // check if there is a ongoing rebalance
     let rebalance_id = LATEST_REBALANCE_ID
         .may_load(deps.storage)?
         .unwrap_or_default();
@@ -51,14 +66,19 @@ pub fn init(
         }
     }
 
+    // make new rebalance
     let rebalance = Rebalance {
         manager: deps.api.addr_validate(&manager)?,
         deflation,
         inflation,
         finalized: false,
     };
-    let assets = get_assets(deps.storage)?;
-    rebalance.validate(assets)?;
+
+    // fetch current units and validate new rebalance
+    let units = get_units(deps.storage)?;
+    rebalance.validate(units)?;
+
+    // save
     REBALANCES.save(deps.storage, rebalance_id, &rebalance)?;
 
     let resp = Response::new().add_attributes(vec![
@@ -71,13 +91,17 @@ pub fn init(
     Ok(resp)
 }
 
+// deflate / inflate the target denom
 pub fn trade(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: RebalanceTradeMsg,
 ) -> Result<Response, ContractError> {
+    // realize streaming fee before rebalance to cleanup latest states
     let realize_msg = fee::realize_streaming_fee(deps.storage)?;
+
+    // make message wrapper to place the realize msg at the top
     let wrap = |resp: Result<Response, ContractError>| {
         resp.map(|mut r| {
             r.messages.insert(0, SubMsg::new(realize_msg));
@@ -174,8 +198,8 @@ pub fn deflate_reserve(
     let (_, target_unit) = rebalance.get_deflation(&denom)?;
 
     // fetch current unit about actual denom & reserved denom
-    let origin_unit = ASSETS.load(deps.storage, denom.clone())?;
-    let reserve_unit = ASSETS
+    let origin_unit = UNITS.load(deps.storage, denom.clone())?;
+    let reserve_unit = UNITS
         .load(deps.storage, RESERVE_DENOM.to_string())
         .unwrap_or_default();
 
@@ -188,12 +212,12 @@ pub fn deflate_reserve(
     }
 
     // apply new units
-    ASSETS.save(
+    UNITS.save(
         deps.storage,
         denom.clone(),
         &origin_unit.checked_sub(swap_unit)?,
     )?;
-    ASSETS.save(
+    UNITS.save(
         deps.storage,
         RESERVE_DENOM.to_string(),
         &reserve_unit.checked_add(swap_unit)?,
@@ -238,8 +262,8 @@ pub fn deflate(
     }
 
     // load stored units
-    let origin_unit = ASSETS.load(deps.storage, denom.clone())?;
-    let reserve_unit = ASSETS
+    let origin_unit = UNITS.load(deps.storage, denom.clone())?;
+    let reserve_unit = UNITS
         .load(deps.storage, RESERVE_DENOM.to_string())
         .unwrap_or_default();
 
@@ -264,12 +288,12 @@ pub fn deflate(
     let deduct_unit = Decimal::checked_from_ratio(amount_in, token.total_supply)?;
     let expand_unit = Decimal::checked_from_ratio(amount, token.total_supply)?;
 
-    ASSETS.save(
+    UNITS.save(
         deps.storage,
         denom.clone(),
         &(origin_unit.checked_sub(deduct_unit)?),
     )?;
-    ASSETS.save(
+    UNITS.save(
         deps.storage,
         RESERVE_DENOM.to_string(),
         &(reserve_unit.checked_add(expand_unit)?),
@@ -316,16 +340,16 @@ pub fn inflate_reserve(
     }
     RESERVE_BUFFER.save(deps.storage, denom.clone(), &(buffer.checked_sub(amount)?))?;
 
-    let reserve_unit = ASSETS.load(deps.storage, RESERVE_DENOM.to_string())?;
-    let origin_unit = ASSETS.load(deps.storage, denom.clone()).unwrap_or_default();
+    let reserve_unit = UNITS.load(deps.storage, RESERVE_DENOM.to_string())?;
+    let origin_unit = UNITS.load(deps.storage, denom.clone()).unwrap_or_default();
     let swap_unit = Decimal::checked_from_ratio(amount, token.total_supply)?;
 
-    ASSETS.save(
+    UNITS.save(
         deps.storage,
         denom.clone(),
         &origin_unit.checked_add(swap_unit)?,
     )?;
-    ASSETS.save(
+    UNITS.save(
         deps.storage,
         RESERVE_DENOM.to_string(),
         &reserve_unit.checked_sub(swap_unit)?,
@@ -385,18 +409,18 @@ pub fn inflate(
     }
 
     // deduct & expand stored units
-    let reserve_unit = ASSETS.load(deps.storage, RESERVE_DENOM.to_string())?;
-    let origin_unit = ASSETS.load(deps.storage, denom.clone()).unwrap_or_default();
+    let reserve_unit = UNITS.load(deps.storage, RESERVE_DENOM.to_string())?;
+    let origin_unit = UNITS.load(deps.storage, denom.clone()).unwrap_or_default();
 
     let deduct_unit = Decimal::checked_from_ratio(amount, token.total_supply)?;
     let expand_unit = Decimal::checked_from_ratio(amount_out, token.total_supply)?;
 
-    ASSETS.save(
+    UNITS.save(
         deps.storage,
         RESERVE_DENOM.to_string(),
         &reserve_unit.checked_sub(deduct_unit)?,
     )?;
-    ASSETS.save(
+    UNITS.save(
         deps.storage,
         denom.clone(),
         &origin_unit.checked_add(expand_unit)?,
@@ -430,7 +454,7 @@ pub fn finalize(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, 
 
     // check deflation
     for (denom, target_unit) in rebalance.deflation.clone() {
-        let current_unit = ASSETS.load(deps.storage, denom)?;
+        let current_unit = UNITS.load(deps.storage, denom)?;
         if target_unit == current_unit {
             continue;
         } else {
@@ -439,7 +463,7 @@ pub fn finalize(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, 
     }
 
     // check inflation
-    if !ASSETS
+    if !UNITS
         .load(deps.storage, RESERVE_DENOM.to_string())?
         .is_zero()
     {
@@ -472,7 +496,7 @@ mod test {
 
     use crate::test::default_trade_info;
     use crate::test::mock_dependencies;
-    use crate::test::{register_assets, to_assets, SENDER_GOV, SENDER_OWNER};
+    use crate::test::{register_units, to_units, SENDER_GOV, SENDER_OWNER};
     use crate::{state::Token, test::default_fee};
     use crate::{state::FEE, test::default_token};
 
@@ -487,8 +511,8 @@ mod test {
     ) -> (Rebalance, Token) {
         let rebalance = Rebalance {
             manager: Addr::unchecked("manager"),
-            deflation: to_assets(deflation),
-            inflation: to_assets(inflation),
+            deflation: to_units(deflation),
+            inflation: to_units(inflation),
             finalized,
         };
 
@@ -513,14 +537,14 @@ mod test {
             GOV.save(deps.as_mut().storage, &Addr::unchecked(SENDER_GOV))
                 .unwrap();
 
-            register_assets(deps.as_mut().storage, &[("ukrw", "1.0"), ("uusd", "1.8")]);
+            register_units(deps.as_mut().storage, &[("ukrw", "1.0"), ("uusd", "1.8")]);
 
             let resp = init(
                 deps.as_mut(),
                 mock_info(SENDER_GOV, &[]),
                 "manager".to_string(),
-                to_assets(&[("ukrw", "0.3")]),
-                to_assets(&[("ujpy", "1")]),
+                to_units(&[("ukrw", "0.3")]),
+                to_units(&[("ujpy", "1")]),
             )
             .unwrap();
             assert_eq!(
@@ -538,8 +562,8 @@ mod test {
                 rebalance,
                 Rebalance {
                     manager: Addr::unchecked("manager"),
-                    deflation: to_assets(&[("ukrw", "0.3")]),
-                    inflation: to_assets(&[("ujpy", "1")]),
+                    deflation: to_units(&[("ukrw", "0.3")]),
+                    inflation: to_units(&[("ujpy", "1")]),
                     finalized: false
                 }
             );
@@ -556,8 +580,8 @@ mod test {
                 deps.as_mut(),
                 mock_info(SENDER_OWNER, &[]),
                 "manager".to_string(),
-                to_assets(&[]),
-                to_assets(&[]),
+                to_units(&[]),
+                to_units(&[]),
             )
             .unwrap_err();
             assert_eq!(err, ContractError::Unauthorized {});
@@ -587,8 +611,8 @@ mod test {
                 deps.as_mut(),
                 mock_info(SENDER_GOV, &[]),
                 "manager".to_string(),
-                to_assets(&[]),
-                to_assets(&[]),
+                to_units(&[]),
+                to_units(&[]),
             )
             .unwrap_err();
             assert_eq!(err, ContractError::RebalanceNotFinalized {});
@@ -714,11 +738,11 @@ mod test {
             ) {
                 // assert state - assets
                 assert_eq!(
-                    ASSETS.load(storage, from.to_string()).unwrap(),
+                    UNITS.load(storage, from.to_string()).unwrap(),
                     Decimal::from_str(deduct).unwrap()
                 );
                 assert_eq!(
-                    ASSETS.load(storage, RESERVE_DENOM.to_string()).unwrap(),
+                    UNITS.load(storage, RESERVE_DENOM.to_string()).unwrap(),
                     Decimal::from_str(expand).unwrap()
                 );
 
@@ -757,7 +781,7 @@ mod test {
                     false,
                 );
 
-                register_assets(
+                register_units(
                     deps.as_mut().storage,
                     &[("ukrw", "1.1"), (RESERVE_DENOM, "0.0")],
                 );
@@ -811,7 +835,7 @@ mod test {
                     false,
                 );
 
-                register_assets(deps.as_mut().storage, &[("uosmo", "1.1")]);
+                register_units(deps.as_mut().storage, &[("uosmo", "1.1")]);
 
                 let res = deflate_reserve(deps.as_mut(), "manager", "uosmo", 10000).unwrap();
 
@@ -903,7 +927,7 @@ mod test {
 
                 setup(deps.as_mut().storage, 1, &[("ukrw", "1.0")], &[], false);
 
-                register_assets(
+                register_units(
                     deps.as_mut().storage,
                     &[("ukrw", "1.1"), (RESERVE_DENOM, "0.0")],
                 );
@@ -939,7 +963,7 @@ mod test {
 
                 setup(deps.as_mut().storage, 1, &[("ukrw", "1.0")], &[], false);
 
-                register_assets(
+                register_units(
                     deps.as_mut().storage,
                     &[("ukrw", "1.1"), (RESERVE_DENOM, "0.0")],
                 );
@@ -1008,11 +1032,11 @@ mod test {
             ) {
                 // assert state - assets
                 assert_eq!(
-                    ASSETS.load(storage, RESERVE_DENOM.to_string()).unwrap(),
+                    UNITS.load(storage, RESERVE_DENOM.to_string()).unwrap(),
                     Decimal::from_str(deduct).unwrap()
                 );
                 assert_eq!(
-                    ASSETS.load(storage, to.to_string()).unwrap(),
+                    UNITS.load(storage, to.to_string()).unwrap(),
                     Decimal::from_str(expand).unwrap()
                 );
 
@@ -1039,7 +1063,7 @@ mod test {
 
                 setup(deps.as_mut().storage, 1, &[], &[("ukrw", "1.0")], false);
 
-                register_assets(deps.as_mut().storage, &[(RESERVE_DENOM, "1.0")]);
+                register_units(deps.as_mut().storage, &[(RESERVE_DENOM, "1.0")]);
 
                 let mut trade_info = default_trade_info();
                 trade_info.routes = SwapRoutes(vec![SwapRoute {
@@ -1080,7 +1104,7 @@ mod test {
 
                 setup(deps.as_mut().storage, 1, &[], &[("uosmo", "1.0")], false);
 
-                register_assets(deps.as_mut().storage, &[(RESERVE_DENOM, "1.0")]);
+                register_units(deps.as_mut().storage, &[(RESERVE_DENOM, "1.0")]);
 
                 let buffer = Uint128::new(100000);
                 RESERVE_BUFFER
@@ -1240,7 +1264,7 @@ mod test {
                 false,
             );
 
-            register_assets(
+            register_units(
                 deps.as_mut().storage,
                 &[
                     ("ukrw", "1.2"),

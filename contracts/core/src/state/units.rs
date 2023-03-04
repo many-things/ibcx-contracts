@@ -8,10 +8,10 @@ use crate::error::ContractError;
 
 use super::RESERVE_DENOM;
 
-pub const ASSETS_PREFIX: &str = "assets";
-pub const ASSETS: Map<String, Decimal> = Map::new(ASSETS_PREFIX);
+pub const UNITS_PREFIX: &str = "assets";
+pub const UNITS: Map<String, Decimal> = Map::new(UNITS_PREFIX);
 
-pub fn set_assets(storage: &mut dyn Storage, assets: Units) -> Result<(), ContractError> {
+pub fn set_units(storage: &mut dyn Storage, assets: Units) -> Result<(), ContractError> {
     if assets.len() > MAX_LIMIT as usize {
         return Err(ContractError::InvalidAssetLength { limit: MAX_LIMIT });
     }
@@ -22,23 +22,23 @@ pub fn set_assets(storage: &mut dyn Storage, assets: Units) -> Result<(), Contra
                 reserved: RESERVE_DENOM.to_string(),
             });
         }
-        match ASSETS.may_load(storage, denom.clone())? {
+        match UNITS.may_load(storage, denom.clone())? {
             Some(_) => return Err(ContractError::DenomReserved { reserved: denom }),
-            None => ASSETS.save(storage, denom, &unit)?,
+            None => UNITS.save(storage, denom, &unit)?,
         }
     }
 
     Ok(())
 }
 
-pub fn get_assets(storage: &dyn Storage) -> StdResult<Units> {
-    ASSETS
+pub fn get_units(storage: &dyn Storage) -> StdResult<Units> {
+    UNITS
         .range(storage, None, None, Order::Ascending)
         .take(MAX_LIMIT as usize)
         .collect::<StdResult<_>>()
 }
 
-pub fn assert_assets(
+pub fn assert_units(
     assets: Units,
     funds: Vec<Coin>,
     desired: Uint128,
@@ -91,7 +91,7 @@ mod test {
 
     use crate::{
         state::{Token, TOKEN},
-        test::{register_assets, to_assets},
+        test::{register_units, to_units},
     };
 
     use super::*;
@@ -108,7 +108,7 @@ mod test {
             )
             .unwrap();
 
-        register_assets(
+        register_units(
             storage,
             &[("ueur", "1.0"), ("ukrw", "1.2"), ("uusd", "1.5")],
         );
@@ -119,17 +119,17 @@ mod test {
         let mut storage = MockStorage::new();
 
         // check limit exceeds
-        let assets = to_assets(
+        let assets = to_units(
             [("ukrw", "1.0")]
                 .repeat((MAX_LIMIT + 1).try_into().unwrap())
                 .as_slice(),
         );
-        let err = set_assets(&mut storage, assets).unwrap_err();
+        let err = set_units(&mut storage, assets).unwrap_err();
         assert_eq!(err, ContractError::InvalidAssetLength { limit: MAX_LIMIT });
 
         // check reserved denom
-        let assets = to_assets(&[(RESERVE_DENOM, "1.0")]);
-        let err = set_assets(&mut storage, assets).unwrap_err();
+        let assets = to_units(&[(RESERVE_DENOM, "1.0")]);
+        let err = set_units(&mut storage, assets).unwrap_err();
         assert_eq!(
             err,
             ContractError::DenomReserved {
@@ -138,21 +138,21 @@ mod test {
         );
 
         // check denom duplication
-        let assets = to_assets(&[("ukrw", "1.0"), ("ukrw", "1.0")]);
-        let err = set_assets(&mut storage, assets).unwrap_err();
+        let assets = to_units(&[("ukrw", "1.0"), ("ukrw", "1.0")]);
+        let err = set_units(&mut storage, assets).unwrap_err();
         assert_eq!(
             err,
             ContractError::DenomReserved {
                 reserved: "ukrw".to_string()
             }
         );
-        ASSETS.remove(&mut storage, "ukrw".to_string());
+        UNITS.remove(&mut storage, "ukrw".to_string());
 
         // ok
-        let assets = to_assets(&[("ukrw", "1.0"), ("ueur", "1.2"), ("uusd", "1.5")]);
-        set_assets(&mut storage, assets.clone()).unwrap();
+        let assets = to_units(&[("ukrw", "1.0"), ("ueur", "1.2"), ("uusd", "1.5")]);
+        set_units(&mut storage, assets.clone()).unwrap();
         for (denom, unit) in assets {
-            assert_eq!(ASSETS.load(&storage, denom).unwrap(), unit);
+            assert_eq!(UNITS.load(&storage, denom).unwrap(), unit);
         }
     }
 
@@ -162,11 +162,11 @@ mod test {
 
         setup_test(&mut storage);
 
-        let assets = get_assets(&storage).unwrap();
+        let assets = get_units(&storage).unwrap();
 
         assert_eq!(
             assets,
-            to_assets(&[("ueur", "1.0"), ("ukrw", "1.2"), ("uusd", "1.5"),])
+            to_units(&[("ueur", "1.0"), ("ukrw", "1.2"), ("uusd", "1.5"),])
         );
     }
 
@@ -176,8 +176,8 @@ mod test {
 
         setup_test(&mut storage);
 
-        let refund = assert_assets(
-            get_assets(&storage).unwrap(),
+        let refund = assert_units(
+            get_units(&storage).unwrap(),
             vec![
                 coin(12000, "ueur"),
                 coin(15000, "ukrw"),
@@ -192,7 +192,7 @@ mod test {
         );
 
         let err =
-            assert_assets(get_assets(&storage).unwrap(), vec![], Uint128::new(10000)).unwrap_err();
+            assert_units(get_units(&storage).unwrap(), vec![], Uint128::new(10000)).unwrap_err();
         assert_eq!(err, ContractError::InsufficientFunds("ueur".to_string()));
     }
 
@@ -204,7 +204,7 @@ mod test {
 
         assert_eq!(
             get_redeem_amounts(
-                get_assets(&storage).unwrap(),
+                get_units(&storage).unwrap(),
                 RESERVE_DENOM,
                 Uint128::new(10)
             )
