@@ -116,7 +116,6 @@ fn _claim(
         ClaimProofOptional::ClaimProof(proof) => (proof, sender.clone(), true),
     };
 
-    // verify merkle proof (from https://github.com/cosmwasm/cw-tokens/blob/master/contracts/cw20-merkle-airdrop/src/contract.rs)
     let mut airdrop = AIRDROPS.load(storage, airdrop_id)?;
     if airdrop.closed {
         return Err(ContractError::AirdropClosed {});
