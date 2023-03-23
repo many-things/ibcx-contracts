@@ -27,7 +27,7 @@ const leaves =
       }));
 
 const tree = new MerkleTree(
-  leaves.map(({ address, amount }) => SHA256(`${address}${amount}`)),
+  leaves.map(({ address, amount }) => SHA256(`${address}:${amount}`)),
   SHA256,
   { sort: true }
 );
@@ -35,7 +35,7 @@ const tree = new MerkleTree(
 const root = tree.getHexRoot().replace("0x", "");
 
 const proofs = leaves.map(({ address, amount }) => {
-  const leaf = SHA256(`${address}${amount}`);
+  const leaf = SHA256(`${address}:${amount}`);
   const proof = tree
     .getHexProof(leaf.toString())
     .map((v) => v.replace("0x", ""));
