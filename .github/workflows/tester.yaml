@@ -2,9 +2,13 @@ name: testing
 
 on:
   push:
+    paths:
+      - 'contracts/**'
     branches:
       - main
   pull_request:
+    paths:
+      - 'contracts/**'
     branches:
       - main
 
