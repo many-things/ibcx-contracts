@@ -15,7 +15,7 @@ pub fn verify_merkle_proof(
     claim_proof: &str,
     amount: Uint128,
 ) -> Result<(), ContractError> {
-    let user_input = format!("{claim_proof}{amount}");
+    let user_input = format!("{claim_proof}:{amount}");
 
     let hash = sha2::Sha256::digest(user_input.as_bytes())
         .as_slice()
@@ -57,9 +57,9 @@ mod test {
     pub const SAMPLE_ROOT_TEST: &str =
         "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
     pub const SAMPLE_ROOT_OPEN: &str =
-        "87696533e495ec288f64fbcfb5508f14ed33c07c076fe2cd9074456484fe9e5e";
+        "597f35d2e2f4f5c02e31be44695da0c3e0ce03bbb212c6cfc4ef94d7d4940bb5";
     pub const SAMPLE_ROOT_BEARER: &str =
-        "e05ed933574870cefefffa975dfbad8fc4f0924086f8d6f96c9017a5731bb5fa";
+        "36aa7eff8f432a03572d519e71200f3cd20168bb4d3e678b27ca984a30feef81";
 
     pub fn make_airdrop(
         creator: impl Into<String>,
@@ -130,36 +130,32 @@ mod test {
     pub fn get_open_claims() -> Vec<Claim> {
         vec![
             Claim::new(
-                "osmo10yaagy0faggta0085hkzr3ckq7p7z9996nrn0m",
-                43904658,
-                ClaimProofOptional::account("osmo10yaagy0faggta0085hkzr3ckq7p7z9996nrn0m"),
-                vec![
-                    "bb416c8705248d135a5c5b1db2d61adf0fcd232b258b57f077fc3e389def4b8d",
-                    "a869545b9b418fdb973c0b83903ee99e1b27dc2dce75d7e10d263787ee3c97c1",
-                    "d31db3d17297d25ec12e293c46dc54c3069df14e883ec24f13666123c1499cf3",
-                    "de5c3d495e15d29a7b8cf3b8fe8a8bc7602fa1e3122debaf1bd01314d81b1dea",
-                ],
-            ),
-            Claim::new(
                 "osmo1phaxpevm5wecex2jyaqty2a4v02qj7qmlmzk5a",
-                84794294,
+                1000,
                 ClaimProofOptional::account("osmo1phaxpevm5wecex2jyaqty2a4v02qj7qmlmzk5a"),
                 vec![
-                    "02898441407b91279f1fd8de37dd214e970300f1f1040cbb933513dea3b75c15",
-                    "7af343b691d61831c7532dccbf7fa476ce3a8269c5c93c834e7404976448869b",
-                    "695956534ac375d1039af6583f60120d6d7cdd95c5ea7bd2953b80bb454c336b",
-                    "28e923bb17fe7fb93b1bbfe7c1e75927ed39f20d978d62ece0f575e45e66d862",
+                    "7ea10756e42edf91a6fae6fa8a1acd00751c52c5e0f9d497a7abff7813512667",
+                    "eda896591efa2cd33541930d90ea37449af60460ef8e527109ee9940238266ce",
+                    "b712f5b328047024ff46b9e105ecb71dfcb9813088a87a7e6a46731e7db62638",
+                    "eca3408c50efba13b12ec9b352e0403369ff423ee89f23d1f7ada03a90d7e84f",
                 ],
             ),
             Claim::new(
-                "osmo12smx2wdlyttvyzvzg54y2vnqwq2qjateuf7thj",
-                22816641,
-                ClaimProofOptional::account("osmo12smx2wdlyttvyzvzg54y2vnqwq2qjateuf7thj"),
+                "osmo1cyyzpxplxdzkeea7kwsydadg87357qnahakaks",
+                1000,
+                ClaimProofOptional::account("osmo1cyyzpxplxdzkeea7kwsydadg87357qnahakaks"),
                 vec![
-                    "d96108fe28f021ec3cf173966f4c42b36b405fbb147b060e0e034fdee78aca0d",
-                    "e3a3cf4d86e87086372e55c1d25882d20f99e0a6ac1cb87eaa286206b74b953c",
-                    "de5c3d495e15d29a7b8cf3b8fe8a8bc7602fa1e3122debaf1bd01314d81b1dea",
+                    "2a466d1b5ce03857a1c908737daed70c67a0b4a8883efc8afedb16d7f76c340f",
+                    "bd8ca611132cc19133ee408646ec08f2e104b6bb670bce0c3070fa2f086120d8",
+                    "7821cdd6c9c94cc63b7c6131711a9deebc02c71dd075ab555ab48d19fddd7aa9",
+                    "eca3408c50efba13b12ec9b352e0403369ff423ee89f23d1f7ada03a90d7e84f",
                 ],
+            ),
+            Claim::new(
+                "osmo18s5lynnmx37hq4wlrw9gdn68sg2uxp5rgk26vv",
+                1000,
+                ClaimProofOptional::account("osmo18s5lynnmx37hq4wlrw9gdn68sg2uxp5rgk26vv"),
+                vec!["c3f89415e48599f708ba5767dda0b20d52a7a35c85c239b0f17fc59431c796ad"],
             ),
         ]
     }
@@ -168,41 +164,39 @@ mod test {
         vec![
             Claim::new(
                 sender,
-                83576099,
+                10000,
                 ClaimProofOptional::claim_proof(
-                    "4c76049e0d90410060bbebb9562a223c461e04b99d2b5535e6b2aa91edcddee8",
+                    "af3bbee2ddde2fa3e1e66b40036ece0aaccaafbe9801d7d20a25c2f28491ea32",
                 ),
                 vec![
-                    "1b290aa1e1b5b0eac2d3581a804cbee984652261dc29a589de09c5938ce15f76",
-                    "e67ef76129d46785d89c970c1d92cc55a5541c2268f45ce2caf172163f3391ed",
-                    "01d417c4c8e9421aa4c37a4828898fbaeb180cad9026e31b7a21965522d4806f",
-                    "7fc962bc95a29db92e61e79a40d1ba27bbd3c8cbcbabc7228e67f38b2f133528",
+                    "9fccf099a14171ad087464325aa6be356fc71d83743be8b8505894aa347fd3d3",
+                    "80005d069b219d7e23920de9f584c6c7b16a45e067e4a1294eb7c682c2bec429",
+                    "860643b0a8b8932a68738b5a18bc1b243e030a3b10c20779bbbf620d1ff39cf3",
+                    "0a794b9b5e9d8c1db20800184764ec58bbea6d8ec43fbc41d30779e5a4592997",
                 ],
             ),
             Claim::new(
                 sender,
-                14430018,
+                10000,
                 ClaimProofOptional::claim_proof(
-                    "aeff09ab18c01d444aed2273d1b1825cf5889f8d253df7235eabb1e52717bbe8",
+                    "668857caefd64b5e716e7b99c625119aae9bcfed76dae38da983586148c584b8",
                 ),
                 vec![
-                    "824cc5d487a8306208ce09cb0448b2289803bb0c12a92a958e5eb85e8eb4468d",
-                    "404fc9497469dbfbb3021efcdcbb244de21facecf21774a345c01e7e11540d53",
-                    "b7446f5ad5a9694a47122a9d8afa9d24187e948ce3a2c4d1011550357d2ab403",
-                    "4940ac27869b3c0d8dd1fb598c46882eb716be85acbc264aab9672b576e94f05",
+                    "9ff01de88ca0ea4a38873c8ea9cfc09d41bac627ae01f9272e8c29c97ac742dd",
+                    "d375f310c6a3dcfb5eceb51bf26bba3d8a2459d29b91583a70bf5469a77aa8f5",
+                    "090d1756337269d841a4f7488aa37eef7840373eea516fecfcca430d04461fb5",
+                    "0a794b9b5e9d8c1db20800184764ec58bbea6d8ec43fbc41d30779e5a4592997",
                 ],
             ),
             Claim::new(
                 sender,
-                53405648,
+                10000,
                 ClaimProofOptional::claim_proof(
-                    "509818a235b8f2463dcefefec5de502f0bd413fa51dbee63f657320d9118ceaa",
+                    "d6981c4c287487efebcd93fe7695ad0a9317eb926e9c230ac643bce441389d2e",
                 ),
                 vec![
-                    "7708cf33aabaca0a15702a094b6a7db5339b4079d15d8aef28f582eec97aa2e8",
-                    "d257d54ac607bd21844eba08c324d8c42fd382eb9c26294dcfd2aa27ffc68294",
-                    "7de49485d71e14879141969366854c0e121fc7655e70a45ceb7e34557c42bab3",
-                    "7fc962bc95a29db92e61e79a40d1ba27bbd3c8cbcbabc7228e67f38b2f133528",
+                    "e5f11726de09f158a299ff803dc193ba185880bfda243eb19560a99b720a0ff1",
+                    "193bb1198b29ba3e925c9b6d45b7ded1714ba5b9eeae2d30ae733d6954cfe4cc",
                 ],
             ),
         ]
