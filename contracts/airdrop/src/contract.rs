@@ -1,6 +1,8 @@
 use cosmwasm_std::{entry_point, Env, MessageInfo, QueryResponse};
 use cosmwasm_std::{Deps, DepsMut, Response};
-use ibcx_interface::airdrop::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use ibcx_interface::airdrop::{
+    ClaimPayload, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, RegisterPayload,
+};
 
 use crate::{
     error::ContractError, execute, query, state::LATEST_AIRDROP_ID, CONTRACT_NAME, CONTRACT_VERSION,
@@ -27,19 +29,18 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
+    use crate::execute;
     use ExecuteMsg::*;
 
     match msg {
-        Register {
-            merkle_root,
-            denom,
-            label,
-            bearer,
-        } => execute::register(deps, info, merkle_root, denom, label, bearer),
-        Fund { id } => execute::fund(deps, info, id),
+        Register(payload) => execute::register(deps, info, payload),
+
+        Fund(airdrop) => execute::fund(deps, info, airdrop),
+
         Claim(payload) => execute::claim(deps, info, payload),
-        MultiClaim(payload) => execute::multi_claim(deps, info, payload),
-        Close { id } => execute::close(deps, info, id),
+        MultiClaim(payload) => execute::claim_many(deps, info, payload),
+
+        Close(airdrop) => execute::close(deps, info, airdrop),
     }
 }
 
