@@ -2,6 +2,8 @@ name: linter
 
 on:
   push:
+    paths:
+      - 'contracts/**'
     branches:
       - main
   pull_request:
