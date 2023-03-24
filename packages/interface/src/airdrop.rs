@@ -53,12 +53,51 @@ pub enum RegisterPayload {
 
     // Payload for bearer airdrop
     Bearer {
+        // merkle root of airdrop
         merkle_root: String,
+
+        // denomination of airdrop
         denom: String,
-        label: Option<String>,
+
+        // public key of signer
         signer_pub: String,
+
+        // signature of signer - sign(sha256({BECH32_SIGNER_ADDRESS}))
         signer_sig: String,
+
+        // optional: label
+        label: Option<String>,
     },
+}
+
+impl RegisterPayload {
+    pub fn open(
+        merkle_root: impl ToString,
+        denom: impl ToString,
+        label: Option<impl ToString>,
+    ) -> Self {
+        Self::Open {
+            merkle_root: merkle_root.to_string(),
+            denom: denom.to_string(),
+            label: label.map(|x| x.to_string()),
+        }
+    }
+
+    pub fn bearer(
+        merkle_root: impl ToString,
+        denom: impl ToString,
+        signer_pub: impl ToString,
+        signer_sig: impl ToString,
+        label: Option<impl ToString>,
+    ) -> Self {
+        Self::Bearer {
+            merkle_root: merkle_root.to_string(),
+            denom: denom.to_string(),
+            signer_pub: signer_pub.to_string(),
+            signer_sig: signer_sig.to_string(),
+            label: label.map(|x| x.to_string()),
+        }
+    }
 }
 
 #[cw_serde]
@@ -80,6 +119,72 @@ pub enum ClaimPayload {
         claim_sign: String,        // signature of signer
         merkle_proof: Vec<String>, // merkle proof of airdrop
     },
+}
+
+impl ClaimPayload {
+    pub fn open_id(
+        id: u64,
+        amount: u128,
+        account: Option<impl ToString>,
+        merkle_proof: &[&str],
+    ) -> Self {
+        Self::Open {
+            airdrop: AirdropId::id(id),
+            amount: Uint128::new(amount),
+            account: account.map(|x| x.to_string()),
+            merkle_proof: merkle_proof.iter().map(|x| x.to_string()).collect(),
+        }
+    }
+
+    pub fn open_label(
+        label: impl ToString + Into<String>,
+        amount: u128,
+        account: Option<impl ToString>,
+        merkle_proof: &[&str],
+    ) -> Self {
+        Self::Open {
+            airdrop: AirdropId::label(label),
+            amount: Uint128::new(amount),
+            account: account.map(|x| x.to_string()),
+            merkle_proof: merkle_proof.iter().map(|x| x.to_string()).collect(),
+        }
+    }
+
+    pub fn bearer_id(
+        id: u64,
+        amount: u128,
+        account: Option<impl ToString>,
+        claim_hash: impl ToString,
+        claim_sign: impl ToString,
+        merkle_proof: &[&str],
+    ) -> Self {
+        Self::Bearer {
+            airdrop: AirdropId::id(id),
+            amount: Uint128::new(amount),
+            account: account.map(|x| x.to_string()),
+            claim_hash: claim_hash.to_string(),
+            claim_sign: claim_sign.to_string(),
+            merkle_proof: merkle_proof.iter().map(|x| x.to_string()).collect(),
+        }
+    }
+
+    pub fn bearer_label(
+        label: impl ToString + Into<String>,
+        amount: u128,
+        account: Option<impl ToString>,
+        claim_hash: impl ToString,
+        claim_sign: impl ToString,
+        merkle_proof: &[&str],
+    ) -> Self {
+        Self::Bearer {
+            airdrop: AirdropId::label(label),
+            amount: Uint128::new(amount),
+            account: account.map(|x| x.to_string()),
+            claim_hash: claim_hash.to_string(),
+            claim_sign: claim_sign.to_string(),
+            merkle_proof: merkle_proof.iter().map(|x| x.to_string()).collect(),
+        }
+    }
 }
 
 #[cw_serde]
