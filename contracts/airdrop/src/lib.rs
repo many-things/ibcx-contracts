@@ -1,7 +1,4 @@
-use cosmwasm_std::Uint128;
-use error::ContractError;
-use sha2::Digest;
-
+pub mod airdrop;
 pub mod contract;
 pub mod error;
 pub mod execute;
@@ -15,9 +12,9 @@ pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{testing::mock_info, Addr, DepsMut, Response, Uint128};
-    use ibcx_interface::airdrop::{AirdropId, ClaimPayload, ClaimProofOptional};
+    use ibcx_interface::airdrop::{AirdropId, ClaimPayload};
 
-    use crate::{error::ContractError, execute, state::Airdrop};
+    use crate::{airdrop::Airdrop, error::ContractError, execute};
 
     pub const SENDER_OWNER: &str = "owner";
 

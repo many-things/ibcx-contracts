@@ -24,6 +24,9 @@ pub enum ContractError {
     #[error("{0}")]
     FromHexError(#[from] hex::FromHexError),
 
+    #[error("{0}")]
+    VerificationError(#[from] cosmwasm_std::VerificationError),
+
     #[error("Unauthorized")]
     Unauthorized {},
 
@@ -51,6 +54,24 @@ pub enum ContractError {
     #[error("Invalid airdrop type. expected:{expected:?}, actual:{actual:?}")]
     InvalidAirdropType { expected: String, actual: String },
 
-    #[error("Invalid claim signature")]
-    InvalidClaimSignature {},
+    #[error("Invalid signature. action:{action:?}")]
+    InvalidSignature { action: String },
+
+    #[error("Invalid public key")]
+    InvalidPubKey {},
+}
+
+impl ContractError {
+    pub fn invalid_airdrop_type(expected: impl ToString, actual: impl ToString) -> Self {
+        ContractError::InvalidAirdropType {
+            expected: expected.to_string(),
+            actual: actual.to_string(),
+        }
+    }
+
+    pub fn invalid_signature(action: impl ToString) -> Self {
+        ContractError::InvalidSignature {
+            action: action.to_string(),
+        }
+    }
 }

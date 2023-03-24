@@ -1,12 +1,8 @@
 use cosmwasm_std::{entry_point, Env, MessageInfo, QueryResponse};
 use cosmwasm_std::{Deps, DepsMut, Response};
-use ibcx_interface::airdrop::{
-    ClaimPayload, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, RegisterPayload,
-};
+use ibcx_interface::airdrop::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
-use crate::{
-    error::ContractError, execute, query, state::LATEST_AIRDROP_ID, CONTRACT_NAME, CONTRACT_VERSION,
-};
+use crate::{error::ContractError, state::LATEST_AIRDROP_ID, CONTRACT_NAME, CONTRACT_VERSION};
 
 #[entry_point]
 pub fn instantiate(
@@ -25,7 +21,7 @@ pub fn instantiate(
 #[entry_point]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
@@ -33,18 +29,19 @@ pub fn execute(
     use ExecuteMsg::*;
 
     match msg {
-        Register(payload) => execute::register(deps, info, payload),
+        Register(payload) => execute::register(deps, env, info, payload),
 
         Fund(airdrop) => execute::fund(deps, info, airdrop),
 
         Claim(payload) => execute::claim(deps, info, payload),
 
-        Close(airdrop) => execute::close(deps, info, airdrop),
+        Close(airdrop) => execute::close(deps, env, info, airdrop),
     }
 }
 
 #[entry_point]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, ContractError> {
+    use crate::query;
     use QueryMsg::*;
 
     match msg {

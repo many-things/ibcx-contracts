@@ -47,7 +47,8 @@ pub enum RegisterPayload {
         merkle_root: String,
         denom: String,
         label: Option<String>,
-        signer: Option<String>,
+        signer_pub: String,
+        signer_sig: String,
     },
 }
 

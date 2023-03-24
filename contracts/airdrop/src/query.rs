@@ -11,9 +11,9 @@ use ibcx_interface::{
 };
 
 use crate::{
+    airdrop::Airdrop,
     error::ContractError,
-    state::{Airdrop, AIRDROPS, CLAIM_LOGS, LABELS, LATEST_AIRDROP_ID},
-    verify_merkle_proof,
+    state::{AIRDROPS, CLAIM_LOGS, LABELS, LATEST_AIRDROP_ID},
 };
 
 fn airdrop_to_resp(id: u64, airdrop: Airdrop) -> GetAirdropResponse {
