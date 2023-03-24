@@ -1,7 +1,8 @@
 use crate::error::ContractError;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Storage, Uint128};
+use cosmwasm_std::{Addr, StdResult, Storage, Uint128};
 use cw_storage_plus::{Item, Map};
+use ibcx_interface::airdrop::AirdropId;
 
 #[cw_serde]
 pub enum Airdrop {
@@ -80,6 +81,13 @@ impl Airdrop {
             Airdrop::Bearer { label, .. } => label,
         }
     }
+
+    pub fn closed(&self) -> bool {
+        match self {
+            Airdrop::Open { closed, .. } => *closed,
+            Airdrop::Bearer { closed, .. } => *closed,
+        }
+    }
 }
 
 pub const LATEST_AIRDROP_KEY: &str = "latest_airdrop";
@@ -93,6 +101,17 @@ pub const LABELS: Map<&str, u64> = Map::new(LABELS_PREFIX);
 
 pub const CLAIM_LOGS_PREFIX: &str = "claim_logs";
 pub const CLAIM_LOGS: Map<(u64, &str), Uint128> = Map::new(CLAIM_LOGS_PREFIX);
+
+pub fn load_airdrop(storage: &dyn Storage, id: AirdropId) -> StdResult<(u64, Airdrop)> {
+    let airdrop_id = match id {
+        AirdropId::Id(id) => id,
+        AirdropId::Label(label) => LABELS.load(deps.storage, &label)?,
+    };
+
+    let airdrop = AIRDROPS.load(deps.storage, airdrop_id)?;
+
+    Ok((airdrop_id, airdrop))
+}
 
 pub fn save_label(
     storage: &mut dyn Storage,
