@@ -1,6 +1,6 @@
 use crate::airdrop::{Airdrop, BearerAirdrop, OpenAirdrop};
 use crate::error::ContractError;
-use crate::state::{load_airdrop, AIRDROPS};
+use crate::state::{airdrops, load_airdrop};
 use cosmwasm_std::{attr, DepsMut, MessageInfo, Response};
 use ibcx_interface::airdrop::AirdropId;
 
@@ -17,7 +17,7 @@ fn fund_open(
     deps: DepsMut,
     info: MessageInfo,
     id: u64,
-    airdrop: OpenAirdrop,
+    mut airdrop: OpenAirdrop,
 ) -> Result<Response, ContractError> {
     if airdrop.creator != info.sender {
         return Err(ContractError::Unauthorized {});
@@ -29,7 +29,7 @@ fn fund_open(
     let additional_funds = cw_utils::must_pay(&info, &airdrop.denom)?;
     airdrop.total_amount = airdrop.total_amount.checked_add(additional_funds)?;
 
-    AIRDROPS.save(deps.storage, id, &airdrop.wrap())?;
+    airdrops().save(deps.storage, id, &airdrop.wrap())?;
 
     Ok(Response::new().add_attributes(vec![
         attr("action", "fund"),
@@ -44,7 +44,7 @@ fn fund_bearer(
     deps: DepsMut,
     info: MessageInfo,
     id: u64,
-    airdrop: BearerAirdrop,
+    mut airdrop: BearerAirdrop,
 ) -> Result<Response, ContractError> {
     if airdrop.creator != info.sender {
         return Err(ContractError::Unauthorized {});
@@ -56,7 +56,7 @@ fn fund_bearer(
     let additional_funds = cw_utils::must_pay(&info, &airdrop.denom)?;
     airdrop.total_amount = airdrop.total_amount.checked_add(additional_funds)?;
 
-    AIRDROPS.save(deps.storage, id, &airdrop.wrap())?;
+    airdrops().save(deps.storage, id, &airdrop.wrap())?;
 
     Ok(Response::new().add_attributes(vec![
         attr("action", "fund"),

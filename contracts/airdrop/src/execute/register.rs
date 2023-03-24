@@ -1,6 +1,6 @@
 use crate::airdrop::{BearerAirdrop, OpenAirdrop};
 use crate::error::ContractError;
-use crate::state::{save_label, AIRDROPS, LATEST_AIRDROP_ID};
+use crate::state::{airdrops, save_label, LATEST_AIRDROP_ID};
 use crate::verify::{pub_to_addr, sha256_digest};
 use cosmwasm_std::{attr, Binary, DepsMut, Env, MessageInfo, Response, Uint128};
 use ibcx_interface::airdrop::RegisterPayload;
@@ -72,12 +72,12 @@ fn register_open(
 
     // apply to state (LABELS, AIRDROP, LATEST_AIRDROP_ID)
     save_label(deps.storage, airdrop_id, &airdrop.label)?;
-    AIRDROPS.save(deps.storage, airdrop_id, &airdrop.wrap())?;
+    airdrops().save(deps.storage, airdrop_id, &airdrop.wrap())?;
     LATEST_AIRDROP_ID.save(deps.storage, &(airdrop_id + 1))?;
 
     Ok(Response::new().add_attributes(vec![
         attr("action", "register"),
-        attr("executor", airdrop.creator),
+        attr("executor", &airdrop.creator),
         attr("type", airdrop.wrap().type_str()),
         attr("merkle_root", airdrop.merkle_root),
         attr("total_amount", airdrop.total_amount.to_string()),
@@ -85,6 +85,7 @@ fn register_open(
     ]))
 }
 
+#[allow(clippy::too_many_arguments)]
 // bearer airdrop registerer
 fn register_bearer(
     deps: DepsMut,
@@ -107,15 +108,16 @@ fn register_bearer(
     let label = label.map(|x| format!("{}/{x}", info.sender));
 
     // verify signer_sig
-    let signer_pub = hex::decode(signer_pub)?.as_slice();
-    let signer_sig = hex::decode(signer_sig)?.as_slice();
+    let signer_pub = hex::decode(signer_pub)?;
+    let signer_sig = hex::decode(signer_sig)?;
     // TODO: do we have to make prefix injectable?
-    let signer = pub_to_addr(Binary::from(signer_pub), "osmo")?;
+    let signer = pub_to_addr(signer_pub.clone().into(), "osmo")?;
 
-    let digest_str = format!("{signer}");
-    let digest = sha256_digest(digest_str.as_bytes())?;
+    let digest = sha256_digest(signer.as_bytes())?;
 
-    let verified = deps.api.secp256k1_verify(&digest, signer_sig, signer_pub)?;
+    let verified =
+        deps.api
+            .secp256k1_verify(&digest, signer_sig.as_slice(), signer_pub.as_slice())?;
     if !verified {
         return Err(ContractError::invalid_signature("register"));
     }
@@ -140,12 +142,12 @@ fn register_bearer(
 
     // apply to state (LABELS, AIRDROP, LATEST_AIRDROP_ID)
     save_label(deps.storage, airdrop_id, &airdrop.label)?;
-    AIRDROPS.save(deps.storage, airdrop_id, &airdrop.wrap())?;
+    airdrops().save(deps.storage, airdrop_id, &airdrop.wrap())?;
     LATEST_AIRDROP_ID.save(deps.storage, &(airdrop_id + 1))?;
 
     Ok(Response::new().add_attributes(vec![
         attr("action", "register"),
-        attr("executor", airdrop.creator),
+        attr("executor", &airdrop.creator),
         attr("type", airdrop.wrap().type_str()),
         attr("signer", airdrop.signer),
         attr("merkle_root", airdrop.merkle_root),
@@ -156,7 +158,7 @@ fn register_bearer(
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{coins, testing::mock_dependencies_with_balances};
+    use cosmwasm_std::{coin, testing::mock_dependencies_with_balances, Coin};
 
     const DENOM_BASE: u128 = 10 ^ 6;
 
@@ -166,9 +168,10 @@ mod test {
 
     #[test]
     fn test_register_open() {
-        let initial_balances = &[("tester", coins(normalize_amount(10.5), "ukrw").as_slice())];
+        let tester_balance: &[Coin] = &[coin(normalize_amount(10.5), "ukrw")];
+        let initial_balances = &[("tester", tester_balance)];
 
-        let mut deps = mock_dependencies_with_balances(initial_balances);
+        let deps = mock_dependencies_with_balances(initial_balances);
 
         let balances = deps.as_ref().querier.query_all_balances("tester").unwrap();
         println!("{:?}", balances);

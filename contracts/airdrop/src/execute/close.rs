@@ -1,6 +1,6 @@
 use crate::airdrop::{Airdrop, BearerAirdrop, OpenAirdrop};
 use crate::error::ContractError;
-use crate::state::{load_airdrop, AIRDROPS};
+use crate::state::{airdrops, load_airdrop};
 use cosmwasm_std::{attr, coins, BankMsg, DepsMut, Env, MessageInfo, Response};
 use ibcx_interface::airdrop::AirdropId;
 
@@ -23,7 +23,7 @@ fn close_open(
     env: Env,
     info: MessageInfo,
     airdrop_id: u64,
-    airdrop: OpenAirdrop,
+    mut airdrop: OpenAirdrop,
 ) -> Result<Response, ContractError> {
     // validation
     if airdrop.creator != info.sender {
@@ -38,12 +38,12 @@ fn close_open(
     airdrop.closed_at = Some(env.block.height);
 
     // apply states
-    AIRDROPS.save(deps.storage, airdrop_id, &airdrop.wrap())?;
+    airdrops().save(deps.storage, airdrop_id, &airdrop.wrap())?;
 
     // response
     let send_msg = BankMsg::Send {
         to_address: airdrop.creator.to_string(),
-        amount: coins(redeem_amount.u128(), airdrop.denom),
+        amount: coins(redeem_amount.u128(), &airdrop.denom),
     };
 
     let attrs = vec![
@@ -62,7 +62,7 @@ fn close_bearer(
     env: Env,
     info: MessageInfo,
     airdrop_id: u64,
-    airdrop: BearerAirdrop,
+    mut airdrop: BearerAirdrop,
 ) -> Result<Response, ContractError> {
     // validation
     if airdrop.creator != info.sender {
@@ -77,12 +77,12 @@ fn close_bearer(
     airdrop.closed_at = Some(env.block.height);
 
     // apply states
-    AIRDROPS.save(deps.storage, airdrop_id, &airdrop.wrap())?;
+    airdrops().save(deps.storage, airdrop_id, &airdrop.wrap())?;
 
     // response
     let send_msg = BankMsg::Send {
         to_address: airdrop.creator.to_string(),
-        amount: coins(redeem_amount.u128(), airdrop.denom),
+        amount: coins(redeem_amount.u128(), &airdrop.denom),
     };
 
     let attrs = vec![
