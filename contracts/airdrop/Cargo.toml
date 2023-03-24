@@ -24,7 +24,7 @@ sha2 = { version = "0.10.6", default-features = false }
 hex = "0.4.3"
 thiserror = { version = "1.0.37" }
 
-osmosis-std = "0.13.1"
+osmosis-std = "0.15.0"
 ibcx-utils = { path = "../../packages/utils" }
 ibcx-interface = { path = "../../packages/interface" }
 
