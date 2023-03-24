@@ -1,31 +1,41 @@
 use crate::error::ContractError;
+use bech32::ToBase32;
 use cosmwasm_std::{Addr, Binary, Uint128};
-use sha2::digest::generic_array::GenericArray;
+use ripemd::{Digest, Ripemd160};
+use sha2::Sha256;
 
-pub fn sha256_digest(bz: impl AsRef<[u8]>) -> Result<[u8], ContractError> {
-    sha2::Sha256::digest(bz)
+pub fn sha256_digest(bz: impl AsRef<[u8]>) -> Result<[u8; 32], ContractError> {
+    let mut hasher = Sha256::new();
+
+    hasher.update(bz);
+
+    hasher
+        .finalize()
         .as_slice()
         .try_into()
         .map_err(|_| ContractError::WrongLength {})
 }
 
-pub fn verify_bearer_sign(
-    hash: &str,
-    addr: &Addr,
-    amount: Uint128,
-    sign: &str,
-    pubkey: Binary,
-) -> Result<(), ContractError> {
-    let verified = deps.api.secp256k1_verify(
-        &sha256_digest(format!("{hash}/{addr}/{amount}").as_bytes())?,
-        &hex::decode(sign)?,
-        &pubkey,
-    )?;
-    if !verified {
-        return Err(ContractError::InvalidClaimSignature {});
-    }
+pub fn ripemd160_digest(bz: impl AsRef<[u8]>) -> Result<[u8; 20], ContractError> {
+    let mut hasher = Ripemd160::new();
 
-    Ok(())
+    hasher.update(bz);
+
+    hasher
+        .finalize()
+        .as_slice()
+        .try_into()
+        .map_err(|_| ContractError::WrongLength {})
+}
+
+pub fn pub_to_addr(pub_key: Binary, prefix: &str) -> Result<String, ContractError> {
+    let sha_hash = sha256_digest(pub_key)?;
+    let rip_hash = ripemd160_digest(sha_hash)?;
+
+    let addr = bech32::encode(prefix, rip_hash.to_base32(), bech32::Variant::Bech32)
+        .map_err(|_| ContractError::InvalidPubKey {})?;
+
+    Ok(addr)
 }
 
 // verify merkle proof (from https://github.com/cosmwasm/cw-tokens/blob/master/contracts/cw20-merkle-airdrop/src/contract.rs)
@@ -44,6 +54,7 @@ pub fn verify_merkle_proof(
         hex::decode_to_slice(p, &mut proof_buf)?;
         let mut hashes = [hash, proof_buf];
         hashes.sort_unstable();
+
         sha256_digest(hashes.concat())
     })?;
 
