@@ -1,5 +1,6 @@
+use crate::error::ContractError;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{Addr, Storage, Uint128};
 use cw_storage_plus::{Item, Map};
 
 #[cw_serde]
@@ -30,6 +31,57 @@ pub enum Airdrop {
     },
 }
 
+impl Airdrop {
+    pub fn type_str(&self) -> &str {
+        match self {
+            Airdrop::Open { .. } => "open",
+            Airdrop::Bearer { .. } => "bearer",
+        }
+    }
+
+    pub fn creator(&self) -> &Addr {
+        match self {
+            Airdrop::Open { creator, .. } => creator,
+            Airdrop::Bearer { creator, .. } => creator,
+        }
+    }
+
+    pub fn denom(&self) -> &str {
+        match self {
+            Airdrop::Open { denom, .. } => denom,
+            Airdrop::Bearer { denom, .. } => denom,
+        }
+    }
+
+    pub fn total_amount(&self) -> &Uint128 {
+        match self {
+            Airdrop::Open { total_amount, .. } => total_amount,
+            Airdrop::Bearer { total_amount, .. } => total_amount,
+        }
+    }
+
+    pub fn total_claimed(&self) -> &Uint128 {
+        match self {
+            Airdrop::Open { total_claimed, .. } => total_claimed,
+            Airdrop::Bearer { total_claimed, .. } => total_claimed,
+        }
+    }
+
+    pub fn merkle_root(&self) -> &str {
+        match self {
+            Airdrop::Open { merkle_root, .. } => merkle_root,
+            Airdrop::Bearer { merkle_root, .. } => merkle_root,
+        }
+    }
+
+    pub fn label(&self) -> &Option<String> {
+        match self {
+            Airdrop::Open { label, .. } => label,
+            Airdrop::Bearer { label, .. } => label,
+        }
+    }
+}
+
 pub const LATEST_AIRDROP_KEY: &str = "latest_airdrop";
 pub const LATEST_AIRDROP_ID: Item<u64> = Item::new(LATEST_AIRDROP_KEY);
 
@@ -41,3 +93,21 @@ pub const LABELS: Map<&str, u64> = Map::new(LABELS_PREFIX);
 
 pub const CLAIM_LOGS_PREFIX: &str = "claim_logs";
 pub const CLAIM_LOGS: Map<(u64, &str), Uint128> = Map::new(CLAIM_LOGS_PREFIX);
+
+pub fn save_label(
+    storage: &mut dyn Storage,
+    id: u64,
+    label: &Option<String>,
+) -> Result<(), ContractError> {
+    if let Some(label) = label {
+        if LABELS.has(storage, &label) {
+            return Err(ContractError::KeyAlreadyExists {
+                typ: "label".to_string(),
+                key: label.clone(),
+            });
+        }
+        LABELS.save(storage, &label, &id)?;
+    }
+
+    Ok(())
+}
