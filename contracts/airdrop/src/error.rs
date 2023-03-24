@@ -30,8 +30,8 @@ pub enum ContractError {
     #[error("Key already exists. {key:?}")]
     KeyAlreadyExists { typ: String, key: String },
 
-    #[error("Already claimed. id:{airdrop_id:?}, claimer:{claimer:?}")]
-    AlreadyClaimed { airdrop_id: u64, claimer: Addr },
+    #[error("Already claimed. id:{airdrop_id:?}, claim_key:{claim_key:?}")]
+    AlreadyClaimed { airdrop_id: u64, claim_key: String },
 
     #[error("Wrong length")]
     WrongLength {},
@@ -47,4 +47,10 @@ pub enum ContractError {
 
     #[error("Unabled to claim more than supplied funds.")]
     InsufficientAirdropFunds {},
+
+    #[error("Invalid airdrop type. expected:{expected:?}, actual:{actual:?}")]
+    InvalidAirdropType { expected: String, actual: String },
+
+    #[error("Invalid claim signature")]
+    InvalidClaimSignature {},
 }

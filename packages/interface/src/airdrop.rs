@@ -57,7 +57,7 @@ pub enum ClaimPayload {
     Open {
         airdrop: AirdropId,        // airdrop specifier
         amount: Uint128,           // claim amount
-        account: Option<String>,   // address who claims
+        account: Option<String>,   // address who claims - default is tx.sender
         merkle_proof: Vec<String>, // merkle proof of airdrop
     },
 
@@ -65,6 +65,7 @@ pub enum ClaimPayload {
     Bearer {
         airdrop: AirdropId,        // airdrop specifier
         amount: Uint128,           // claim amount
+        account: Option<String>,   // address who claims - default is tx.sender
         claim_hash: String,        // salt hash to prevent double spending
         claim_sign: String,        // signature of signer
         merkle_proof: Vec<String>, // merkle proof of airdrop
@@ -75,10 +76,7 @@ pub enum ClaimPayload {
 pub enum ExecuteMsg {
     Register(RegisterPayload),
     Fund(AirdropId),
-
     Claim(ClaimPayload),
-    MultiClaim(Vec<ClaimPayload>),
-
     Close(AirdropId),
 }
 

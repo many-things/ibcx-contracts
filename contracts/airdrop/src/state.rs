@@ -1,6 +1,6 @@
 use crate::error::ContractError;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, StdResult, Storage, Uint128};
+use cosmwasm_std::{Addr, Binary, StdResult, Storage, Uint128};
 use cw_storage_plus::{Item, Map};
 use ibcx_interface::airdrop::AirdropId;
 
@@ -21,6 +21,7 @@ pub enum Airdrop {
     Bearer {
         creator: Addr,
         signer: Addr,
+        signer_pub: Binary,
 
         denom: String,
         total_amount: Uint128,
@@ -126,6 +127,21 @@ pub fn save_label(
             });
         }
         LABELS.save(storage, &label, &id)?;
+    }
+
+    Ok(())
+}
+
+pub fn assert_not_claimed(
+    storage: &dyn Storage,
+    id: u64,
+    claim_key: &str,
+) -> Result<(), ContractError> {
+    if CLAIM_LOGS.may_load(storage, (id, claim_key))?.is_some() {
+        return Err(ContractError::AlreadyClaimed {
+            airdrop_id: id,
+            claim_key: claim_key.to_string(),
+        });
     }
 
     Ok(())

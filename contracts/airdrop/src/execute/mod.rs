@@ -3,10 +3,10 @@ mod close;
 mod fund;
 mod register;
 
-pub use crate::execute::claim::{claim, claim_many};
-pub use crate::execute::close::close;
-pub use crate::execute::fund::fund;
-pub use crate::execute::register::register;
+pub use claim::claim;
+pub use close::close;
+pub use fund::fund;
+pub use register::register;
 
 #[cfg(test)]
 mod test;

@@ -38,7 +38,6 @@ pub fn execute(
         Fund(airdrop) => execute::fund(deps, info, airdrop),
 
         Claim(payload) => execute::claim(deps, info, payload),
-        MultiClaim(payload) => execute::claim_many(deps, info, payload),
 
         Close(airdrop) => execute::close(deps, info, airdrop),
     }
