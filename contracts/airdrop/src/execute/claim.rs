@@ -1,10 +1,7 @@
 use crate::error::ContractError;
-use crate::state::{assert_not_claimed, load_airdrop, Airdrop, AIRDROPS, CLAIM_LOGS, LABELS};
-use crate::verify::{sha256_digest, verify_bearer_sign, verify_merkle_proof};
-use crate::verify_merkle_proof;
-use cosmwasm_std::{
-    attr, coins, Addr, Api, BankMsg, CosmosMsg, DepsMut, MessageInfo, Response, Storage, Uint128,
-};
+use crate::state::{assert_not_claimed, load_airdrop, AIRDROPS, CLAIM_LOGS};
+use crate::verify::{sha256_digest, verify_merkle_proof};
+use cosmwasm_std::{attr, coins, Addr, BankMsg, DepsMut, MessageInfo, Response, Uint128};
 use ibcx_interface::airdrop::{AirdropId, ClaimPayload};
 
 pub fn claim(
@@ -49,19 +46,6 @@ pub fn claim(
     }
 }
 
-fn assert_airdrop_type(airdrop: &Airdrop, expected: &str) -> Result<(), ContractError> {
-    let airdrop_type = airdrop.type_str();
-
-    if airdrop_type != expected {
-        return Err(ContractError::InvalidAirdropType {
-            expected: expected.to_string(),
-            actual: airdrop_type.to_string(),
-        });
-    }
-
-    Ok(())
-}
-
 fn claim_open(
     deps: &DepsMut,
     sender: &Addr,
@@ -71,21 +55,17 @@ fn claim_open(
     merkle_proof: Vec<String>,
 ) -> Result<Response, ContractError> {
     let (airdrop_id, mut airdrop) = load_airdrop(deps.storage, id)?;
-    if airdrop.closed() {
+
+    // pre-validations
+    let airdrop = airdrop.unwrap_open()?;
+    if airdrop.closed_at.is_some() {
         return Err(ContractError::AirdropClosed {});
     }
 
-    // pre-validations
-    assert_airdrop_type(&airdrop, "open")?;
     assert_not_claimed(deps.storage, airdrop_id, claimer.as_str())?;
 
     // verify claimer
-    verify_merkle_proof(
-        airdrop.merkle_root(),
-        merkle_proof,
-        claimer.as_str(),
-        amount,
-    )?;
+    verify_merkle_proof(&airdrop.merkle_root, merkle_proof, claimer.as_str(), amount)?;
 
     // claim
     airdrop.total_claimed = airdrop.total_claimed.checked_add(amount)?;
@@ -94,19 +74,19 @@ fn claim_open(
     }
 
     // apply to state
-    AIRDROPS.save(deps.storage, airdrop_id, &airdrop)?;
+    AIRDROPS.save(deps.storage, airdrop_id, &airdrop.wrap())?;
     CLAIM_LOGS.save(deps.storage, (airdrop_id, claimer.as_str()), &amount)?;
 
     // response
     let claim_msg = BankMsg::Send {
         to_address: claimer.to_string(),
-        amount: coins(amount.u128(), airdrop.denom()),
+        amount: coins(amount.u128(), airdrop.denom),
     };
 
     let attrs = vec![
         attr("action", "claim"),
         attr("executor", sender),
-        attr("airdrop_type", airdrop.type_str()),
+        attr("airdrop_type", airdrop.wrap().type_str()),
         attr("airdrop_id", airdrop_id.to_string()),
         attr("claimer", claimer),
         attr("amount", amount),
@@ -125,27 +105,27 @@ fn claim_bearer(
     claim_sign: String,
     merkle_proof: Vec<String>,
 ) -> Result<Response, ContractError> {
-    let (airdrop_id, mut airdrop) = load_airdrop(storage, id)?;
-    if airdrop.closed() {
-        return Err(ContractError::AirdropClosed {});
-    }
+    let (airdrop_id, mut airdrop) = load_airdrop(deps.storage, id)?;
 
     // pre-validations
-    assert_airdrop_type(&airdrop, "bearer")?;
-    assert_not_claimed(storage, airdrop_id, claimer.as_str())?;
-
-    // get address of signer and its public key
-    let (signer, signer_pub) = match airdrop {
-        Airdrop::Bearer {
-            signer, signer_pub, ..
-        } => (signer, signer_pub),
-        _ => unreachable!("must pass assert_airdrop_type"),
-    };
+    let airdrop = airdrop.unwrap_bearer()?;
+    if airdrop.closed_at.is_some() {
+        return Err(ContractError::AirdropClosed {});
+    }
+    assert_not_claimed(deps.storage, airdrop_id, claimer.as_str())?;
 
     // verifications
-    verify_merkle_proof(airdrop.merkle_root(), merkle_proof, &claim_hash, amount)?;
+    verify_merkle_proof(&airdrop.merkle_root, merkle_proof, &claim_hash, amount)?;
 
-    verify_bearer_sign(&claim_hash, &claimer, amount, &claim_sign, signer_pub)?;
+    let digest_str = format!("{claim_hash}/{claimer}/{amount}");
+    let digest = sha256_digest(digest_str.as_bytes())?;
+
+    let ok = deps
+        .api
+        .secp256k1_verify(&digest, &hex::decode(claim_sign)?, &airdrop.signer_pub)?;
+    if !ok {
+        return Err(ContractError::invalid_signature("claim_bearer"));
+    }
 
     // claim
     airdrop.total_claimed = airdrop.total_claimed.checked_add(amount)?;
@@ -154,21 +134,21 @@ fn claim_bearer(
     }
 
     // apply to state
-    AIRDROPS.save(deps.storage, airdrop_id, &airdrop)?;
+    AIRDROPS.save(deps.storage, airdrop_id, &airdrop.wrap())?;
     CLAIM_LOGS.save(deps.storage, (airdrop_id, &claim_hash), &amount)?;
 
     // response
     let claim_msg = BankMsg::Send {
         to_address: claimer.to_string(),
-        amount: coins(amount.u128(), airdrop.denom()),
+        amount: coins(amount.u128(), airdrop.denom),
     };
 
     let attrs = vec![
         attr("action", "claim"),
         attr("executor", sender),
-        attr("airdrop_type", airdrop.type_str()),
+        attr("airdrop_type", airdrop.wrap().type_str()),
         attr("airdrop_id", airdrop_id.to_string()),
-        attr("signer", signer.to_string()),
+        attr("signer", airdrop.signer),
         attr("claimer", claimer),
         attr("amount", amount),
     ];
