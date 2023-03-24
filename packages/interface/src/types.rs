@@ -3,10 +3,9 @@ use std::str::FromStr;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Order, StdResult, Uint128};
 use cosmwasm_std::{CosmosMsg, QuerierWrapper};
-use osmosis_std::types::osmosis::gamm::v1beta1::{
-    MsgSwapExactAmountIn, MsgSwapExactAmountOut, QuerySwapExactAmountInRequest,
-    QuerySwapExactAmountInResponse, QuerySwapExactAmountOutRequest,
-    QuerySwapExactAmountOutResponse, SwapAmountInRoute, SwapAmountOutRoute,
+use osmosis_std::types::osmosis::gamm::v1beta1::{MsgSwapExactAmountIn, MsgSwapExactAmountOut};
+use osmosis_std::types::osmosis::poolmanager::v1beta1::{
+    PoolmanagerQuerier, SwapAmountInRoute, SwapAmountOutRoute,
 };
 
 pub type Units = Vec<(String, Decimal)>;
@@ -51,14 +50,13 @@ impl SwapRoutes {
         sender: &Addr,
         token_in: Coin,
     ) -> StdResult<Uint128> {
-        let resp: QuerySwapExactAmountInResponse = querier.query(
-            &QuerySwapExactAmountInRequest {
-                sender: sender.to_string(),
-                pool_id: self.0.first().unwrap().pool_id,
-                token_in: token_in.to_string(),
-                routes: self.clone().into(),
-            }
-            .into(),
+        let client = PoolmanagerQuerier::new(querier);
+
+        let resp = client.estimate_swap_exact_amount_in(
+            sender.to_string(),
+            self.0.first().unwrap().pool_id,
+            token_in.to_string(),
+            self.clone().into(),
         )?;
 
         Uint128::from_str(&resp.token_out_amount)
@@ -70,14 +68,13 @@ impl SwapRoutes {
         sender: &Addr,
         token_out: Coin,
     ) -> StdResult<Uint128> {
-        let resp: QuerySwapExactAmountOutResponse = querier.query(
-            &QuerySwapExactAmountOutRequest {
-                sender: sender.to_string(),
-                pool_id: self.0.first().unwrap().pool_id,
-                routes: self.clone().into(),
-                token_out: token_out.to_string(),
-            }
-            .into(),
+        let client = PoolmanagerQuerier::new(querier);
+
+        let resp = client.estimate_swap_exact_amount_out(
+            sender.to_string(),
+            self.0.first().unwrap().pool_id,
+            self.clone().into(),
+            token_out.to_string(),
         )?;
 
         Uint128::from_str(&resp.token_in_amount)
