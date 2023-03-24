@@ -46,14 +46,11 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, Cont
 
     match msg {
         GetAirdrop(airdrop) => query::get_airdrop(deps, airdrop),
-        ListAirdrops {
-            start_after,
-            limit,
-            order,
-        } => query::list_airdrops(deps, start_after, limit, order),
+        ListAirdrops(option) => query::list_airdrops(deps, option),
         LatestAirdropId {} => query::latest_airdrop_id(deps),
 
         GetClaim { airdrop, claim_key } => query::get_claim(deps, airdrop, claim_key),
+        VerifyClaim(payload) => query::verify_claim(deps, payload),
         ListClaims {
             airdrop,
             start_after,
@@ -61,7 +58,12 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, Cont
             order,
         } => query::list_claims(deps, airdrop, start_after, limit, order),
 
-        ValidateClaim(payload) => query::validate_claim(deps, payload),
+        GetLabel(label) => query::get_label(deps, label),
+        ListLabels {
+            start_after,
+            limit,
+            order,
+        } => query::list_labels(deps, start_after, limit, order),
     }
 }
 
@@ -80,8 +82,6 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
 mod test {
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 
-    use crate::test::SENDER_OWNER;
-
     use super::*;
 
     #[test]
@@ -91,7 +91,7 @@ mod test {
         instantiate(
             deps.as_mut(),
             mock_env(),
-            mock_info(SENDER_OWNER, &[]),
+            mock_info("owner", &[]),
             InstantiateMsg {},
         )
         .unwrap();

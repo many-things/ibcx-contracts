@@ -23,9 +23,18 @@ impl AirdropId {
 }
 
 #[cw_serde]
-pub enum AirdropIdOptional {
-    Id(Option<u64>),
-    Label(Option<String>),
+pub enum AirdropType {
+    Open,
+    Bearer,
+}
+
+impl ToString for AirdropType {
+    fn to_string(&self) -> String {
+        match self {
+            AirdropType::Open => "open".to_string(),
+            AirdropType::Bearer => "bearer".to_string(),
+        }
+    }
 }
 
 #[cw_serde]
@@ -82,17 +91,43 @@ pub enum ExecuteMsg {
 }
 
 #[cw_serde]
+pub enum ListAirdropsQueryOptions {
+    ByID {
+        start_after: Option<u64>,
+        limit: Option<u32>,
+        order: Option<RangeOrder>,
+    },
+
+    ByType {
+        #[serde(rename = "type")]
+        typ: AirdropType,
+        start_after: Option<u64>,
+        limit: Option<u32>,
+        order: Option<RangeOrder>,
+    },
+
+    ByLabel {
+        start_after: Option<String>,
+        limit: Option<u32>,
+        order: Option<RangeOrder>,
+    },
+
+    ByCreator {
+        creator: String,
+        start_after: Option<u64>,
+        limit: Option<u32>,
+        order: Option<RangeOrder>,
+    },
+}
+
+#[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     #[returns(GetAirdropResponse)]
     GetAirdrop(AirdropId),
 
     #[returns(ListAirdropsResponse)]
-    ListAirdrops {
-        start_after: AirdropIdOptional,
-        limit: Option<u32>,
-        order: Option<RangeOrder>,
-    },
+    ListAirdrops(ListAirdropsQueryOptions),
 
     #[returns(LatestAirdropResponse)]
     LatestAirdropId {},
@@ -103,6 +138,9 @@ pub enum QueryMsg {
         claim_key: String,
     },
 
+    #[returns(VerifyClaimResponse)]
+    VerifyClaim(ClaimPayload),
+
     #[returns(ListClaimsResponse)]
     ListClaims {
         airdrop: AirdropId,
@@ -111,8 +149,15 @@ pub enum QueryMsg {
         order: Option<RangeOrder>,
     },
 
-    #[returns(ValidateClaimResponse)]
-    ValidateClaim(ClaimPayload),
+    #[returns(GetLabelResponse)]
+    GetLabel(String),
+
+    #[returns(ListLabelsResponse)]
+    ListLabels {
+        start_after: Option<String>,
+        limit: Option<u32>,
+        order: Option<RangeOrder>,
+    },
 }
 
 #[cw_serde]
@@ -127,13 +172,15 @@ pub enum GetAirdropResponse {
         merkle_root: String,
 
         label: Option<String>,
-        closed: bool,
+        created_at: u64,
+        closed_at: Option<u64>,
     },
 
     Bearer {
         id: u64,
         creator: String,
         signer: String,
+        signer_pub: String,
 
         denom: String,
         total_amount: Uint128,
@@ -141,7 +188,8 @@ pub enum GetAirdropResponse {
         merkle_root: String,
 
         label: Option<String>,
-        closed: bool,
+        created_at: u64,
+        closed_at: Option<u64>,
     },
 }
 
@@ -159,10 +207,36 @@ pub struct GetClaimResponse {
 }
 
 #[cw_serde]
+#[derive(Default)]
+pub struct VerifyClaimResponse {
+    pub valid: bool,
+    pub reason: Option<String>,
+}
+
+impl VerifyClaimResponse {
+    pub fn fail(mut self, reason: impl ToString) -> Self {
+        self.reason = Some(reason.to_string());
+        self
+    }
+
+    pub fn ok(mut self) -> Self {
+        self.valid = true;
+        self
+    }
+}
+
+#[cw_serde]
 pub struct ListClaimsResponse(pub Vec<GetClaimResponse>);
 
 #[cw_serde]
-pub struct ValidateClaimResponse(pub bool);
+pub struct GetLabelResponse {
+    pub creator: String,
+    pub label: String,
+    pub airdrop_id: u64,
+}
+
+#[cw_serde]
+pub struct ListLabelsResponse(pub Vec<GetLabelResponse>);
 
 #[cw_serde]
 pub struct MigrateMsg {

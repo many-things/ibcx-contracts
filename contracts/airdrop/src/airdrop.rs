@@ -18,8 +18,8 @@ pub struct OpenAirdrop {
 }
 
 impl OpenAirdrop {
-    pub fn wrap(self) -> Airdrop {
-        Airdrop::Open(self)
+    pub fn wrap(&self) -> Airdrop {
+        Airdrop::Open(self.clone())
     }
 }
 
@@ -40,8 +40,8 @@ pub struct BearerAirdrop {
 }
 
 impl BearerAirdrop {
-    pub fn wrap(self) -> Airdrop {
-        Airdrop::Bearer(self)
+    pub fn wrap(&self) -> Airdrop {
+        Airdrop::Bearer(self.clone())
     }
 }
 

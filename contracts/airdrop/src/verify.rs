@@ -1,6 +1,6 @@
 use crate::error::ContractError;
 use bech32::ToBase32;
-use cosmwasm_std::{Addr, Binary, Uint128};
+use cosmwasm_std::{Binary, Uint128};
 use ripemd::{Digest, Ripemd160};
 use sha2::Sha256;
 

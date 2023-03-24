@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, StdError};
+use cosmwasm_std::StdError;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -59,6 +59,9 @@ pub enum ContractError {
 
     #[error("Invalid public key")]
     InvalidPubKey {},
+
+    #[error("Invalid label {0}")]
+    InvalidLabel(String),
 }
 
 impl ContractError {
@@ -73,5 +76,9 @@ impl ContractError {
         ContractError::InvalidSignature {
             action: action.to_string(),
         }
+    }
+
+    pub fn invalid_label(label: impl ToString) -> Self {
+        ContractError::InvalidLabel(label.to_string())
     }
 }
