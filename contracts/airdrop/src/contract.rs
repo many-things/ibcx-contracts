@@ -49,26 +49,23 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, Cont
     use QueryMsg::*;
 
     match msg {
-        GetAirdrop { id } => query::get_airdrop(deps, id),
+        GetAirdrop(airdrop) => query::get_airdrop(deps, airdrop),
         ListAirdrops {
             start_after,
             limit,
             order,
         } => query::list_airdrops(deps, start_after, limit, order),
         LatestAirdropId {} => query::latest_airdrop_id(deps),
-        GetClaim { id, claim_proof } => query::get_claim(deps, id, claim_proof),
+
+        GetClaim { airdrop, claim_key } => query::get_claim(deps, airdrop, claim_key),
         ListClaims {
-            id,
+            airdrop,
             start_after,
             limit,
             order,
-        } => query::list_claims(deps, id, start_after, limit, order),
-        CheckQualification {
-            id,
-            amount,
-            claim_proof,
-            merkle_proof,
-        } => query::check_qualification(deps, id, amount, claim_proof, merkle_proof),
+        } => query::list_claims(deps, airdrop, start_after, limit, order),
+
+        ValidateClaim(payload) => query::validate_claim(deps, payload),
     }
 }
 
