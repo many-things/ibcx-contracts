@@ -1,4 +1,4 @@
-use cosmwasm_std::{Deps, QueryResponse, StdResult};
+use cosmwasm_std::{Deps, StdResult};
 use ibcx_interface::{
     airdrop::{
         AirdropId, GetAirdropResponse, LatestAirdropResponse, ListAirdropsQueryOptions,
@@ -11,61 +11,28 @@ use crate::{
     airdrop::Airdrop,
     error::ContractError,
     state::{airdrops, load_airdrop, LABELS, LATEST_AIRDROP_ID},
-    to_binary,
 };
 
-fn to_resp((id, airdrop): (u64, Airdrop)) -> GetAirdropResponse {
-    match airdrop {
-        Airdrop::Open(inner) => GetAirdropResponse::Open {
-            id,
-            creator: inner.creator.to_string(),
-            denom: inner.denom,
-            total_amount: inner.total_amount,
-            total_claimed: inner.total_claimed,
-            merkle_root: inner.merkle_root,
-            label: inner.label,
-            created_at: inner.created_at,
-            closed_at: inner.closed_at,
-        },
-        Airdrop::Bearer(inner) => GetAirdropResponse::Bearer {
-            id,
-            creator: inner.creator.to_string(),
-            signer: inner.signer.to_string(),
-            signer_pub: hex::encode(inner.signer_pub),
-
-            denom: inner.denom,
-            total_amount: inner.total_amount,
-            total_claimed: inner.total_claimed,
-            merkle_root: inner.merkle_root,
-            label: inner.label,
-            created_at: inner.created_at,
-            closed_at: inner.closed_at,
-        },
-    }
+pub fn get_airdrop(deps: Deps, id: AirdropId) -> Result<GetAirdropResponse, ContractError> {
+    Ok(Airdrop::to_resp(load_airdrop(deps.storage, id)?))
 }
 
-pub fn get_airdrop(deps: Deps, id: AirdropId) -> Result<QueryResponse, ContractError> {
-    to_binary(&to_resp(load_airdrop(deps.storage, id)?))
-}
-
-pub fn latest_airdrop_id(deps: Deps) -> Result<QueryResponse, ContractError> {
-    to_binary(&LatestAirdropResponse(
-        LATEST_AIRDROP_ID.load(deps.storage)?,
-    ))
+pub fn latest_airdrop_id(deps: Deps) -> Result<LatestAirdropResponse, ContractError> {
+    Ok(LatestAirdropResponse(LATEST_AIRDROP_ID.load(deps.storage)?))
 }
 
 pub fn list_airdrops(
     deps: Deps,
     option: ListAirdropsQueryOptions,
-) -> Result<QueryResponse, ContractError> {
+) -> Result<ListAirdropsResponse, ContractError> {
     use ListAirdropsQueryOptions::*;
 
-    let airdrop_map_conv = |res: StdResult<(u64, Airdrop)>| res.map(to_resp);
+    let airdrop_map_conv = |res: StdResult<(u64, Airdrop)>| res.map(Airdrop::to_resp);
     let label_map_conv = |res: StdResult<(String, u64)>| -> StdResult<_> {
         let (_, id) = res?;
         let airdrop = airdrops().load(deps.storage, id)?;
 
-        Ok(to_resp((id, airdrop)))
+        Ok(Airdrop::to_resp((id, airdrop)))
     };
 
     match option {
@@ -82,7 +49,7 @@ pub fn list_airdrops(
                 .map(airdrop_map_conv)
                 .collect::<StdResult<_>>()?;
 
-            to_binary(&ListAirdropsResponse(query_res))
+            Ok(ListAirdropsResponse(query_res))
         }
 
         ByType {
@@ -102,7 +69,7 @@ pub fn list_airdrops(
                 .map(airdrop_map_conv)
                 .collect::<StdResult<_>>()?;
 
-            to_binary(&ListAirdropsResponse(query_res))
+            Ok(ListAirdropsResponse(query_res))
         }
 
         ByLabel {
@@ -119,7 +86,7 @@ pub fn list_airdrops(
                 .map(label_map_conv)
                 .collect::<StdResult<_>>()?;
 
-            to_binary(&ListAirdropsResponse(query_res))
+            Ok(ListAirdropsResponse(query_res))
         }
 
         ByCreator {
@@ -139,7 +106,7 @@ pub fn list_airdrops(
                 .map(airdrop_map_conv)
                 .collect::<StdResult<_>>()?;
 
-            to_binary(&ListAirdropsResponse(query_res))
+            Ok(ListAirdropsResponse(query_res))
         }
     }
 }

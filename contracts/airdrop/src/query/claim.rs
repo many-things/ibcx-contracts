@@ -1,4 +1,4 @@
-use cosmwasm_std::{Deps, Order, QueryResponse, StdResult};
+use cosmwasm_std::{Deps, Order, StdResult};
 use cw_storage_plus::Bound;
 use ibcx_interface::{
     airdrop::{AirdropId, ClaimPayload, GetClaimResponse, ListClaimsResponse, VerifyClaimResponse},
@@ -10,7 +10,6 @@ use ibcx_interface::{
 use crate::{
     error::ContractError,
     state::{load_airdrop, CLAIM_LOGS},
-    to_binary,
     verify::{sha256_digest, verify_merkle_proof},
 };
 
@@ -18,12 +17,12 @@ pub fn get_claim(
     deps: Deps,
     id: AirdropId,
     claim_key: String,
-) -> Result<QueryResponse, ContractError> {
+) -> Result<GetClaimResponse, ContractError> {
     let (airdrop_id, _) = load_airdrop(deps.storage, id)?;
 
     let claim = CLAIM_LOGS.load(deps.storage, (airdrop_id, &claim_key))?;
 
-    to_binary(&GetClaimResponse {
+    Ok(GetClaimResponse {
         id: airdrop_id,
         amount: claim,
         claim_key,
@@ -36,7 +35,7 @@ pub fn list_claims(
     start_after: Option<String>,
     limit: Option<u32>,
     order: Option<RangeOrder>,
-) -> Result<QueryResponse, ContractError> {
+) -> Result<ListClaimsResponse, ContractError> {
     let (airdrop_id, _) = load_airdrop(deps.storage, id)?;
 
     let start = start_after.as_deref();
@@ -62,10 +61,13 @@ pub fn list_claims(
         })
         .collect::<StdResult<_>>()?;
 
-    to_binary(&ListClaimsResponse(resps))
+    Ok(ListClaimsResponse(resps))
 }
 
-pub fn verify_claim(deps: Deps, payload: ClaimPayload) -> Result<QueryResponse, ContractError> {
+pub fn verify_claim(
+    deps: Deps,
+    payload: ClaimPayload,
+) -> Result<VerifyClaimResponse, ContractError> {
     let resp = VerifyClaimResponse::default();
 
     match payload {
@@ -79,13 +81,13 @@ pub fn verify_claim(deps: Deps, payload: ClaimPayload) -> Result<QueryResponse, 
 
             let airdrop = airdrop.unwrap_open()?;
             if airdrop.closed_at.is_some() {
-                return to_binary(&resp.fail("airdrop is closed"));
+                return Ok(resp.fail("airdrop is closed"));
             }
 
             let verify_result =
                 verify_merkle_proof(&airdrop.merkle_root, proof, &account.unwrap(), amount);
             if let Err(e) = verify_result {
-                return to_binary(&resp.fail(e));
+                return Ok(resp.fail(e));
             }
         }
 
@@ -102,13 +104,13 @@ pub fn verify_claim(deps: Deps, payload: ClaimPayload) -> Result<QueryResponse, 
 
             let airdrop = airdrop.unwrap_bearer()?;
             if airdrop.closed_at.is_some() {
-                return to_binary(&resp.fail("airdrop is closed"));
+                return Ok(resp.fail("airdrop is closed"));
             }
 
             // validate claim hash
             let verify_result = verify_merkle_proof(&airdrop.merkle_root, proof, &account, amount);
             if let Err(e) = verify_result {
-                return to_binary(&resp.fail(e));
+                return Ok(resp.fail(e));
             }
 
             // validate claimer
@@ -121,10 +123,10 @@ pub fn verify_claim(deps: Deps, payload: ClaimPayload) -> Result<QueryResponse, 
                 &airdrop.signer_pub,
             )?;
             if !verify_result {
-                return to_binary(&resp.fail("invalid claim signature"));
+                return Ok(resp.fail("invalid claim signature"));
             }
         }
     }
 
-    to_binary(&resp.ok())
+    Ok(resp.ok())
 }

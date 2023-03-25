@@ -1,20 +1,20 @@
-use cosmwasm_std::{Deps, QueryResponse, StdResult};
+use cosmwasm_std::{Deps, StdResult};
 use ibcx_interface::{
     airdrop::{GetLabelResponse, ListLabelsResponse},
     range_option,
     types::RangeOrder,
 };
 
-use crate::{error::ContractError, state::LABELS, to_binary};
+use crate::{error::ContractError, state::LABELS};
 
-pub fn get_label(deps: Deps, label: String) -> Result<QueryResponse, ContractError> {
+pub fn get_label(deps: Deps, label: String) -> Result<GetLabelResponse, ContractError> {
     let airdrop_id = LABELS.load(deps.storage, &label)?;
 
     let splitted: Vec<_> = label.split('/').collect();
     let creator = splitted[0].to_string();
     let label = splitted[1..].join("/");
 
-    to_binary(&GetLabelResponse {
+    Ok(GetLabelResponse {
         creator,
         label,
         airdrop_id,
@@ -26,7 +26,7 @@ pub fn list_labels(
     start_after: Option<String>,
     limit: Option<u32>,
     order: Option<RangeOrder>,
-) -> Result<QueryResponse, ContractError> {
+) -> Result<ListLabelsResponse, ContractError> {
     let label_map_conv = |item: StdResult<(String, u64)>| {
         let (label, airdrop_id) = item?;
 
@@ -50,5 +50,5 @@ pub fn list_labels(
         .map(label_map_conv)
         .collect::<StdResult<_>>()?;
 
-    to_binary(&ListLabelsResponse(query_resp))
+    Ok(ListLabelsResponse(query_resp))
 }

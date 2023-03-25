@@ -1,5 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Binary, Uint128};
+use ibcx_interface::airdrop::GetAirdropResponse;
 
 use crate::error::ContractError;
 
@@ -74,6 +75,36 @@ impl Airdrop {
                 "bearer",
                 self.type_str(),
             )),
+        }
+    }
+
+    pub fn to_resp((id, airdrop): (u64, Self)) -> GetAirdropResponse {
+        match airdrop {
+            Self::Open(inner) => GetAirdropResponse::Open {
+                id,
+                creator: inner.creator.to_string(),
+                denom: inner.denom,
+                total_amount: inner.total_amount,
+                total_claimed: inner.total_claimed,
+                merkle_root: inner.merkle_root,
+                label: inner.label,
+                created_at: inner.created_at,
+                closed_at: inner.closed_at,
+            },
+            Self::Bearer(inner) => GetAirdropResponse::Bearer {
+                id,
+                creator: inner.creator.to_string(),
+                signer: inner.signer.to_string(),
+                signer_pub: hex::encode(inner.signer_pub),
+
+                denom: inner.denom,
+                total_amount: inner.total_amount,
+                total_claimed: inner.total_claimed,
+                merkle_root: inner.merkle_root,
+                label: inner.label,
+                created_at: inner.created_at,
+                closed_at: inner.closed_at,
+            },
         }
     }
 }

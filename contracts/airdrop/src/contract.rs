@@ -1,3 +1,4 @@
+use cosmwasm_schema::serde::Serialize;
 use cosmwasm_std::{entry_point, Env, MessageInfo, QueryResponse};
 use cosmwasm_std::{Deps, DepsMut, Response};
 use ibcx_interface::airdrop::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
@@ -39,31 +40,38 @@ pub fn execute(
     }
 }
 
+fn to_binary<T: Serialize>(res: Result<T, ContractError>) -> Result<QueryResponse, ContractError> {
+    match res {
+        Ok(v) => Ok(cosmwasm_std::to_binary(&v)?),
+        Err(e) => Err(e),
+    }
+}
+
 #[entry_point]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, ContractError> {
     use crate::query;
     use QueryMsg::*;
 
     match msg {
-        GetAirdrop(airdrop) => query::get_airdrop(deps, airdrop),
-        ListAirdrops(option) => query::list_airdrops(deps, option),
-        LatestAirdropId {} => query::latest_airdrop_id(deps),
+        GetAirdrop(airdrop) => to_binary(query::get_airdrop(deps, airdrop)),
+        ListAirdrops(option) => to_binary(query::list_airdrops(deps, option)),
+        LatestAirdropId {} => to_binary(query::latest_airdrop_id(deps)),
 
-        GetClaim { airdrop, claim_key } => query::get_claim(deps, airdrop, claim_key),
-        VerifyClaim(payload) => query::verify_claim(deps, payload),
+        GetClaim { airdrop, claim_key } => to_binary(query::get_claim(deps, airdrop, claim_key)),
+        VerifyClaim(payload) => to_binary(query::verify_claim(deps, payload)),
         ListClaims {
             airdrop,
             start_after,
             limit,
             order,
-        } => query::list_claims(deps, airdrop, start_after, limit, order),
+        } => to_binary(query::list_claims(deps, airdrop, start_after, limit, order)),
 
-        GetLabel(label) => query::get_label(deps, label),
+        GetLabel(label) => to_binary(query::get_label(deps, label)),
         ListLabels {
             start_after,
             limit,
             order,
-        } => query::list_labels(deps, start_after, limit, order),
+        } => to_binary(query::list_labels(deps, start_after, limit, order)),
     }
 }
 

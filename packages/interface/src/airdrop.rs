@@ -71,11 +71,7 @@ pub enum RegisterPayload {
 }
 
 impl RegisterPayload {
-    pub fn open(
-        merkle_root: impl ToString,
-        denom: impl ToString,
-        label: Option<impl ToString>,
-    ) -> Self {
+    pub fn open(merkle_root: impl ToString, denom: impl ToString, label: Option<&str>) -> Self {
         Self::Open {
             merkle_root: merkle_root.to_string(),
             denom: denom.to_string(),
@@ -88,7 +84,7 @@ impl RegisterPayload {
         denom: impl ToString,
         signer_pub: impl ToString,
         signer_sig: impl ToString,
-        label: Option<impl ToString>,
+        label: Option<&str>,
     ) -> Self {
         Self::Bearer {
             merkle_root: merkle_root.to_string(),
@@ -223,6 +219,56 @@ pub enum ListAirdropsQueryOptions {
         limit: Option<u32>,
         order: Option<RangeOrder>,
     },
+}
+
+impl ListAirdropsQueryOptions {
+    pub fn by_id(start_after: Option<u64>, limit: Option<u32>, order: Option<RangeOrder>) -> Self {
+        Self::ByID {
+            start_after,
+            limit,
+            order,
+        }
+    }
+
+    pub fn by_type(
+        typ: AirdropType,
+        start_after: Option<u64>,
+        limit: Option<u32>,
+        order: Option<RangeOrder>,
+    ) -> Self {
+        Self::ByType {
+            typ,
+            start_after,
+            limit,
+            order,
+        }
+    }
+
+    pub fn by_label(
+        start_after: Option<&str>,
+        limit: Option<u32>,
+        order: Option<RangeOrder>,
+    ) -> Self {
+        Self::ByLabel {
+            start_after: start_after.map(|x| x.to_string()),
+            limit,
+            order,
+        }
+    }
+
+    pub fn by_creator(
+        creator: impl ToString,
+        start_after: Option<u64>,
+        limit: Option<u32>,
+        order: Option<RangeOrder>,
+    ) -> Self {
+        Self::ByCreator {
+            creator: creator.to_string(),
+            start_after,
+            limit,
+            order,
+        }
+    }
 }
 
 #[cw_serde]
