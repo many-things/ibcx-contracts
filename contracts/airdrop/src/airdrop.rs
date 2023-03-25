@@ -18,9 +18,9 @@ pub struct OpenAirdrop {
     pub closed_at: Option<u64>,
 }
 
-impl OpenAirdrop {
-    pub fn wrap(&self) -> Airdrop {
-        Airdrop::Open(self.clone())
+impl From<OpenAirdrop> for Airdrop {
+    fn from(val: OpenAirdrop) -> Self {
+        Airdrop::Open(val)
     }
 }
 
@@ -40,9 +40,9 @@ pub struct BearerAirdrop {
     pub closed_at: Option<u64>,
 }
 
-impl BearerAirdrop {
-    pub fn wrap(&self) -> Airdrop {
-        Airdrop::Bearer(self.clone())
+impl From<BearerAirdrop> for Airdrop {
+    fn from(val: BearerAirdrop) -> Self {
+        Airdrop::Bearer(val)
     }
 }
 
