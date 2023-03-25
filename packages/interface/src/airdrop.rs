@@ -37,6 +37,12 @@ impl ToString for AirdropType {
     }
 }
 
+impl From<AirdropType> for String {
+    fn from(val: AirdropType) -> Self {
+        val.to_string()
+    }
+}
+
 #[cw_serde]
 pub enum RegisterPayload {
     // Payload for open airdrop
