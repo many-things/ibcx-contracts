@@ -24,16 +24,16 @@ pub fn airdrops<'a>() -> IndexedMap<'a, u64, Airdrop, AirdropIndexes<'a>> {
                 Airdrop::Open(_) => "open",
                 Airdrop::Bearer(_) => "bearer",
             },
-            "airdrop",
-            "airdrop__by_type",
+            "airdrops",
+            "airdrops__by_type",
         ),
         by_creator: MultiIndex::new(
             |_, k| match k {
                 Airdrop::Open(inner) => inner.creator.clone(),
                 Airdrop::Bearer(inner) => inner.creator.clone(),
             },
-            "airdrop",
-            "airdrop__by_creator",
+            "airdrops",
+            "airdrops__by_creator",
         ),
     };
     IndexedMap::new("airdrops", indexes)
