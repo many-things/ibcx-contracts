@@ -2,8 +2,8 @@ use crate::airdrop::{BearerAirdrop, OpenAirdrop};
 use crate::error::ContractError;
 use crate::state::{airdrops, save_label, LATEST_AIRDROP_ID};
 use crate::verify::{pub_to_addr, sha256_digest};
-use cosmwasm_std::{attr, Binary, DepsMut, Env, MessageInfo, Response, Uint128};
-use ibcx_interface::airdrop::RegisterPayload;
+use cosmwasm_std::{attr, Attribute, Binary, DepsMut, Env, MessageInfo, Response, Uint128};
+use ibcx_interface::airdrop::{AirdropType, RegisterPayload};
 
 pub fn register(
     deps: DepsMut,
@@ -34,6 +34,18 @@ pub fn register(
             signer_sig,
         ),
     }
+}
+
+fn register_open_event(id: u64, airdrop: OpenAirdrop) -> Vec<Attribute> {
+    vec![
+        attr("action", "register"),
+        attr("executor", &airdrop.creator),
+        attr("id", id.to_string()),
+        attr("type", AirdropType::Open),
+        attr("merkle_root", airdrop.merkle_root),
+        attr("total_amount", airdrop.total_amount.to_string()),
+        attr("label", airdrop.label.unwrap_or_default()),
+    ]
 }
 
 fn register_open(
@@ -70,19 +82,28 @@ fn register_open(
         closed_at: None,
     };
 
+    // event attributes
+    let attrs = register_open_event(airdrop_id, airdrop.clone());
+
     // apply to state (LABELS, AIRDROP, LATEST_AIRDROP_ID)
     save_label(deps.storage, airdrop_id, &airdrop.label)?;
-    airdrops().save(deps.storage, airdrop_id, &airdrop.wrap())?;
+    airdrops().save(deps.storage, airdrop_id, &airdrop.into())?;
     LATEST_AIRDROP_ID.save(deps.storage, &(airdrop_id + 1))?;
 
-    Ok(Response::new().add_attributes(vec![
+    Ok(Response::new().add_attributes(attrs))
+}
+
+fn register_bearer_event(id: u64, airdrop: BearerAirdrop) -> Vec<Attribute> {
+    vec![
         attr("action", "register"),
         attr("executor", &airdrop.creator),
-        attr("type", airdrop.wrap().type_str()),
+        attr("id", id.to_string()),
+        attr("type", AirdropType::Bearer),
+        attr("signer", airdrop.signer),
         attr("merkle_root", airdrop.merkle_root),
         attr("total_amount", airdrop.total_amount.to_string()),
         attr("label", airdrop.label.unwrap_or_default()),
-    ]))
+    ]
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -139,6 +160,9 @@ fn register_bearer(
         created_at: env.block.height,
         closed_at: None,
     };
+
+    // event attributes
+    let attrs = register_bearer_event(airdrop_id, airdrop.clone());
 
     // apply to state (LABELS, AIRDROP, LATEST_AIRDROP_ID)
     save_label(deps.storage, airdrop_id, &airdrop.label)?;

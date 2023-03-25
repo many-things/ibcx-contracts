@@ -1,8 +1,10 @@
 use crate::error::ContractError;
 use crate::state::{airdrops, assert_not_claimed, load_airdrop, CLAIM_LOGS};
 use crate::verify::{sha256_digest, verify_merkle_proof};
-use cosmwasm_std::{attr, coins, Addr, BankMsg, DepsMut, MessageInfo, Response, Uint128};
-use ibcx_interface::airdrop::{AirdropId, ClaimPayload};
+use cosmwasm_std::{
+    attr, coins, Addr, Attribute, BankMsg, DepsMut, MessageInfo, Response, Uint128,
+};
+use ibcx_interface::airdrop::{AirdropId, AirdropType, ClaimPayload};
 
 pub fn claim(
     deps: DepsMut,
@@ -44,6 +46,23 @@ pub fn claim(
     }
 }
 
+fn claim_open_event(
+    sender: Addr,
+    typ: AirdropType,
+    id: u64,
+    claimer: Addr,
+    amount: impl Into<u128>,
+) -> Vec<Attribute> {
+    vec![
+        attr("action", "claim"),
+        attr("executor", sender),
+        attr("airdrop_type", typ),
+        attr("airdrop_id", id.to_string()),
+        attr("claimer", claimer),
+        attr("amount", amount.into().to_string()),
+    ]
+}
+
 fn claim_open(
     deps: DepsMut,
     sender: Addr,
@@ -71,26 +90,44 @@ fn claim_open(
         return Err(ContractError::InsufficientAirdropFunds {});
     }
 
-    // apply to state
-    airdrops().save(deps.storage, airdrop_id, &airdrop.wrap())?;
-    CLAIM_LOGS.save(deps.storage, (airdrop_id, claimer.as_str()), &amount)?;
-
     // response
     let claim_msg = BankMsg::Send {
         to_address: claimer.to_string(),
         amount: coins(amount.u128(), &airdrop.denom),
     };
 
-    let attrs = vec![
-        attr("action", "claim"),
-        attr("executor", sender),
-        attr("airdrop_type", airdrop.wrap().type_str()),
-        attr("airdrop_id", airdrop_id.to_string()),
-        attr("claimer", claimer),
-        attr("amount", amount),
-    ];
+    let attrs = claim_open_event(
+        sender,
+        AirdropType::Open,
+        airdrop_id,
+        claimer.clone(),
+        amount,
+    );
+
+    // apply to state
+    airdrops().save(deps.storage, airdrop_id, &airdrop.into())?;
+    CLAIM_LOGS.save(deps.storage, (airdrop_id, claimer.as_str()), &amount)?;
 
     Ok(Response::new().add_message(claim_msg).add_attributes(attrs))
+}
+
+fn claim_bearer_event(
+    sender: Addr,
+    typ: AirdropType,
+    id: u64,
+    signer: Addr,
+    claimer: Addr,
+    amount: impl Into<u128>,
+) -> Vec<Attribute> {
+    vec![
+        attr("action", "claim"),
+        attr("executor", sender),
+        attr("airdrop_type", typ),
+        attr("airdrop_id", id.to_string()),
+        attr("signer", signer),
+        attr("claimer", claimer),
+        attr("amount", amount.into().to_string()),
+    ]
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -132,25 +169,24 @@ fn claim_bearer(
         return Err(ContractError::InsufficientAirdropFunds {});
     }
 
-    // apply to state
-    airdrops().save(deps.storage, airdrop_id, &airdrop.wrap())?;
-    CLAIM_LOGS.save(deps.storage, (airdrop_id, &claim_hash), &amount)?;
-
     // response
     let claim_msg = BankMsg::Send {
         to_address: claimer.to_string(),
         amount: coins(amount.u128(), &airdrop.denom),
     };
 
-    let attrs = vec![
-        attr("action", "claim"),
-        attr("executor", sender),
-        attr("airdrop_type", airdrop.wrap().type_str()),
-        attr("airdrop_id", airdrop_id.to_string()),
-        attr("signer", airdrop.signer),
-        attr("claimer", claimer),
-        attr("amount", amount),
-    ];
+    let attrs = claim_bearer_event(
+        sender,
+        AirdropType::Bearer,
+        airdrop_id,
+        airdrop.signer.clone(),
+        claimer,
+        amount,
+    );
+
+    // apply to state
+    airdrops().save(deps.storage, airdrop_id, &airdrop.into())?;
+    CLAIM_LOGS.save(deps.storage, (airdrop_id, &claim_hash), &amount)?;
 
     Ok(Response::new().add_message(claim_msg).add_attributes(attrs))
 }
