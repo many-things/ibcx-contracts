@@ -1,4 +1,7 @@
-use cosmwasm_std::{coin, coins, Addr, BankMsg, Coin, CosmosMsg, Storage, Uint128};
+use cosmwasm_std::{
+    attr, coin, coins, Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response,
+    Storage, Uint128,
+};
 use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgBurn, MsgMint};
 use std::collections::BTreeMap;
 
@@ -168,6 +171,20 @@ pub fn realize_streaming_fee(storage: &mut dyn Storage) -> Result<CosmosMsg, Con
     FEE.save(storage, &fee)?;
 
     Ok(msg)
+}
+
+pub fn realize(deps: DepsMut, _env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+    let fee = FEE.load(deps.storage)?;
+    if fee.collector != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let msg = realize_streaming_fee(deps.storage)?;
+
+    Ok(Response::new().add_message(msg).add_attributes(vec![
+        attr("method", "realize"),
+        attr("executor", info.sender),
+    ]))
 }
 
 #[cfg(test)]
