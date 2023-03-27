@@ -22,10 +22,11 @@ pub fn mint(
     receiver: Option<String>,
     refund_to: Option<String>,
 ) -> Result<Response, ContractError> {
-    PAUSED
+    let pause_info = PAUSED
         .load(deps.storage)?
-        .refresh(deps.storage, &env)?
+        .refresh(&env)?
         .assert_not_paused()?;
+    PAUSED.save(deps.storage, &pause_info)?;
 
     // validate!
     let receiver = receiver
@@ -76,10 +77,11 @@ pub fn burn(
     info: MessageInfo,
     redeem_to: Option<String>,
 ) -> Result<Response, ContractError> {
-    PAUSED
+    let pause_info = PAUSED
         .load(deps.storage)?
-        .refresh(deps.storage, &env)?
+        .refresh(&env)?
         .assert_not_paused()?;
+    PAUSED.save(deps.storage, &pause_info)?;
 
     let mut token = TOKEN.load(deps.storage)?;
     let received = cw_utils::must_pay(&info, &token.denom)?;

@@ -1,15 +1,11 @@
 use std::collections::BTreeMap;
 
-use cosmwasm_std::{coin, Coin, Decimal, Order, StdResult, Storage, Uint128};
-use cw_storage_plus::Map;
+use cosmwasm_std::{coin, Coin, Order, StdResult, Storage, Uint128};
 use ibcx_interface::{types::Units, MAX_LIMIT};
 
 use crate::error::ContractError;
 
-use super::RESERVE_DENOM;
-
-pub const UNITS_PREFIX: &str = "assets";
-pub const UNITS: Map<String, Decimal> = Map::new(UNITS_PREFIX);
+use super::{RESERVE_DENOM, UNITS};
 
 pub fn set_units(storage: &mut dyn Storage, assets: Units) -> Result<(), ContractError> {
     if assets.len() > MAX_LIMIT as usize {

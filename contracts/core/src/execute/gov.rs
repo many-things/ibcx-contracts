@@ -47,7 +47,7 @@ pub fn pause(
 ) -> Result<Response, ContractError> {
     let mut pause_info = PAUSED
         .load(deps.storage)?
-        .refresh(deps.storage, &env)?
+        .refresh(&env)?
         .assert_not_paused()?;
 
     if env.block.time.seconds() >= expires_at {
@@ -71,11 +71,7 @@ pub fn pause(
 }
 
 pub fn release(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
-    PAUSED
-        .load(deps.storage)?
-        .refresh(deps.storage, &env)?
-        .assert_paused()?;
-
+    PAUSED.load(deps.storage)?.refresh(&env)?.assert_paused()?;
     PAUSED.save(deps.storage, &Default::default())?;
 
     let resp = Response::new().add_attributes(vec![

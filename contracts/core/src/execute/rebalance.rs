@@ -489,9 +489,7 @@ mod test {
         to_binary, Addr, Storage,
     };
     use ibcx_interface::types::{SwapRoute, SwapRoutes};
-    use osmosis_std::types::osmosis::gamm::v1beta1::{
-        QuerySwapExactAmountInResponse, QuerySwapExactAmountOutResponse,
-    };
+
     use std::str::FromStr;
 
     use crate::test::default_trade_info;
@@ -695,6 +693,8 @@ mod test {
 
         mod deflate {
 
+            use osmosis_std::types::osmosis::poolmanager::v1beta1::EstimateSwapExactAmountOutResponse;
+
             use super::*;
 
             fn deflate(
@@ -764,9 +764,9 @@ mod test {
                 let mut deps = mock_dependencies();
 
                 deps.querier.stargate.register(
-                    "/osmosis.gamm.v1beta1.Query/EstimateSwapExactAmountOut",
+                    "/osmosis.poolmanager.v1beta1.Query/EstimateSwapExactAmountOut",
                     |_| {
-                        to_binary(&QuerySwapExactAmountOutResponse {
+                        to_binary(&EstimateSwapExactAmountOutResponse {
                             token_in_amount: "10000".to_string(),
                         })
                         .into()
@@ -952,10 +952,10 @@ mod test {
                 let mut deps = mock_dependencies();
 
                 deps.querier.stargate.register(
-                    "/osmosis.gamm.v1beta1.Query/EstimateSwapExactAmountOut",
+                    "/osmosis.poolmanager.v1beta1.Query/EstimateSwapExactAmountOut",
                     |_| {
-                        to_binary(&QuerySwapExactAmountOutResponse {
-                            token_in_amount: "100000".to_string(),
+                        to_binary(&EstimateSwapExactAmountOutResponse {
+                            token_in_amount: "10000".to_string(),
                         })
                         .into()
                     },
@@ -989,6 +989,8 @@ mod test {
         }
 
         mod inflate {
+
+            use osmosis_std::types::osmosis::poolmanager::v1beta1::EstimateSwapExactAmountInResponse;
 
             use super::*;
 
@@ -1052,9 +1054,9 @@ mod test {
                 let mut deps = mock_dependencies();
 
                 deps.querier.stargate.register(
-                    "/osmosis.gamm.v1beta1.Query/EstimateSwapExactAmountIn",
+                    "/osmosis.poolmanager.v1beta1.Query/EstimateSwapExactAmountIn",
                     |_| {
-                        to_binary(&QuerySwapExactAmountInResponse {
+                        to_binary(&EstimateSwapExactAmountInResponse {
                             token_out_amount: "1000".to_string(),
                         })
                         .into()
@@ -1206,9 +1208,9 @@ mod test {
                 let mut deps = mock_dependencies();
 
                 deps.querier.stargate.register(
-                    "/osmosis.gamm.v1beta1.Query/EstimateSwapExactAmountIn",
+                    "/osmosis.poolmanager.v1beta1.Query/EstimateSwapExactAmountIn",
                     |_| {
-                        to_binary(&QuerySwapExactAmountInResponse {
+                        to_binary(&EstimateSwapExactAmountInResponse {
                             token_out_amount: "1000".to_string(),
                         })
                         .into()
