@@ -66,3 +66,62 @@ pub fn verify_merkle_proof(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::verify_merkle_proof;
+
+    #[test]
+    fn test_verify_merkle_proof() {
+        verify_merkle_proof(
+            "597f35d2e2f4f5c02e31be44695da0c3e0ce03bbb212c6cfc4ef94d7d4940bb5",
+            vec![
+                "7ea10756e42edf91a6fae6fa8a1acd00751c52c5e0f9d497a7abff7813512667".to_string(),
+                "eda896591efa2cd33541930d90ea37449af60460ef8e527109ee9940238266ce".to_string(),
+                "b712f5b328047024ff46b9e105ecb71dfcb9813088a87a7e6a46731e7db62638".to_string(),
+                "eca3408c50efba13b12ec9b352e0403369ff423ee89f23d1f7ada03a90d7e84f".to_string(),
+            ],
+            "osmo1phaxpevm5wecex2jyaqty2a4v02qj7qmlmzk5a",
+            1000u128.into(),
+        )
+        .unwrap();
+
+        verify_merkle_proof(
+            "597f35d2e2f4f5c02e31be44695da0c3e0ce03bbb212c6cfc4ef94d7d4940bb5",
+            vec![
+                "7ea10756e42edf91a6fae6fa8a1acd00751c52c5e0f9d497a7abff7813512667".to_string(),
+                "eda896591efa2cd33541930d90ea37449af60460ef8e527109ee9940238266ce".to_string(),
+                "b712f5b328047024ff46b9e105ecb71dfcb9813088a87a7e6a46731e7db62638".to_string(),
+                "eca3408c50efba13b12ec9b352e0403369ff423ee89f23d1f7ada03a90d7e84f".to_string(),
+            ],
+            "osmo1phaxpevm5wecex2jyaqty2a4v02qj7qmlmzk5a",
+            10000u128.into(),
+        )
+        .unwrap_err();
+
+        verify_merkle_proof(
+            "597f35d2e2f4f5c02e31be44695da0c3e0ce03bbb212c6cfc4ef94d7d4940bb5",
+            vec![
+                "7ea10756e42edf91a6fae6fa8a1acd00751c52c5e0f9d497a7abff7813512667".to_string(),
+                "eda896591efa2cd33541930d90ea37449af60460ef8e527109ee9940238266ce".to_string(),
+                "b712f5b328047024ff46b9e105ecb71dfcb9813088a87a7e6a46731e7db62638".to_string(),
+                "eca3408c50efba13b12ec9b352e0403369ff423ee89f23d1f7ada03a90d7e84f".to_string(),
+            ],
+            "asdf",
+            10000u128.into(),
+        )
+        .unwrap_err();
+
+        verify_merkle_proof(
+            "597f35d2e2f4f5c02e31be44695da0c3e0ce03bbb212c6cfc4ef94d7d4940bb5",
+            vec![
+                "7ea10756e42edf91a6fae6fa8a1acd00751c52c5e0f9d497a7abff7813512667".to_string(),
+                "eda896591efa2cd33541930d90ea37449af60460ef8e527109ee9940238266ce".to_string(),
+                "b712f5b328047024ff46b9e105ecb71dfcb9813088a87a7e6a46731e7db62638".to_string(),
+            ],
+            "osmo1phaxpevm5wecex2jyaqty2a4v02qj7qmlmzk5a",
+            10000u128.into(),
+        )
+        .unwrap_err();
+    }
+}
