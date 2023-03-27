@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, StdError};
+use cosmwasm_std::StdError;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -24,14 +24,17 @@ pub enum ContractError {
     #[error("{0}")]
     FromHexError(#[from] hex::FromHexError),
 
+    #[error("{0}")]
+    VerificationError(#[from] cosmwasm_std::VerificationError),
+
     #[error("Unauthorized")]
     Unauthorized {},
 
     #[error("Key already exists. {key:?}")]
     KeyAlreadyExists { typ: String, key: String },
 
-    #[error("Already claimed. id:{airdrop_id:?}, claimer:{claimer:?}")]
-    AlreadyClaimed { airdrop_id: u64, claimer: Addr },
+    #[error("Already claimed. id:{airdrop_id:?}, claim_key:{claim_key:?}")]
+    AlreadyClaimed { airdrop_id: u64, claim_key: String },
 
     #[error("Wrong length")]
     WrongLength {},
@@ -47,4 +50,35 @@ pub enum ContractError {
 
     #[error("Unabled to claim more than supplied funds.")]
     InsufficientAirdropFunds {},
+
+    #[error("Invalid airdrop type. expected:{expected:?}, actual:{actual:?}")]
+    InvalidAirdropType { expected: String, actual: String },
+
+    #[error("Invalid signature. action:{action:?}")]
+    InvalidSignature { action: String },
+
+    #[error("Invalid public key")]
+    InvalidPubKey {},
+
+    #[error("Invalid label {0}")]
+    InvalidLabel(String),
+}
+
+impl ContractError {
+    pub fn invalid_airdrop_type(expected: impl ToString, actual: impl ToString) -> Self {
+        ContractError::InvalidAirdropType {
+            expected: expected.to_string(),
+            actual: actual.to_string(),
+        }
+    }
+
+    pub fn invalid_signature(action: impl ToString) -> Self {
+        ContractError::InvalidSignature {
+            action: action.to_string(),
+        }
+    }
+
+    pub fn invalid_label(label: impl ToString) -> Self {
+        ContractError::InvalidLabel(label.to_string())
+    }
 }

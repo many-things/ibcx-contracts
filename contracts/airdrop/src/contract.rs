@@ -1,10 +1,9 @@
+use cosmwasm_schema::serde::Serialize;
 use cosmwasm_std::{entry_point, Env, MessageInfo, QueryResponse};
 use cosmwasm_std::{Deps, DepsMut, Response};
 use ibcx_interface::airdrop::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
-use crate::{
-    error::ContractError, execute, query, state::LATEST_AIRDROP_ID, CONTRACT_NAME, CONTRACT_VERSION,
-};
+use crate::{error::ContractError, state::LATEST_AIRDROP_ID, CONTRACT_NAME, CONTRACT_VERSION};
 
 #[entry_point]
 pub fn instantiate(
@@ -23,51 +22,56 @@ pub fn instantiate(
 #[entry_point]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
+    use crate::execute;
     use ExecuteMsg::*;
 
     match msg {
-        Register {
-            merkle_root,
-            denom,
-            label,
-            bearer,
-        } => execute::register(deps, info, merkle_root, denom, label, bearer),
-        Fund { id } => execute::fund(deps, info, id),
+        Register(payload) => execute::register(deps, env, info, payload),
+
+        Fund(airdrop) => execute::fund(deps, info, airdrop),
+
         Claim(payload) => execute::claim(deps, info, payload),
-        MultiClaim(payload) => execute::multi_claim(deps, info, payload),
-        Close { id } => execute::close(deps, info, id),
+
+        Close(airdrop) => execute::close(deps, env, info, airdrop),
+    }
+}
+
+fn to_binary<T: Serialize>(res: Result<T, ContractError>) -> Result<QueryResponse, ContractError> {
+    match res {
+        Ok(v) => Ok(cosmwasm_std::to_binary(&v)?),
+        Err(e) => Err(e),
     }
 }
 
 #[entry_point]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, ContractError> {
+    use crate::query;
     use QueryMsg::*;
 
     match msg {
-        GetAirdrop { id } => query::get_airdrop(deps, id),
-        ListAirdrops {
-            start_after,
-            limit,
-            order,
-        } => query::list_airdrops(deps, start_after, limit, order),
-        LatestAirdropId {} => query::latest_airdrop_id(deps),
-        GetClaim { id, claim_proof } => query::get_claim(deps, id, claim_proof),
+        GetAirdrop(airdrop) => to_binary(query::get_airdrop(deps, airdrop)),
+        ListAirdrops(option) => to_binary(query::list_airdrops(deps, option)),
+        LatestAirdropId {} => to_binary(query::latest_airdrop_id(deps)),
+
+        GetClaim { airdrop, claim_key } => to_binary(query::get_claim(deps, airdrop, claim_key)),
+        VerifyClaim(payload) => to_binary(query::verify_claim(deps, payload)),
         ListClaims {
-            id,
+            airdrop,
             start_after,
             limit,
             order,
-        } => query::list_claims(deps, id, start_after, limit, order),
-        CheckQualification {
-            id,
-            amount,
-            claim_proof,
-            merkle_proof,
-        } => query::check_qualification(deps, id, amount, claim_proof, merkle_proof),
+        } => to_binary(query::list_claims(deps, airdrop, start_after, limit, order)),
+
+        GetLabel(label) => to_binary(query::get_label(deps, label)),
+        ListLabels {
+            start_after,
+            limit,
+            order,
+        } => to_binary(query::list_labels(deps, start_after, limit, order)),
     }
 }
 
@@ -86,8 +90,6 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
 mod test {
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 
-    use crate::test::SENDER_OWNER;
-
     use super::*;
 
     #[test]
@@ -97,7 +99,7 @@ mod test {
         instantiate(
             deps.as_mut(),
             mock_env(),
-            mock_info(SENDER_OWNER, &[]),
+            mock_info("owner", &[]),
             InstantiateMsg {},
         )
         .unwrap();
