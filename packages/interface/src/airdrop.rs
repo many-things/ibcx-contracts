@@ -124,12 +124,7 @@ pub enum ClaimPayload {
 }
 
 impl ClaimPayload {
-    pub fn open_id(
-        id: u64,
-        amount: u128,
-        account: Option<impl ToString>,
-        merkle_proof: &[&str],
-    ) -> Self {
+    pub fn open_id(id: u64, amount: u128, account: Option<&str>, merkle_proof: &[&str]) -> Self {
         Self::Open {
             airdrop: AirdropId::id(id),
             amount: Uint128::new(amount),
@@ -139,7 +134,7 @@ impl ClaimPayload {
     }
 
     pub fn open_label(
-        label: impl ToString + Into<String>,
+        label: &str,
         amount: u128,
         account: Option<impl ToString>,
         merkle_proof: &[&str],
@@ -155,7 +150,7 @@ impl ClaimPayload {
     pub fn bearer_id(
         id: u64,
         amount: u128,
-        account: Option<impl ToString>,
+        account: Option<&str>,
         claim_hash: impl ToString,
         claim_sign: impl ToString,
         merkle_proof: &[&str],
@@ -171,7 +166,7 @@ impl ClaimPayload {
     }
 
     pub fn bearer_label(
-        label: impl ToString + Into<String>,
+        label: &str,
         amount: u128,
         account: Option<impl ToString>,
         claim_hash: impl ToString,
