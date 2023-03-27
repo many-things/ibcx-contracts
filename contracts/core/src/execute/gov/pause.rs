@@ -164,7 +164,7 @@ mod tests {
 
         assert_eq!(
             release(deps.as_mut(), env, sender).unwrap_err(),
-            ContractError::Std(StdError::not_found("ibcx_core::state::PauseInfo"))
+            ContractError::Std(StdError::not_found("ibcx_core::state::pause::PauseInfo"))
         );
     }
 

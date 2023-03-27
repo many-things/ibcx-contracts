@@ -462,7 +462,7 @@ mod tests {
 
         // amount_gap = 10000
         assert_eq!(
-            deflate(deps.as_mut(), "manager", "ukrw", 10000, 10000).unwrap_err(),
+            deflate(deps.as_mut(), "manager", "ukrw", 10000, 1000).unwrap_err(),
             ContractError::OverSlippageAllowance {}
         );
     }
