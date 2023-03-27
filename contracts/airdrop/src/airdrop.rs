@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Binary, Uint128};
-use ibcx_interface::airdrop::GetAirdropResponse;
+use ibcx_interface::airdrop::{AirdropType, GetAirdropResponse};
 
 use crate::error::ContractError;
 
@@ -54,6 +54,13 @@ pub enum Airdrop {
 }
 
 impl Airdrop {
+    pub fn type_of(&self) -> AirdropType {
+        match self {
+            Airdrop::Open { .. } => AirdropType::Open,
+            Airdrop::Bearer { .. } => AirdropType::Bearer,
+        }
+    }
+
     pub fn type_str(&self) -> &str {
         match self {
             Airdrop::Open { .. } => "open",

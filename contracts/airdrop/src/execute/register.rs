@@ -166,41 +166,189 @@ fn register_bearer(
 
     // apply to state (LABELS, AIRDROP, LATEST_AIRDROP_ID)
     save_label(deps.storage, airdrop_id, &airdrop.label)?;
-    airdrops().save(deps.storage, airdrop_id, &airdrop.wrap())?;
+    airdrops().save(deps.storage, airdrop_id, &airdrop.into())?;
     LATEST_AIRDROP_ID.save(deps.storage, &(airdrop_id + 1))?;
 
-    Ok(Response::new().add_attributes(vec![
-        attr("action", "register"),
-        attr("executor", &airdrop.creator),
-        attr("type", airdrop.wrap().type_str()),
-        attr("signer", airdrop.signer),
-        attr("merkle_root", airdrop.merkle_root),
-        attr("total_amount", airdrop.total_amount.to_string()),
-        attr("label", airdrop.label.unwrap_or_default()),
-    ]))
+    Ok(Response::new().add_attributes(attrs))
 }
 
 #[cfg(test)]
-mod test {
-    use cosmwasm_std::{coin, testing::mock_dependencies_with_balances, Coin};
+mod tests {
+    use cosmwasm_std::{
+        coin,
+        testing::{
+            mock_dependencies_with_balances, mock_env, mock_info, MockApi, MockQuerier, MockStorage,
+        },
+        Addr, Binary, Coin, OwnedDeps, Uint128,
+    };
+    use ibcx_interface::airdrop::{
+        AirdropId, GetLabelResponse, InstantiateMsg, ListAirdropsQueryOptions, RegisterPayload,
+    };
 
-    const DENOM_BASE: u128 = 10 ^ 6;
+    use crate::{
+        airdrop::{Airdrop, BearerAirdrop, OpenAirdrop},
+        contract::instantiate,
+        execute::register::{register_bearer_event, register_open_event},
+        query,
+    };
+
+    use super::register;
+
+    type Balances<'a> = &'a [(&'a str, &'a [Coin])];
+
+    const DENOM_BASE: u128 = 10e6 as u128;
 
     fn normalize_amount(amount: f32) -> u128 {
         (amount * DENOM_BASE as f32) as u128
     }
 
-    #[test]
-    fn test_register_open() {
-        let tester_balance: &[Coin] = &[coin(normalize_amount(10.5), "ukrw")];
-        let initial_balances = &[("tester", tester_balance)];
+    fn assert_state(
+        deps: OwnedDeps<MockStorage, MockApi, MockQuerier>,
+        registerer: String,
+        label: String,
+        expected: (u64, Airdrop),
+    ) {
+        // Check LABELS
+        let get_label = query::get_label(deps.as_ref(), format!("{registerer}/{label}")).unwrap();
+        assert_eq!(
+            get_label,
+            GetLabelResponse {
+                creator: registerer.clone(),
+                label,
+                airdrop_id: 0
+            }
+        );
 
-        let deps = mock_dependencies_with_balances(initial_balances);
+        // Check AIRDROPS
+        let get_airdrop = query::get_airdrop(deps.as_ref(), AirdropId::id(0)).unwrap();
+        assert_eq!(get_airdrop, Airdrop::to_resp(expected.clone()));
 
-        let balances = deps.as_ref().querier.query_all_balances("tester").unwrap();
-        println!("{:?}", balances);
+        let list_airdrops_by_type = query::list_airdrops(
+            deps.as_ref(),
+            ListAirdropsQueryOptions::by_type(expected.1.type_of(), None, None, None),
+        )
+        .unwrap();
+        assert_eq!(
+            list_airdrops_by_type.0,
+            vec![Airdrop::to_resp(expected.clone())]
+        );
+
+        let list_airdrops_by_creator = query::list_airdrops(
+            deps.as_ref(),
+            ListAirdropsQueryOptions::by_creator(&registerer, None, None, None),
+        )
+        .unwrap();
+        assert_eq!(list_airdrops_by_creator.0, vec![Airdrop::to_resp(expected)]);
     }
 
     #[test]
-    fn test_register_bearer() {}
+    fn test_register_open() {
+        // setup test
+        let registerer = "tester".to_string();
+        let denom = "ukrw".to_string();
+        let amount = normalize_amount(5.5);
+        let merkle_root = "deadbeef".repeat(8);
+        let label = "test_airdrop".to_string();
+
+        let initial_balances: Balances = &[(registerer.as_str(), &[coin(amount, &denom)])];
+
+        let mut deps = mock_dependencies_with_balances(initial_balances);
+
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("creator", &[]),
+            InstantiateMsg {},
+        )
+        .unwrap();
+
+        let env = mock_env();
+        let info = mock_info(&registerer, &[coin(amount, &denom)]);
+        let payload = RegisterPayload::open(&merkle_root, &denom, Some(&label));
+
+        let expected: (u64, Airdrop) = (
+            0u64,
+            OpenAirdrop {
+                creator: Addr::unchecked(&registerer),
+
+                denom,
+                total_amount: Uint128::from(amount),
+                total_claimed: Uint128::zero(),
+                merkle_root,
+
+                label: Some(format!("{registerer}/{label}")),
+
+                created_at: env.block.height,
+                closed_at: None,
+            }
+            .into(),
+        );
+
+        let resp = register(deps.as_mut(), env, info, payload).unwrap();
+        assert_eq!(
+            resp.attributes,
+            register_open_event(expected.0, expected.1.clone().unwrap_open().unwrap())
+        );
+        assert_state(deps, registerer, label, expected);
+    }
+
+    #[test]
+    fn test_register_bearer() {
+        // setup test
+        let registerer = "tester".to_string();
+        let denom = "ukrw".to_string();
+        let amount = normalize_amount(5.5);
+        let merkle_root = "deadbeef".repeat(8);
+
+        // notice oak worry limit wrap speak medal online prefer cluster roof addict wrist behave treat actual wasp year salad speed social layer crew genius
+        let signer_addr = "osmo1cyyzpxplxdzkeea7kwsydadg87357qnahakaks";
+        let signer_pub = "02ec18c82501c5088119251679b538e9cf8eae502956cc862c7778aa148365e886";
+        let signer_sig = "c8cccdaa7568544164b2bcbea55eaaaa7f52e63ff2e9f075d7419a4558f2ec5574f196d449304314f22a0803f4fc260c476a1380b6db72b7cb6976980b9a1a46";
+
+        let label = "test_airdrop".to_string();
+
+        let initial_balances: Balances = &[(registerer.as_str(), &[coin(amount, &denom)])];
+
+        let mut deps = mock_dependencies_with_balances(initial_balances);
+
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("creator", &[]),
+            InstantiateMsg {},
+        )
+        .unwrap();
+
+        let env = mock_env();
+        let info = mock_info(&registerer, &[coin(amount, &denom)]);
+        let payload =
+            RegisterPayload::bearer(&merkle_root, &denom, signer_pub, signer_sig, Some(&label));
+
+        let expected: (u64, Airdrop) = (
+            0u64,
+            BearerAirdrop {
+                creator: Addr::unchecked(&registerer),
+                signer: deps.as_ref().api.addr_validate(signer_addr).unwrap(),
+                signer_pub: Binary::from(hex::decode(signer_pub).unwrap()),
+
+                denom,
+                total_amount: Uint128::from(amount),
+                total_claimed: Uint128::zero(),
+                merkle_root,
+
+                label: Some(format!("{registerer}/{label}")),
+
+                created_at: env.block.height,
+                closed_at: None,
+            }
+            .into(),
+        );
+
+        let resp = register(deps.as_mut(), env, info, payload).unwrap();
+        assert_eq!(
+            resp.attributes,
+            register_bearer_event(expected.0, expected.1.clone().unwrap_bearer().unwrap())
+        );
+        assert_state(deps, registerer, label, expected);
+    }
 }
