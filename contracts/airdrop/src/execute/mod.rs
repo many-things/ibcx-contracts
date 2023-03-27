@@ -10,9 +10,12 @@ pub use register::register;
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{Addr, Binary, Coin};
+    use cosmwasm_std::{coin, testing::mock_info, Addr, Binary, Coin, DepsMut, Env};
+    use ibcx_interface::airdrop::RegisterPayload;
 
-    use crate::airdrop::{BearerAirdrop, OpenAirdrop};
+    use crate::airdrop::{Airdrop, BearerAirdrop, OpenAirdrop};
+
+    use super::register;
 
     pub type Balances<'a> = &'a [(&'a str, &'a [Coin])];
 
@@ -20,6 +23,46 @@ mod tests {
 
     pub fn normalize_amount(amount: f32) -> u128 {
         (amount * DENOM_BASE as f32) as u128
+    }
+
+    pub fn register_airdrop(deps: DepsMut, env: Env, airdrop: Airdrop, sign: Option<&str>) {
+        match airdrop {
+            Airdrop::Open(inner) => {
+                // open
+                let info_register_open = mock_info(
+                    inner.creator.as_str(),
+                    &[coin(inner.total_amount.u128(), &inner.denom)],
+                );
+                register(
+                    deps,
+                    env,
+                    info_register_open,
+                    RegisterPayload::open(&inner.merkle_root, &inner.denom, None),
+                )
+                .unwrap();
+            }
+            Airdrop::Bearer(inner) => {
+                // bearer
+                let info_register_bearer = mock_info(
+                    inner.creator.as_str(),
+                    &[coin(inner.total_amount.u128(), &inner.denom)],
+                );
+
+                register(
+                    deps,
+                    env,
+                    info_register_bearer,
+                    RegisterPayload::bearer(
+                        &inner.merkle_root,
+                        &inner.denom,
+                        hex::encode(&inner.signer_pub),
+                        sign.unwrap(),
+                        None,
+                    ),
+                )
+                .unwrap();
+            }
+        }
     }
 
     pub fn mock_open_airdrop(label: Option<&str>, created_at: u64) -> OpenAirdrop {
