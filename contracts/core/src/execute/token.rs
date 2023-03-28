@@ -11,7 +11,7 @@ use crate::{
     state::{CONFIG, FEE, INDEX_UNITS, TOTAL_SUPPLY},
 };
 
-use super::assert_paused_and_update;
+use super::{assert_ongoing_rebalance, assert_paused_and_update};
 
 fn unwrap_addr(api: &dyn Api, addr: Option<String>, fallback: &Addr) -> StdResult<Addr> {
     Ok(addr
@@ -39,6 +39,7 @@ pub fn mint(
     refund_to: Option<String>,
 ) -> Result<Response, ContractError> {
     assert_paused_and_update(deps.storage, &env, false)?;
+    assert_ongoing_rebalance(deps.storage, false)?;
 
     // addresses
     let receiver = unwrap_addr(deps.api, receiver, &info.sender)?;
@@ -118,6 +119,7 @@ pub fn burn(
     redeem_to: Option<String>,
 ) -> Result<Response, ContractError> {
     assert_paused_and_update(deps.storage, &env, false)?;
+    assert_ongoing_rebalance(deps.storage, false)?;
 
     // addresses
     let redeem_to = unwrap_addr(deps.api, redeem_to, &info.sender)?;
