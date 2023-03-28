@@ -1,12 +1,12 @@
+use cosmwasm_schema::serde::Serialize;
 use cosmwasm_std::{attr, entry_point, Reply};
 use cosmwasm_std::{Deps, DepsMut, Response, SubMsg};
 use cosmwasm_std::{Env, MessageInfo, QueryResponse, Uint128};
 use ibcx_interface::core::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgCreateDenom, MsgCreateDenomResponse};
 
-use crate::state::{set_units, Fee, Token, FEE, GOV, TOKEN};
-use crate::REPLY_ID_DENOM_CREATION;
-use crate::{error::ContractError, state::PAUSED, CONTRACT_NAME, CONTRACT_VERSION};
+use crate::state::{Config, Fee, StreamingFee, Units, CONFIG, FEE, INDEX_UNITS, TOTAL_SUPPLY};
+use crate::{error::ContractError, CONTRACT_NAME, CONTRACT_VERSION, REPLY_ID_DENOM_CREATION};
 
 #[entry_point]
 pub fn instantiate(
@@ -17,38 +17,48 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     cw2::set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    TOKEN.save(
-        deps.storage,
-        &Token {
-            denom: msg.denom.clone(),
+    let mut index_units = Units(msg.index_units);
+    if index_units.check_duplicate() {
+        return Err(ContractError::DenomDuplicated {});
+    }
+
+    // fee
+    let fee = Fee {
+        collector: deps.api.addr_validate(&msg.fee.collector)?,
+        mint_fee: msg.fee.mint_fee,
+        burn_fee: msg.fee.burn_fee,
+        streaming_fee: msg.fee.streaming_fee.map(|v| StreamingFee {
+            rate: v,
+            collected: Units::default(),
+            last_collected_at: env.block.time.seconds(),
+        }),
+    };
+
+    // config
+    let config = Config {
+        gov: deps.api.addr_validate(&msg.gov)?,
+        paused: Default::default(),
+        index_denom: "undefined".to_string(),
             reserve_denom: msg.reserve_denom,
-            total_supply: Uint128::zero(),
-        },
-    )?;
+    };
 
-    GOV.save(deps.storage, &deps.api.addr_validate(&msg.gov)?)?;
-    FEE.save(
-        deps.storage,
-        &Fee {
-            collector: deps.api.addr_validate(&msg.fee_strategy.collector)?,
-            stream_collected: vec![],
-            mint: msg.fee_strategy.mint,
-            burn: msg.fee_strategy.burn,
-            stream: msg.fee_strategy.stream,
-            stream_last_collected_at: env.block.time.seconds(),
-        },
-    )?;
-    PAUSED.save(deps.storage, &Default::default())?;
-    set_units(deps.storage, msg.initial_units)?;
+    // apply initial state
+    FEE.save(deps.storage, &fee)?;
+    CONFIG.save(deps.storage, &config)?;
+    TOTAL_SUPPLY.save(deps.storage, &Uint128::zero())?;
+    INDEX_UNITS.save(deps.storage, &index_units);
 
-    let resp = Response::new()
-        .add_submessage(SubMsg::reply_on_success(
+    // response
+    let msg_create_denom = SubMsg::reply_on_success(
             MsgCreateDenom {
                 sender: env.contract.address.into_string(),
-                subdenom: msg.denom,
+            subdenom: config.index_denom,
             },
             REPLY_ID_DENOM_CREATION,
-        ))
+    );
+
+    let resp = Response::new()
+        .add_submessage(msg_create_denom)
         .add_attribute("method", "instantiate");
 
     Ok(resp)
@@ -74,6 +84,7 @@ pub fn execute(
         } => execute::mint(deps, env, info, amount, receiver, refund_to),
         Burn { redeem_to } => execute::burn(deps, env, info, redeem_to),
         Realize {} => execute::realize(deps, env, info),
+
         Gov(msg) => execute::handle_gov_msg(deps, env, info, msg),
         Rebalance(msg) => execute::handle_rebalance_msg(deps, env, info, msg),
     }
