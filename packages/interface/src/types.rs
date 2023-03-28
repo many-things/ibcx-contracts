@@ -1,14 +1,12 @@
 use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{coin, Addr, Coin, Decimal, Order, StdResult, Uint128};
+use cosmwasm_std::{coin, Addr, Coin, Order, StdResult, Uint128};
 use cosmwasm_std::{CosmosMsg, QuerierWrapper};
 use osmosis_std::types::osmosis::poolmanager::v1beta1::{
     MsgSwapExactAmountIn, MsgSwapExactAmountOut, PoolmanagerQuerier, SwapAmountInRoute,
     SwapAmountOutRoute,
 };
-
-pub type Units = Vec<(String, Decimal)>;
 
 #[cw_serde]
 pub struct SwapRoute {
