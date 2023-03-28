@@ -27,6 +27,9 @@ pub enum ContractError {
     #[error("denom {reserved:?} already reserved")]
     DenomReserved { reserved: String },
 
+    #[error("duplicated denom in units")]
+    DenomDuplicated {},
+
     #[error("length of assets exceeded. limit:{limit:?}")]
     InvalidAssetLength { limit: u32 },
 
