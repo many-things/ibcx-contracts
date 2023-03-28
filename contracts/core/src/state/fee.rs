@@ -5,16 +5,19 @@ use ibcx_interface::types::Units;
 use crate::error::ContractError;
 
 #[cw_serde]
+pub struct StreamingFee {
+    pub rate: Decimal,
+    pub collected: Units,
+    pub last_collected_at: u64,
+}
+
+#[cw_serde]
 pub struct Fee {
     // address of fee collector
     pub collector: Addr,
-    pub mint: Option<Decimal>,
-    pub burn: Option<Decimal>,
-    // secondly rate
-    // ex) APY %0.15 = 1 - (1 + 0.0015)^(1 / (86400 * 365)) = 0.000000000047529
-    pub stream: Option<Decimal>,
-    pub stream_collected: Units,
-    pub stream_last_collected_at: u64,
+    pub mint_fee: Option<Decimal>,
+    pub burn_fee: Option<Decimal>,
+    pub streaming_fee: Option<StreamingFee>,
 }
 
 impl Fee {

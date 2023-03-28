@@ -1,37 +1,37 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
 
-use crate::types::{SwapRoutes, Units};
+use crate::types::SwapRoutes;
 
 #[cw_serde]
 #[derive(Default)]
-pub struct Fee {
+pub struct FeePayload {
     pub collector: String,
-    pub mint: Option<Decimal>,
-    pub burn: Option<Decimal>,
-    pub stream: Option<Decimal>,
+    pub mint_fee: Option<Decimal>,
+    pub burn_fee: Option<Decimal>,
+    pub streaming_fee: Option<Decimal>,
 }
 
 #[cw_serde]
 #[derive(Default)]
 pub struct InstantiateMsg {
     pub gov: String,
-    pub denom: String,
+    pub fee: FeePayload,
+    pub index_denom: String,
+    pub index_units: Vec<(String, Decimal)>,
     pub reserve_denom: String,
-    pub initial_units: Units,
-    pub fee_strategy: Fee,
 }
 
 #[cw_serde]
 pub enum GovMsg {
     // pause mint / burn
     Pause {
-        expires_at: u64,
+        expires_at: Option<u64>,
     },
     Release {},
 
     UpdateGov(String),
-    UpdateFeeStrategy(Fee),
+    UpdateFeeStrategy(FeePayload),
     UpdateReserveDenom(String),
     UpdateTradeInfo {
         denom: String,
@@ -61,8 +61,8 @@ pub enum RebalanceTradeMsg {
 pub enum RebalanceMsg {
     Init {
         manager: String,
-        deflation: Units, // target units
-        inflation: Units, // conversion weights
+        deflation: Vec<(String, Decimal)>, // target units
+        inflation: Vec<(String, Decimal)>, // conversion weights
     },
     Trade(RebalanceTradeMsg),
     Finalize {},
@@ -112,14 +112,14 @@ pub enum QueryMsg {
 #[cw_serde]
 pub struct GetConfigResponse {
     pub gov: Addr,
-    pub denom: String,
+    pub index_denom: String,
     pub reserve_denom: String,
 }
 
 #[cw_serde]
 pub struct GetFeeResponse {
     pub collector: Addr,
-    pub collected: Units,
+    pub collected: Vec<(String, Decimal)>,
     pub realized: Vec<(String, Uint128)>,
     pub mint: Option<Decimal>,
     pub burn: Option<Decimal>,
@@ -137,7 +137,7 @@ pub struct GetPauseInfoResponse {
 pub struct GetPortfolioResponse {
     pub total_supply: Uint128,
     pub assets: Vec<Coin>,
-    pub units: Units,
+    pub units: Vec<(String, Decimal)>,
 }
 
 #[cw_serde]

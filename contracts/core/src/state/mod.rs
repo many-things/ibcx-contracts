@@ -7,34 +7,35 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Uint128};
 use cw_storage_plus::{Item, Map};
 
-pub use fee::Fee;
+pub use fee::{Fee, StreamingFee};
 pub use pause::PauseInfo;
 pub use rebalance::{Rebalance, TradeInfo};
-pub use units::{assert_units, get_redeem_amounts, get_units, set_units};
+pub use units::Units;
 
 #[cw_serde]
-pub struct Token {
-    pub denom: String,
+pub struct Config {
+    pub gov: Addr,
+    pub paused: PauseInfo,
+    pub index_denom: String,
     pub reserve_denom: String,
-    pub total_supply: Uint128,
 }
 
 pub const RESERVE_DENOM: &str = "reserve";
 
-pub const GOV_KEY: &str = "gov";
-pub const GOV: Item<Addr> = Item::new(GOV_KEY);
+pub const CONFIG_KEY: &str = "config";
+pub const CONFIG: Item<Config> = Item::new(CONFIG_KEY);
 
 pub const FEE_KEY: &str = "fee";
 pub const FEE: Item<Fee> = Item::new(FEE_KEY);
 
-pub const TOKEN_KEY: &str = "token";
-pub const TOKEN: Item<Token> = Item::new(TOKEN_KEY);
+pub const TOTAL_SUPPLY_KEY: &str = "total_supply";
+pub const TOTAL_SUPPLY: Item<Uint128> = Item::new(TOTAL_SUPPLY_KEY);
 
-pub const PAUSED_KEY: &str = "paused";
-pub const PAUSED: Item<PauseInfo> = Item::new(PAUSED_KEY);
+pub const INDEX_UNITS_KEY: &str = "index_units";
+pub const INDEX_UNITS: Item<Units> = Item::new(INDEX_UNITS_KEY);
 
-pub const UNITS_PREFIX: &str = "assets";
-pub const UNITS: Map<String, Decimal> = Map::new(UNITS_PREFIX);
+pub const RESERVE_UNIT_KEY: &str = "reserve_unit";
+pub const RESERVE_UNIT: Item<Decimal> = Item::new(RESERVE_UNIT_KEY);
 
 pub const LATEST_REBALANCE_ID_KEY: &str = "latest_rebalance_id";
 pub const LATEST_REBALANCE_ID: Item<u64> = Item::new(LATEST_REBALANCE_ID_KEY);
