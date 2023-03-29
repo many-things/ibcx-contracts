@@ -98,10 +98,11 @@ mod tests {
 
     #[test]
     fn test_pop_key() {
-        let mut units = Units(vec![
+        let mut units: Units = vec![
             ("uatom".to_string(), Decimal::from_ratio(1u128, 2u128)),
             ("uosmo".to_string(), Decimal::from_ratio(1u128, 4u128)),
-        ]);
+        ]
+        .into();
 
         // pop uatom
         assert_eq!(
@@ -110,10 +111,7 @@ mod tests {
         );
         assert_eq!(
             units,
-            Units(vec![(
-                "uosmo".to_string(),
-                Decimal::from_ratio(1u128, 4u128)
-            )])
+            vec![("uosmo".to_string(), Decimal::from_ratio(1u128, 4u128))].into()
         );
 
         // pop once again
@@ -128,30 +126,76 @@ mod tests {
             units.pop_key("uosmo"),
             Some(("uosmo".to_string(), Decimal::from_ratio(1u128, 4u128)))
         );
-        assert_eq!(units, Units(vec![]));
+        assert_eq!(units, vec![].into());
+    }
+
+    #[test]
+    fn test_prune_zero() {
+        let mut units: Units = vec![
+            ("uatom".to_string(), Decimal::from_ratio(1u128, 2u128)),
+            ("uosmo".to_string(), Decimal::from_ratio(1u128, 4u128)),
+            ("ujuno".to_string(), Decimal::zero()),
+        ]
+        .into();
+
+        units.prune_zero();
+
+        assert_eq!(
+            units,
+            vec![
+                ("uatom".to_string(), Decimal::from_ratio(1u128, 2u128)),
+                ("uosmo".to_string(), Decimal::from_ratio(1u128, 4u128)),
+            ]
+            .into()
+        );
+    }
+
+    #[test]
+    fn test_check_empty() {
+        let cases = [
+            (
+                vec![
+                    ("uatom".to_string(), Decimal::from_ratio(1u128, 2u128)),
+                    ("uosmo".to_string(), Decimal::zero()),
+                ],
+                false,
+            ),
+            (
+                vec![
+                    ("uatom".to_string(), Decimal::zero()),
+                    ("uosmo".to_string(), Decimal::zero()),
+                ],
+                true,
+            ),
+            (vec![], true),
+        ];
+
+        for (units, expected) in cases {
+            assert_eq!(Units::from(units).check_empty(), expected);
+        }
     }
 
     #[test]
     fn test_check_duplication() {
         let cases = [
             (
-                Units(vec![
+                vec![
                     ("uatom".to_string(), Decimal::from_ratio(1u128, 2u128)),
                     ("uatom".to_string(), Decimal::from_ratio(1u128, 4u128)),
-                ]),
+                ],
                 true,
             ),
             (
-                Units(vec![
+                vec![
                     ("uatom".to_string(), Decimal::from_ratio(1u128, 2u128)),
                     ("uosmo".to_string(), Decimal::from_ratio(1u128, 4u128)),
-                ]),
+                ],
                 false,
             ),
         ];
 
         for (units, expect) in cases {
-            assert_eq!(units.check_duplicate(), expect);
+            assert_eq!(Units::from(units).check_duplicate(), expect);
         }
     }
 }
