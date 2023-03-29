@@ -1,24 +1,17 @@
+mod config;
 mod fee;
 mod pause;
 mod rebalance;
 mod units;
 
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::Uint128;
 use cw_storage_plus::{Item, Map};
 
+pub use config::Config;
 pub use fee::{Fee, StreamingFee};
 pub use pause::PauseInfo;
 pub use rebalance::{Rebalance, TradeInfo};
 pub use units::Units;
-
-#[cw_serde]
-pub struct Config {
-    pub gov: Addr,
-    pub paused: PauseInfo,
-    pub index_denom: String,
-    pub reserve_denom: String,
-}
 
 pub const CONFIG_KEY: &str = "config";
 pub const CONFIG: Item<Config> = Item::new(CONFIG_KEY);
@@ -35,11 +28,8 @@ pub const INDEX_UNITS: Item<Units> = Item::new(INDEX_UNITS_KEY);
 pub const RESERVE_UNITS_KEY: &str = "reserve_units";
 pub const RESERVE_UNITS: Item<Units> = Item::new(RESERVE_UNITS_KEY);
 
-pub const LATEST_REBALANCE_ID_KEY: &str = "latest_rebalance_id";
-pub const LATEST_REBALANCE_ID: Item<u64> = Item::new(LATEST_REBALANCE_ID_KEY);
-
-pub const REBALANCES_PREFIX: &str = "rebalances";
-pub const REBALANCES: Map<u64, Rebalance> = Map::new(REBALANCES_PREFIX);
+pub const REBALANCE_KEY: &str = "rebalances";
+pub const REBALANCE: Item<Rebalance> = Item::new(REBALANCE_KEY);
 
 pub const TRADE_INFOS_PREFIX: &str = "trade_infos";
 pub const TRADE_INFOS: Map<String, TradeInfo> = Map::new(TRADE_INFOS_PREFIX);
@@ -49,14 +39,21 @@ pub mod tests {
     use std::str::FromStr;
 
     use cosmwasm_std::{Addr, Decimal, Env, StdResult, Storage};
+    use ibcx_interface::types::{SwapRoute, SwapRoutes};
 
-    use super::{Config, Fee, PauseInfo, StreamingFee, CONFIG, FEE, INDEX_UNITS, TOTAL_SUPPLY};
+    use super::{
+        Config, Fee, PauseInfo, Rebalance, StreamingFee, TradeInfo, CONFIG, FEE, INDEX_UNITS,
+        RESERVE_UNITS, TOTAL_SUPPLY,
+    };
 
     pub struct StateBuilder<'a> {
         pub config: Config,
         pub fee: Fee,
-        pub index_units: &'a [(&'a str, &'a str)],
         pub total_supply: u128,
+        pub index_units: &'a [(&'a str, &'a str)],
+        pub reserve_units: &'a [(&'a str, &'a str)],
+        pub rebalance: Option<Rebalance>,
+        pub trade_infos: &'a [(&'a str, TradeInfo)],
     }
 
     impl<'a> StateBuilder<'a> {
@@ -64,8 +61,32 @@ pub mod tests {
             Self {
                 config: mock_config(),
                 fee: mock_fee(env, None, None, None),
-                index_units: &[("uatom", "0.5"), ("uosmo", "0.3")],
                 total_supply: 10e6 as u128,
+
+                index_units: &[("uatom", "0.5"), ("uosmo", "0.3")],
+                reserve_units: &[("uatom", "0.1"), ("uosmo", "0.12")],
+
+                rebalance: None,
+                trade_infos: &[
+                    (
+                        "uatom",
+                        TradeInfo {
+                            routes: SwapRoutes(vec![SwapRoute::new(0, "uosmo")]),
+                            cooldown: 86400u64,
+                            max_trade_amount: (10e6 as u128).into(),
+                            last_traded_at: Some(env.block.time.seconds()),
+                        },
+                    ),
+                    (
+                        "uosmo",
+                        TradeInfo {
+                            routes: SwapRoutes(vec![SwapRoute::new(0, "uatom")]),
+                            cooldown: 86400u64,
+                            max_trade_amount: (10e6 as u128).into(),
+                            last_traded_at: Some(env.block.time.seconds()),
+                        },
+                    ),
+                ],
             }
         }
 
@@ -113,11 +134,49 @@ pub mod tests {
             self
         }
 
+        pub fn add_reserve_unit(mut self, denom: &str, unit: &str) -> Self {
+            self.reserve_units = &[self.reserve_units, &[(denom, unit)]].concat();
+            self
+        }
+
+        pub fn clear_reserve_unit(mut self) -> Self {
+            self.reserve_units = &[];
+            self
+        }
+
+        pub fn with_rebalance(mut self, rebalance: Rebalance) -> Self {
+            self.rebalance = Some(rebalance);
+            self
+        }
+
+        pub fn add_trade_info(mut self, denom: &str, trade_info: TradeInfo) -> Self {
+            self.trade_infos = &[self.trade_infos, &[(denom, trade_info)]].concat();
+            self
+        }
+
+        pub fn clear_trade_infos(mut self) -> Self {
+            self.trade_infos = &[];
+            self
+        }
+
         pub fn build(self, storage: &mut dyn Storage) {
             CONFIG.save(storage, &self.config).unwrap();
             FEE.save(storage, &self.fee).unwrap();
 
             INDEX_UNITS
+                .save(
+                    storage,
+                    &self
+                        .index_units
+                        .into_iter()
+                        .map(|(k, v)| Ok((k.to_string(), Decimal::from_str(v)?)))
+                        .collect::<StdResult<Vec<_>>>()
+                        .unwrap()
+                        .into(),
+                )
+                .unwrap();
+
+            RESERVE_UNITS
                 .save(
                     storage,
                     &self
