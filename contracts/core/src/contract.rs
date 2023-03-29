@@ -17,7 +17,7 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     cw2::set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let mut index_units = Units(msg.index_units);
+    let mut index_units: Units = msg.index_units.into();
     if index_units.check_duplicate() {
         return Err(ContractError::DenomDuplicated {});
     }

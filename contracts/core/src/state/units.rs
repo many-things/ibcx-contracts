@@ -9,7 +9,19 @@ pub type Unit = (String, Decimal);
 
 #[cw_serde]
 #[derive(Default)]
-pub struct Units(pub Vec<Unit>);
+pub struct Units(Vec<Unit>);
+
+impl From<Vec<Unit>> for Units {
+    fn from(v: Vec<Unit>) -> Self {
+        Self(v)
+    }
+}
+
+impl<'a> From<&'a [Unit]> for Units {
+    fn from(v: &'a [Unit]) -> Self {
+        Self(v.to_vec())
+    }
+}
 
 impl Units {
     pub fn add_key(&mut self, k: &str, v: Decimal) -> StdResult<()> {
@@ -31,6 +43,10 @@ impl Units {
         } else {
             None
         }
+    }
+
+    pub fn prune_zero(&mut self) {
+        self.0.retain(|(_, unit)| !unit.is_zero());
     }
 
     pub fn calc_require_amount(&self, index_amount: Uint128) -> Vec<Coin> {
@@ -59,6 +75,10 @@ impl Units {
         }
 
         Ok(funds.into_iter().filter(|v| !v.amount.is_zero()).collect())
+    }
+
+    pub fn check_empty(&self) -> bool {
+        self.0.iter().all(|(_, unit)| !unit.is_zero())
     }
 
     pub fn check_duplicate(&self) -> bool {

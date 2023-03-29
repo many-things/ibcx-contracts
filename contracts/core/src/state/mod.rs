@@ -4,7 +4,7 @@ mod rebalance;
 mod units;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Decimal, Uint128};
+use cosmwasm_std::{Addr, Uint128};
 use cw_storage_plus::{Item, Map};
 
 pub use fee::{Fee, StreamingFee};
@@ -20,8 +20,6 @@ pub struct Config {
     pub reserve_denom: String,
 }
 
-pub const RESERVE_DENOM: &str = "reserve";
-
 pub const CONFIG_KEY: &str = "config";
 pub const CONFIG: Item<Config> = Item::new(CONFIG_KEY);
 
@@ -34,8 +32,8 @@ pub const TOTAL_SUPPLY: Item<Uint128> = Item::new(TOTAL_SUPPLY_KEY);
 pub const INDEX_UNITS_KEY: &str = "index_units";
 pub const INDEX_UNITS: Item<Units> = Item::new(INDEX_UNITS_KEY);
 
-pub const RESERVE_UNIT_KEY: &str = "reserve_unit";
-pub const RESERVE_UNIT: Item<Decimal> = Item::new(RESERVE_UNIT_KEY);
+pub const RESERVE_UNITS_KEY: &str = "reserve_units";
+pub const RESERVE_UNITS: Item<Units> = Item::new(RESERVE_UNITS_KEY);
 
 pub const LATEST_REBALANCE_ID_KEY: &str = "latest_rebalance_id";
 pub const LATEST_REBALANCE_ID: Item<u64> = Item::new(LATEST_REBALANCE_ID_KEY);
@@ -46,18 +44,13 @@ pub const REBALANCES: Map<u64, Rebalance> = Map::new(REBALANCES_PREFIX);
 pub const TRADE_INFOS_PREFIX: &str = "trade_infos";
 pub const TRADE_INFOS: Map<String, TradeInfo> = Map::new(TRADE_INFOS_PREFIX);
 
-pub const RESERVE_BUFFER_PREFIX: &str = "reserve_buffer";
-pub const RESERVE_BUFFER: Map<String, Uint128> = Map::new(RESERVE_BUFFER_PREFIX);
-
 #[cfg(test)]
 pub mod tests {
     use std::str::FromStr;
 
     use cosmwasm_std::{Addr, Decimal, Env, StdResult, Storage};
 
-    use super::{
-        Config, Fee, PauseInfo, StreamingFee, Units, CONFIG, FEE, INDEX_UNITS, TOTAL_SUPPLY,
-    };
+    use super::{Config, Fee, PauseInfo, StreamingFee, CONFIG, FEE, INDEX_UNITS, TOTAL_SUPPLY};
 
     pub struct StateBuilder<'a> {
         pub config: Config,
@@ -99,7 +92,7 @@ pub mod tests {
         pub fn with_streaming_fee(mut self, streaming_fee: &str, collected_at: u64) -> Self {
             self.fee.streaming_fee = Some(StreamingFee {
                 rate: Decimal::from_str(streaming_fee).unwrap(),
-                collected: Units(vec![]),
+                collected: vec![].into(),
                 last_collected_at: collected_at,
             });
             self
@@ -127,13 +120,13 @@ pub mod tests {
             INDEX_UNITS
                 .save(
                     storage,
-                    &Units(
-                        self.index_units
-                            .into_iter()
-                            .map(|(k, v)| Ok((k.to_string(), Decimal::from_str(v)?)))
-                            .collect::<StdResult<_>>()
-                            .unwrap(),
-                    ),
+                    &self
+                        .index_units
+                        .into_iter()
+                        .map(|(k, v)| Ok((k.to_string(), Decimal::from_str(v)?)))
+                        .collect::<StdResult<Vec<_>>>()
+                        .unwrap()
+                        .into(),
                 )
                 .unwrap();
 
@@ -152,13 +145,12 @@ pub mod tests {
             let index_units = INDEX_UNITS.load(storage).unwrap();
             assert_eq!(
                 index_units,
-                Units(
-                    self.index_units
-                        .into_iter()
-                        .map(|(k, v)| Ok((k.to_string(), Decimal::from_str(v).unwrap())))
-                        .collect::<StdResult<_>>()
-                        .unwrap()
-                )
+                self.index_units
+                    .into_iter()
+                    .map(|(k, v)| Ok((k.to_string(), Decimal::from_str(v).unwrap())))
+                    .collect::<StdResult<Vec<_>>>()
+                    .unwrap()
+                    .into()
             );
 
             let total_supply = TOTAL_SUPPLY.load(storage).unwrap();
@@ -189,7 +181,7 @@ pub mod tests {
                 .map(|v| -> StdResult<_> {
                     Ok(StreamingFee {
                         rate: Decimal::from_str(v)?,
-                        collected: Units(vec![]),
+                        collected: vec![].into(),
                         last_collected_at: env.block.time.seconds(),
                     })
                 })
