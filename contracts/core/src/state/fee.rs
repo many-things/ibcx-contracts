@@ -55,9 +55,16 @@ impl Fee {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use std::str::FromStr;
+impl Default for Fee {
+    fn default() -> Self {
+        Self {
+            collector: Addr::unchecked(""),
+            mint_fee: Default::default(),
+            burn_fee: Default::default(),
+            streaming_fee: Default::default(),
+        }
+    }
+}
 
     use cosmwasm_std::{Addr, Decimal};
     use ibcx_interface::types::Units;

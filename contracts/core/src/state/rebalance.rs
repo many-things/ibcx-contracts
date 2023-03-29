@@ -88,6 +88,17 @@ impl Rebalance {
     }
 }
 
+impl Default for Rebalance {
+    fn default() -> Self {
+        Self {
+            manager: Addr::unchecked(""),
+            deflation: Default::default(),
+            inflation: Default::default(),
+            finalized: Default::default(),
+        }
+    }
+}
+
 #[cw_serde]
 pub struct TradeInfo {
     pub routes: SwapRoutes,
