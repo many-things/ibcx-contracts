@@ -14,6 +14,15 @@ pub struct SwapRoute {
     pub token_denom: String,
 }
 
+impl SwapRoute {
+    pub fn new(pool_id: u64, token_denom: &str) -> Self {
+        Self {
+            pool_id,
+            token_denom: token_denom.to_string(),
+        }
+    }
+}
+
 #[cw_serde]
 pub struct SwapRoutes(pub Vec<SwapRoute>);
 
