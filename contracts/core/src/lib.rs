@@ -1,3 +1,6 @@
+use cosmwasm_std::Addr;
+use error::ContractError;
+
 #[cfg(not(feature = "library"))]
 pub mod contract;
 pub mod error;
@@ -12,3 +15,11 @@ pub const REPLY_ID_DENOM_CREATION: u64 = 0;
 
 #[cfg(test)]
 mod test;
+
+pub fn assert_sender(expected: &Addr, actual: &Addr) -> Result<(), ContractError> {
+    if expected != actual {
+        Err(ContractError::Unauthorized {})
+    } else {
+        Ok(())
+    }
+}
