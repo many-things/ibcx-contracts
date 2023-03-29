@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, vec::IntoIter};
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{coin, Coin, Decimal, StdResult, Uint128};
@@ -20,6 +20,23 @@ impl From<Vec<Unit>> for Units {
 impl<'a> From<&'a [Unit]> for Units {
     fn from(v: &'a [Unit]) -> Self {
         Self(v.to_vec())
+    }
+}
+
+impl Extend<Unit> for Units {
+    fn extend<T: IntoIterator<Item = Unit>>(&mut self, iter: T) {
+        for elem in iter {
+            self.0.push(elem)
+        }
+    }
+}
+
+impl IntoIterator for Units {
+    type Item = Unit;
+    type IntoIter = IntoIter<Unit>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 

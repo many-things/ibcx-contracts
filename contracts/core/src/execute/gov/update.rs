@@ -3,9 +3,7 @@ use ibcx_interface::{core::FeePayload, types::SwapRoutes};
 
 use crate::{
     error::ContractError,
-    state::{
-        Config, StreamingFee, TradeInfo, Units, CONFIG, FEE, REBALANCE, RESERVE_UNITS, TRADE_INFOS,
-    },
+    state::{Config, StreamingFee, TradeInfo, CONFIG, FEE, REBALANCE, RESERVE_UNITS, TRADE_INFOS},
 };
 
 pub fn update_gov(
@@ -55,7 +53,7 @@ pub fn update_fee(
     fee.burn_fee = new_fee.burn_fee;
     fee.streaming_fee = new_fee.streaming_fee.map(|v| StreamingFee {
         rate: v,
-        collected: Units::default(),
+        collected: vec![],
         last_collected_at: env.block.time.seconds(),
     });
 
@@ -159,7 +157,7 @@ mod tests {
     use crate::{
         error::ContractError,
         execute::gov::update::update_fee,
-        state::{tests::mock_config, Fee, Rebalance, StreamingFee, Units, CONFIG, FEE, REBALANCE},
+        state::{tests::mock_config, Fee, Rebalance, StreamingFee, CONFIG, FEE, REBALANCE},
         test::mock_dependencies,
     };
 
@@ -312,7 +310,7 @@ mod tests {
                         .unwrap(),
                     StreamingFee {
                         rate: fee.streaming_fee.unwrap(),
-                        collected: Units::default(),
+                        collected: vec![],
                         last_collected_at: std_time,
                     },
                 ),
