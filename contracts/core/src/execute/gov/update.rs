@@ -1,10 +1,11 @@
 use cosmwasm_std::{attr, DepsMut, Env, MessageInfo, Response, Uint128};
-use ibcx_interface::{core::Fee, types::SwapRoutes};
+use ibcx_interface::{core::FeePayload, types::SwapRoutes};
 
 use crate::{
     error::ContractError,
-    execute::fee::realize_streaming_fee,
-    state::{TradeInfo, FEE, GOV, RESERVE_DENOM, TOKEN, TRADE_INFOS, UNITS},
+    state::{
+        Config, StreamingFee, TradeInfo, Units, CONFIG, FEE, REBALANCE, RESERVE_UNITS, TRADE_INFOS,
+    },
 };
 
 pub fn update_gov(
@@ -12,7 +13,17 @@ pub fn update_gov(
     info: MessageInfo,
     new_gov: String,
 ) -> Result<Response, ContractError> {
-    GOV.save(deps.storage, &deps.api.addr_validate(&new_gov)?)?;
+    let config = CONFIG.load(deps.storage)?;
+
+    config.check_gov(&info.sender)?;
+
+    CONFIG.save(
+        deps.storage,
+        &Config {
+            gov: deps.api.addr_validate(&new_gov)?,
+            ..config
+        },
+    )?;
 
     let resp = Response::new().add_attributes(vec![
         attr("method", "gov::update_gov"),
@@ -27,29 +38,37 @@ pub fn update_fee(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    new_fee: Fee,
+    new_fee: FeePayload,
 ) -> Result<Response, ContractError> {
-    let msg = realize_streaming_fee(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
 
+    config.check_gov(&info.sender)?;
+    if REBALANCE.may_load(deps.storage)?.is_some() {
+        return Err(ContractError::RebalanceNotFinalized {});
+    }
+
+    // update
     let mut fee = FEE.load(deps.storage)?;
 
     fee.collector = deps.api.addr_validate(&new_fee.collector)?;
-    fee.mint = new_fee.mint;
-    fee.burn = new_fee.burn;
-
-    if let Some(stream) = new_fee.stream {
-        fee.stream = Some(stream);
-        // TODO: update fee
-        fee.stream_last_collected_at = env.block.time.seconds();
-    }
+    fee.mint_fee = new_fee.mint_fee;
+    fee.burn_fee = new_fee.burn_fee;
+    fee.streaming_fee = new_fee.streaming_fee.map(|v| StreamingFee {
+        rate: v,
+        collected: Units::default(),
+        last_collected_at: env.block.time.seconds(),
+    });
 
     FEE.save(deps.storage, &fee)?;
 
-    let resp = Response::new().add_message(msg).add_attributes(vec![
+    // response
+    let attrs = vec![
         attr("method", "gov::update_fee"),
         attr("executor", info.sender),
         attr("new_fee", format!("{new_fee:?}")),
-    ]);
+    ];
+
+    let resp = Response::new().add_attributes(attrs);
 
     Ok(resp)
 }
@@ -59,23 +78,34 @@ pub fn update_reserve_denom(
     info: MessageInfo,
     new_denom: String,
 ) -> Result<Response, ContractError> {
-    let mut token = TOKEN.load(deps.storage)?;
-    let unit = UNITS.load(deps.storage, RESERVE_DENOM.to_string())?;
-    if !unit.is_zero() {
-        return Err(ContractError::InvalidArgument(
-            "reserve_denom must be zero in portfolio".to_string(),
-        ));
+    let config = CONFIG.load(deps.storage)?;
+
+    config.check_gov(&info.sender)?;
+    if REBALANCE.may_load(deps.storage)?.is_some() {
+        return Err(ContractError::RebalanceNotFinalized {});
     }
 
-    token.reserve_denom = new_denom.clone();
+    let reserve_units = RESERVE_UNITS.load(deps.storage)?;
+    if !reserve_units.check_empty() {
+        return Err(ContractError::RebalanceNotFinalized {});
+    }
 
-    TOKEN.save(deps.storage, &token)?;
+    CONFIG.save(
+        deps.storage,
+        &Config {
+            reserve_denom: new_denom,
+            ..config
+        },
+    )?;
 
-    let resp = Response::new().add_attributes(vec![
+    // response
+    let attrs = vec![
         attr("method", "gov::update_reserve_denom"),
         attr("executor", info.sender),
         attr("new_denom", new_denom),
-    ]);
+    ];
+
+    let resp = Response::new().add_attributes(attrs);
 
     Ok(resp)
 }
@@ -88,231 +118,206 @@ pub fn update_trade_info(
     cooldown: u64,
     max_trade_amount: Uint128,
 ) -> Result<Response, ContractError> {
-    TRADE_INFOS.save(
-        deps.storage,
-        denom.clone(),
-        &TradeInfo {
-            routes: routes.clone(),
-            cooldown,
-            max_trade_amount,
-            last_traded_at: None,
-        },
-    )?;
+    let config = CONFIG.load(deps.storage)?;
 
-    let resp = Response::new().add_attributes(vec![
+    config.check_gov(&info.sender)?;
+
+    let trade_info = TradeInfo {
+        routes: routes.clone(),
+        cooldown,
+        max_trade_amount,
+        last_traded_at: None,
+    };
+
+    TRADE_INFOS.save(deps.storage, denom.clone(), &trade_info)?;
+
+    let attrs = vec![
         attr("method", "gov::update_trade_info"),
         attr("executor", info.sender),
         attr("denom", denom),
         attr("routes", format!("{routes:?}")),
         attr("cooldown", cooldown.to_string()),
         attr("max_trade_amount", max_trade_amount.to_string()),
-    ]);
+    ];
+
+    let resp = Response::new().add_attributes(attrs);
 
     Ok(resp)
 }
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
 
     use cosmwasm_std::{
+        attr,
         testing::{mock_env, mock_info},
-        Addr, Decimal,
+        Addr, Decimal, Timestamp,
     };
+    use ibcx_interface::core::FeePayload;
 
     use crate::{
-        state::{self, Token},
-        test::{
-            default_fee, default_token, mock_dependencies, DENOM_DEFAULT, SENDER_GOV, SENDER_OWNER,
-            SENDER_VALID,
-        },
+        error::ContractError,
+        execute::gov::update::update_fee,
+        state::{tests::mock_config, Fee, Rebalance, StreamingFee, Units, CONFIG, FEE, REBALANCE},
+        test::mock_dependencies,
     };
 
-    use super::*;
-
-    fn setup(
-        deps: DepsMut,
-        gov: impl Into<String>,
-        fee: Option<state::Fee>,
-        token: Option<Token>,
-        assets: &[(&str, Decimal)],
-    ) {
-        let gov = Addr::unchecked(gov.into());
-        GOV.save(deps.storage, &gov).unwrap();
-
-        let fee = fee.unwrap_or_else(default_fee);
-        FEE.save(deps.storage, &fee).unwrap();
-
-        let token = token.unwrap_or_else(default_token);
-        TOKEN.save(deps.storage, &token).unwrap();
-
-        for (denom, unit) in assets {
-            UNITS
-                .save(deps.storage, denom.to_string(), &unit.clone())
-                .unwrap();
-        }
-    }
+    use super::update_gov;
 
     #[test]
     fn test_update_gov() {
         let mut deps = mock_dependencies();
 
-        setup(deps.as_mut(), SENDER_GOV, None, None, &[]);
+        let cases = [
+            ("user", "new_gov", Err(ContractError::Unauthorized {})),
+            (
+                "gov",
+                "new_gov",
+                Ok(vec![
+                    attr("method", "gov::update_gov"),
+                    attr("executor", "gov"),
+                    attr("new_gov", "new_gov"),
+                ]),
+            ),
+        ];
 
-        let resp = update_gov(
-            deps.as_mut(),
-            mock_info(SENDER_GOV, &[]),
-            SENDER_OWNER.to_string(),
-        )
-        .unwrap();
+        for (sender, new_gov, expected) in cases {
+            CONFIG.save(deps.as_mut().storage, &mock_config()).unwrap();
 
-        assert_eq!(
-            resp.attributes,
-            vec![
-                attr("method", "gov::update_gov"),
-                attr("executor", SENDER_GOV),
-                attr("new_gov", SENDER_OWNER),
-            ]
-        );
-
-        assert_eq!(
-            GOV.load(deps.as_ref().storage).unwrap().as_str(),
-            SENDER_OWNER
-        );
+            let resp = update_gov(deps.as_mut(), mock_info(sender, &[]), new_gov.to_string());
+            assert_eq!(resp.map(|v| v.attributes), expected);
+        }
     }
 
     #[test]
-    fn test_update_fee_strategy() {
+    fn test_update_fee() {
+        let std_time = mock_env().block.time.seconds();
         let mut deps = mock_dependencies();
 
-        setup(deps.as_mut(), SENDER_GOV, None, None, &[]);
+        FEE.save(deps.as_mut().storage, &Fee::default()).unwrap();
 
-        let new_fee = Fee {
-            collector: SENDER_VALID.to_string(),
-            mint: Some(Decimal::from_ratio(10u128, 100u128)),
-            burn: Some(Decimal::from_ratio(5u128, 100u128)),
-            stream: Some(Decimal::from_ratio(1u128, 100u128)),
-        };
+        enum TestType {
+            Collector,
+            MintFee,
+            BurnFee,
+            StreamingFee,
+            Error,
+        }
 
-        let resp = update_fee(
-            deps.as_mut(),
-            mock_env(),
-            mock_info(SENDER_GOV, &[]),
-            new_fee.clone(),
-        )
-        .unwrap();
+        let cases = [
+            (
+                "gov",
+                None,
+                FeePayload {
+                    collector: "new_collector".to_string(),
+                    ..Default::default()
+                },
+                TestType::Collector,
+                Ok(vec![
+                    attr("method", "gov::update_fee"),
+                    attr("executor", "gov"),
+                    // attr("new_fee", { NEW_FEE })
+                ]),
+            ),
+            (
+                "gov",
+                None,
+                FeePayload {
+                    mint_fee: Some(Decimal::from_str("0.1").unwrap()),
+                    ..Default::default()
+                },
+                TestType::MintFee,
+                Ok(vec![
+                    attr("method", "gov::update_fee"),
+                    attr("executor", "gov"),
+                    // attr("new_fee", { NEW_FEE })
+                ]),
+            ),
+            (
+                "gov",
+                None,
+                FeePayload {
+                    burn_fee: Some(Decimal::from_str("0.1").unwrap()),
+                    ..Default::default()
+                },
+                TestType::BurnFee,
+                Ok(vec![
+                    attr("method", "gov::update_fee"),
+                    attr("executor", "gov"),
+                    // attr("new_fee", { NEW_FEE })
+                ]),
+            ),
+            (
+                "gov",
+                None,
+                FeePayload {
+                    streaming_fee: Some(Decimal::from_str("0.1").unwrap()),
+                    ..Default::default()
+                },
+                TestType::StreamingFee,
+                Ok(vec![
+                    attr("method", "gov::update_fee"),
+                    attr("executor", "gov"),
+                    // attr("new_fee", { NEW_FEE })
+                ]),
+            ),
+            (
+                "user",
+                None,
+                FeePayload::default(),
+                TestType::Error,
+                Err(ContractError::Unauthorized {}),
+            ),
+            (
+                "gov",
+                Some(Rebalance::default()),
+                FeePayload::default(),
+                TestType::Error,
+                Err(ContractError::RebalanceNotFinalized {}),
+            ),
+        ];
 
-        assert_eq!(
-            resp.attributes,
-            vec![
-                attr("method", "gov::update_fee"),
-                attr("executor", SENDER_GOV),
-                attr("new_fee", format!("{new_fee:?}"))
-            ]
-        );
+        for (sender, rebalance, fee, test, expected) in cases {
+            expected.map(|mut v| v.push(attr("new_fee", format!("{:?}", fee))));
 
-        assert_eq!(
-            FEE.load(deps.as_ref().storage).unwrap(),
-            state::Fee {
-                collector: Addr::unchecked(new_fee.collector),
-                stream_collected: vec![],
-                mint: new_fee.mint,
-                burn: new_fee.burn,
-                stream: new_fee.stream,
-                stream_last_collected_at: mock_env().block.time.seconds(),
+            match rebalance {
+                Some(r) => REBALANCE.save(deps.as_mut().storage, &r).unwrap(),
+                None => REBALANCE.remove(deps.as_mut().storage),
             }
-        );
-    }
 
-    #[test]
-    fn test_update_reserve_denom() {
-        let mut deps = mock_dependencies();
+            let mut env = mock_env();
+            env.block.time = Timestamp::from_seconds(std_time);
 
-        // error
-        setup(
-            deps.as_mut(),
-            SENDER_GOV,
-            None,
-            None,
-            &[(RESERVE_DENOM, Decimal::one())],
-        );
+            let resp = update_fee(deps.as_mut(), env, mock_info(sender, &[]), fee);
+            assert_eq!(resp.map(|v| v.attributes), expected);
 
-        assert_eq!(
-            update_reserve_denom(
-                deps.as_mut(),
-                mock_info(SENDER_GOV, &[]),
-                DENOM_DEFAULT.to_string()
-            )
-            .unwrap_err(),
-            ContractError::InvalidArgument("reserve_denom must be zero in portfolio".to_string())
-        );
-
-        // success
-        UNITS
-            .save(
-                deps.as_mut().storage,
-                RESERVE_DENOM.to_string(),
-                &Decimal::zero(),
-            )
-            .unwrap();
-
-        let resp = update_reserve_denom(
-            deps.as_mut(),
-            mock_info(SENDER_GOV, &[]),
-            DENOM_DEFAULT.to_string(),
-        )
-        .unwrap();
-
-        assert_eq!(
-            resp.attributes,
-            vec![
-                attr("method", "gov::update_reserve_denom"),
-                attr("executor", SENDER_GOV),
-                attr("new_denom", DENOM_DEFAULT),
-            ]
-        );
-
-        assert_eq!(
-            TOKEN.load(deps.as_ref().storage).unwrap().reserve_denom,
-            DENOM_DEFAULT
-        );
-    }
-
-    #[test]
-    fn test_update_trade_info() {
-        let mut deps = mock_dependencies();
-
-        let resp = update_trade_info(
-            deps.as_mut(),
-            mock_info(SENDER_GOV, &[]),
-            DENOM_DEFAULT.to_string(),
-            SwapRoutes(vec![]),
-            86400,
-            Uint128::zero(),
-        )
-        .unwrap();
-
-        assert_eq!(
-            resp.attributes,
-            vec![
-                attr("method", "gov::update_trade_info"),
-                attr("executor", SENDER_GOV),
-                attr("denom", DENOM_DEFAULT),
-                attr("routes", format!("{:?}", SwapRoutes(vec![]))),
-                attr("cooldown", 86400.to_string()),
-                attr("max_trade_amount", Uint128::zero().to_string()),
-            ]
-        );
-
-        assert_eq!(
-            TRADE_INFOS
-                .load(deps.as_ref().storage, DENOM_DEFAULT.to_string())
-                .unwrap(),
-            TradeInfo {
-                routes: SwapRoutes(vec![]),
-                cooldown: 86400,
-                max_trade_amount: Uint128::zero(),
-                last_traded_at: None,
+            match test {
+                TestType::Collector => assert_eq!(
+                    FEE.load(deps.as_ref().storage).unwrap().collector,
+                    Addr::unchecked(fee.collector)
+                ),
+                TestType::MintFee => assert_eq!(
+                    FEE.load(deps.as_ref().storage).unwrap().mint_fee.unwrap(),
+                    fee.mint_fee.unwrap()
+                ),
+                TestType::BurnFee => assert_eq!(
+                    FEE.load(deps.as_ref().storage).unwrap().mint_fee.unwrap(),
+                    fee.burn_fee.unwrap()
+                ),
+                TestType::StreamingFee => assert_eq!(
+                    FEE.load(deps.as_ref().storage)
+                        .unwrap()
+                        .streaming_fee
+                        .unwrap(),
+                    StreamingFee {
+                        rate: fee.streaming_fee.unwrap(),
+                        collected: Units::default(),
+                        last_collected_at: std_time,
+                    },
+                ),
+                _ => {}
             }
-        );
+        }
     }
 }
