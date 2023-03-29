@@ -8,10 +8,8 @@ use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgBurn, MsgMint};
 
 use crate::{
     error::ContractError,
-    state::{CONFIG, FEE, INDEX_UNITS, TOTAL_SUPPLY},
+    state::{CONFIG, FEE, INDEX_UNITS, REBALANCE, TOTAL_SUPPLY},
 };
-
-use super::{assert_ongoing_rebalance, assert_paused_and_update};
 
 fn unwrap_addr(api: &dyn Api, addr: Option<String>, fallback: &Addr) -> StdResult<Addr> {
     Ok(addr
@@ -38,15 +36,18 @@ pub fn mint(
     receiver: Option<String>,
     refund_to: Option<String>,
 ) -> Result<Response, ContractError> {
-    assert_paused_and_update(deps.storage, &env, false)?;
-    assert_ongoing_rebalance(deps.storage, false)?;
+    let config = CONFIG.load(deps.storage)?;
+
+    config.assert_not_paused(&env)?;
+    if REBALANCE.may_load(deps.storage)?.is_some() {
+        return Err(ContractError::RebalanceNotFinalized {});
+    }
 
     // addresses
     let receiver = unwrap_addr(deps.api, receiver, &info.sender)?;
     let refund_to = unwrap_addr(deps.api, refund_to, &info.sender)?;
 
     // state loader
-    let config = CONFIG.load(deps.storage)?;
     let fee = FEE.load(deps.storage)?;
     let index_units = INDEX_UNITS.load(deps.storage)?;
     let total_supply = TOTAL_SUPPLY.load(deps.storage)?;
@@ -118,8 +119,12 @@ pub fn burn(
     info: MessageInfo,
     redeem_to: Option<String>,
 ) -> Result<Response, ContractError> {
-    assert_paused_and_update(deps.storage, &env, false)?;
-    assert_ongoing_rebalance(deps.storage, false)?;
+    let config = CONFIG.load(deps.storage)?;
+
+    config.assert_not_paused(&env)?;
+    if REBALANCE.may_load(deps.storage)?.is_some() {
+        return Err(ContractError::RebalanceNotFinalized {});
+    }
 
     // addresses
     let redeem_to = unwrap_addr(deps.api, redeem_to, &info.sender)?;
