@@ -5,14 +5,9 @@ use cosmwasm_std::{DepsMut, Response};
 use cosmwasm_std::{Env, MessageInfo};
 use ibcx_interface::core::GovMsg;
 
-use crate::error::ContractError;
+use crate::StdResult;
 
-pub fn handle_msg(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    msg: GovMsg,
-) -> Result<Response, ContractError> {
+pub fn handle_msg(deps: DepsMut, env: Env, info: MessageInfo, msg: GovMsg) -> StdResult<Response> {
     use GovMsg::*;
 
     match msg {

@@ -3,6 +3,7 @@ use cosmwasm_std::{attr, DepsMut, Env, MessageInfo, Response};
 use crate::{
     error::ContractError,
     state::{Config, PauseInfo, CONFIG},
+    StdResult,
 };
 
 pub fn pause(
@@ -10,7 +11,7 @@ pub fn pause(
     env: Env,
     info: MessageInfo,
     expires_at: Option<u64>,
-) -> Result<Response, ContractError> {
+) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
     config.check_gov(&info.sender)?;
     config.assert_not_paused(&env)?;
@@ -44,7 +45,8 @@ pub fn pause(
             "expires_at",
             expires_at
                 .map(|v| v.to_string())
-                .unwrap_or("never".to_string()),
+                .as_deref()
+                .unwrap_or("never"),
         ),
     ];
 
@@ -53,7 +55,7 @@ pub fn pause(
     Ok(resp)
 }
 
-pub fn release(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+pub fn release(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
     config.check_gov(&info.sender)?;
     config.assert_paused(&env)?;

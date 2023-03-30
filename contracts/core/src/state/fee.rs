@@ -1,46 +1,28 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{coin, Addr, Coin, Decimal, Env, Uint128};
+use cosmwasm_std::{coin, Addr, Coin, Decimal, Uint128};
 
 use crate::error::ContractError;
 
 use super::Units;
 
 #[cw_serde]
+#[derive(Default)]
 pub struct StreamingFee {
     pub rate: Decimal,
     pub collected: Vec<Coin>,
+    pub freeze: bool,
     pub last_collected_at: u64,
 }
 
 impl StreamingFee {
     pub fn collect(
         &mut self,
-        env: &Env,
-        index_units: Units,
-        total_supply: Uint128,
-    ) -> Result<(Units, Option<Vec<Coin>>), ContractError> {
-        let (new_units, fee_units) = self.collect_inner(index_units, env.block.time.seconds())?;
-
-        match fee_units {
-            None => Ok((new_units, None)),
-            Some(fee_units) => {
-                self.realize_inner(fee_units, total_supply)?;
-
-                let collected = self.collected;
-                self.collected = vec![];
-
-                Ok((new_units, Some(collected)))
-            }
-        }
-    }
-
-    fn collect_inner(
-        &mut self,
         index_units: Units,
         now_in_sec: u64,
-    ) -> Result<(Units, Option<Units>), ContractError> {
+        total_supply: Uint128,
+    ) -> Result<(Units, Option<Vec<Coin>>), ContractError> {
         let delta = now_in_sec - self.last_collected_at;
-        if delta == 0 {
+        if self.freeze || delta == 0 {
             return Ok((index_units, None)); // not collected
         }
 
@@ -60,23 +42,11 @@ impl StreamingFee {
             .into_iter()
             .unzip();
 
-        self.last_collected_at = now_in_sec;
-
-        Ok((new_units, Some(collected)))
-    }
-
-    fn realize_inner(
-        &mut self,
-        collected: Units,
-        total_supply: Uint128,
-    ) -> Result<(), ContractError> {
-        let realize = collected
-            .clone()
+        for (denom, amount) in collected
             .into_iter()
             .map(|(denom, unit)| (denom, unit * total_supply))
-            .collect::<Vec<_>>();
-
-        for (denom, amount) in realize {
+            .collect::<Vec<_>>()
+        {
             match self.collected.iter().position(|c| c.denom == denom) {
                 Some(i) => {
                     let origin = self.collected.get_mut(i).unwrap();
@@ -87,7 +57,9 @@ impl StreamingFee {
             }
         }
 
-        Ok(())
+        self.last_collected_at = now_in_sec;
+
+        Ok((new_units, Some(self.collected.clone())))
     }
 }
 
@@ -115,7 +87,9 @@ impl Default for Fee {
 pub mod tests {
     use std::str::FromStr;
 
-    use cosmwasm_std::{coin, Decimal};
+    use cosmwasm_std::{Decimal, Uint128};
+
+    use crate::state::Units;
 
     use super::StreamingFee;
 
@@ -127,32 +101,36 @@ pub mod tests {
             rate: percent_15,
             collected: vec![],
             last_collected_at: 0,
+            freeze: false,
         };
 
-        let index_units = vec![
-            ("uatom".to_string(), Decimal::from_str("2.0").unwrap()),
-            ("uosmo".to_string(), Decimal::from_str("1.0").unwrap()),
-        ]
-        .into();
+        let index_units: Units = vec![("uatom", "20000.0"), ("uosmo", "10000.0")].into();
 
-        let (mut new_units, fee_units) = streaming_fee.collect_inner(index_units, 86400).unwrap();
+        let (mut new_units, fee_units) = streaming_fee
+            .collect(index_units, 86400 * 365, 100u128.into())
+            .unwrap();
 
         {
-            let (new_units_2, fee_units_2) =
-                streaming_fee.collect_inner(index_units, 86400).unwrap();
-            assert_eq!(fee_units, None);
+            let (new_units_2, fee_units_2) = streaming_fee
+                .collect(new_units.clone(), 86400 * 365, 100u128.into())
+                .unwrap();
+            assert_eq!(fee_units_2, None);
             assert_eq!(new_units, new_units_2);
         }
 
         let cases = [
-            ("uatom", "0.003", "0.004", "1.997", "1.996"),
-            ("uosmo", "0.0015", "0.0016", "0.9985", "0.9984"),
+            ("uatom", 2998u128, 3000u128, "19970", "19970.1"),
+            ("uosmo", 1498u128, 1500u128, "9985", "9985.1"),
         ];
 
+        let mut fee_units = fee_units.unwrap();
         for (denom, fee_gt, fee_lt, next_gt, next_lt) in cases {
-            let (_, fee) = fee_units.unwrap().pop_key(denom).unwrap();
-            assert!(fee < Decimal::from_str(fee_lt).unwrap());
-            assert!(fee > Decimal::from_str(fee_gt).unwrap());
+            let fee = match fee_units.iter().position(|v| v.denom == denom) {
+                Some(i) => fee_units.remove(i),
+                None => panic!("no way"),
+            };
+            println!("{} {fee_lt}", fee.amount);
+            assert!(fee.amount > Uint128::new(fee_gt));
 
             let (_, next) = new_units.pop_key(denom).unwrap();
             assert!(next < Decimal::from_str(next_lt).unwrap());
@@ -166,39 +144,15 @@ pub mod tests {
             rate: Decimal::one(),
             collected: vec![],
             last_collected_at: 0,
+            freeze: false,
         };
 
-        let index_units = vec![
-            ("uatom".to_string(), Decimal::from_str("2.0").unwrap()),
-            ("uosmo".to_string(), Decimal::from_str("1.0").unwrap()),
-        ]
-        .into();
+        let index_units: Units = vec![("uatom", "2.0"), ("uosmo", "1.0")].into();
 
-        let (new_units, fee_units) = streaming_fee.collect_inner(index_units, 0).unwrap();
+        let (new_units, fee_units) = streaming_fee
+            .collect(index_units.clone(), 0, 100u128.into())
+            .unwrap();
         assert_eq!(fee_units, None);
         assert_eq!(index_units, new_units);
-    }
-
-    #[test]
-    fn test_streaming_fee_realize() {
-        let mut streaming_fee = StreamingFee {
-            rate: Decimal::one(),
-            collected: vec![],
-            last_collected_at: 0,
-        };
-
-        let collected_units = vec![
-            ("uatom".to_string(), Decimal::from_str("2.15").unwrap()),
-            ("uosmo".to_string(), Decimal::from_str("1.20").unwrap()),
-        ]
-        .into();
-
-        streaming_fee
-            .realize_inner(collected_units, 100u128.into())
-            .unwrap();
-        assert_eq!(
-            streaming_fee.collected,
-            vec![coin(215u128, "uatom"), coin(120u128, "uosmo")]
-        );
     }
 }

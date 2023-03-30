@@ -2,15 +2,12 @@ use cosmwasm_std::{attr, DepsMut, Env, MessageInfo, Response, Uint128};
 use ibcx_interface::{core::FeePayload, types::SwapRoutes};
 
 use crate::{
-    error::ContractError,
-    state::{Config, StreamingFee, TradeInfo, CONFIG, FEE, REBALANCE, RESERVE_UNITS, TRADE_INFOS},
+    error::RebalanceError,
+    state::{Config, StreamingFee, TradeInfo, CONFIG, FEE, REBALANCE, TRADE_INFOS},
+    StdResult,
 };
 
-pub fn update_gov(
-    deps: DepsMut,
-    info: MessageInfo,
-    new_gov: String,
-) -> Result<Response, ContractError> {
+pub fn update_gov(deps: DepsMut, info: MessageInfo, new_gov: String) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
     config.check_gov(&info.sender)?;
@@ -37,12 +34,12 @@ pub fn update_fee(
     env: Env,
     info: MessageInfo,
     new_fee: FeePayload,
-) -> Result<Response, ContractError> {
+) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
     config.check_gov(&info.sender)?;
     if REBALANCE.may_load(deps.storage)?.is_some() {
-        return Err(ContractError::RebalanceNotFinalized {});
+        return Err(RebalanceError::OnRebalancing.into());
     }
 
     // update
@@ -52,9 +49,10 @@ pub fn update_fee(
     fee.mint_fee = new_fee.mint_fee;
     fee.burn_fee = new_fee.burn_fee;
     fee.streaming_fee = new_fee.streaming_fee.map(|v| StreamingFee {
-        rate: v,
+        rate: v.rate,
         collected: vec![],
         last_collected_at: env.block.time.seconds(),
+        freeze: v.freeze,
     });
 
     FEE.save(deps.storage, &fee)?;
@@ -63,7 +61,6 @@ pub fn update_fee(
     let attrs = vec![
         attr("method", "gov::update_fee"),
         attr("executor", info.sender),
-        attr("new_fee", format!("{new_fee:?}")),
     ];
 
     let resp = Response::new().add_attributes(attrs);
@@ -75,23 +72,18 @@ pub fn update_reserve_denom(
     deps: DepsMut,
     info: MessageInfo,
     new_denom: String,
-) -> Result<Response, ContractError> {
+) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
     config.check_gov(&info.sender)?;
     if REBALANCE.may_load(deps.storage)?.is_some() {
-        return Err(ContractError::RebalanceNotFinalized {});
-    }
-
-    let reserve_units = RESERVE_UNITS.load(deps.storage)?;
-    if !reserve_units.check_empty() {
-        return Err(ContractError::RebalanceNotFinalized {});
+        return Err(RebalanceError::OnRebalancing.into());
     }
 
     CONFIG.save(
         deps.storage,
         &Config {
-            reserve_denom: new_denom,
+            reserve_denom: new_denom.clone(),
             ..config
         },
     )?;
@@ -111,11 +103,11 @@ pub fn update_reserve_denom(
 pub fn update_trade_info(
     deps: DepsMut,
     info: MessageInfo,
-    denom: String,
+    denom_in: String,
     routes: SwapRoutes,
     cooldown: u64,
     max_trade_amount: Uint128,
-) -> Result<Response, ContractError> {
+) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
     config.check_gov(&info.sender)?;
@@ -127,12 +119,13 @@ pub fn update_trade_info(
         last_traded_at: None,
     };
 
-    TRADE_INFOS.save(deps.storage, denom.clone(), &trade_info)?;
+    TRADE_INFOS.save(deps.storage, (&denom_in, &routes.denom_last()), &trade_info)?;
 
     let attrs = vec![
         attr("method", "gov::update_trade_info"),
         attr("executor", info.sender),
-        attr("denom", denom),
+        attr("denom_in", denom_in),
+        attr("denom_out", routes.denom_last()),
         attr("routes", format!("{routes:?}")),
         attr("cooldown", cooldown.to_string()),
         attr("max_trade_amount", max_trade_amount.to_string()),
@@ -152,10 +145,10 @@ mod tests {
         testing::{mock_env, mock_info},
         Addr, Decimal, Timestamp,
     };
-    use ibcx_interface::core::FeePayload;
+    use ibcx_interface::core::{FeePayload, StreamingFeePayload};
 
     use crate::{
-        error::ContractError,
+        error::{ContractError, RebalanceError},
         execute::gov::update::update_fee,
         state::{tests::mock_config, Fee, Rebalance, StreamingFee, CONFIG, FEE, REBALANCE},
         test::mock_dependencies,
@@ -194,6 +187,7 @@ mod tests {
         let mut deps = mock_dependencies();
 
         FEE.save(deps.as_mut().storage, &Fee::default()).unwrap();
+        CONFIG.save(deps.as_mut().storage, &mock_config()).unwrap();
 
         enum TestType {
             Collector,
@@ -203,19 +197,23 @@ mod tests {
             Error,
         }
 
+        let fee_base = FeePayload {
+            collector: "collector".to_string(),
+            ..Default::default()
+        };
+
         let cases = [
             (
                 "gov",
                 None,
                 FeePayload {
                     collector: "new_collector".to_string(),
-                    ..Default::default()
+                    ..fee_base.clone()
                 },
                 TestType::Collector,
                 Ok(vec![
                     attr("method", "gov::update_fee"),
                     attr("executor", "gov"),
-                    // attr("new_fee", { NEW_FEE })
                 ]),
             ),
             (
@@ -223,13 +221,12 @@ mod tests {
                 None,
                 FeePayload {
                     mint_fee: Some(Decimal::from_str("0.1").unwrap()),
-                    ..Default::default()
+                    ..fee_base.clone()
                 },
                 TestType::MintFee,
                 Ok(vec![
                     attr("method", "gov::update_fee"),
                     attr("executor", "gov"),
-                    // attr("new_fee", { NEW_FEE })
                 ]),
             ),
             (
@@ -237,27 +234,28 @@ mod tests {
                 None,
                 FeePayload {
                     burn_fee: Some(Decimal::from_str("0.1").unwrap()),
-                    ..Default::default()
+                    ..fee_base.clone()
                 },
                 TestType::BurnFee,
                 Ok(vec![
                     attr("method", "gov::update_fee"),
                     attr("executor", "gov"),
-                    // attr("new_fee", { NEW_FEE })
                 ]),
             ),
             (
                 "gov",
                 None,
                 FeePayload {
-                    streaming_fee: Some(Decimal::from_str("0.1").unwrap()),
-                    ..Default::default()
+                    streaming_fee: Some(StreamingFeePayload {
+                        rate: Decimal::from_str("0.1").unwrap(),
+                        freeze: false,
+                    }),
+                    ..fee_base
                 },
                 TestType::StreamingFee,
                 Ok(vec![
                     attr("method", "gov::update_fee"),
                     attr("executor", "gov"),
-                    // attr("new_fee", { NEW_FEE })
                 ]),
             ),
             (
@@ -272,13 +270,11 @@ mod tests {
                 Some(Rebalance::default()),
                 FeePayload::default(),
                 TestType::Error,
-                Err(ContractError::RebalanceNotFinalized {}),
+                Err(RebalanceError::OnRebalancing.into()),
             ),
         ];
 
         for (sender, rebalance, fee, test, expected) in cases {
-            expected.map(|mut v| v.push(attr("new_fee", format!("{:?}", fee))));
-
             match rebalance {
                 Some(r) => REBALANCE.save(deps.as_mut().storage, &r).unwrap(),
                 None => REBALANCE.remove(deps.as_mut().storage),
@@ -287,7 +283,7 @@ mod tests {
             let mut env = mock_env();
             env.block.time = Timestamp::from_seconds(std_time);
 
-            let resp = update_fee(deps.as_mut(), env, mock_info(sender, &[]), fee);
+            let resp = update_fee(deps.as_mut(), env, mock_info(sender, &[]), fee.clone());
             assert_eq!(resp.map(|v| v.attributes), expected);
 
             match test {
@@ -300,7 +296,7 @@ mod tests {
                     fee.mint_fee.unwrap()
                 ),
                 TestType::BurnFee => assert_eq!(
-                    FEE.load(deps.as_ref().storage).unwrap().mint_fee.unwrap(),
+                    FEE.load(deps.as_ref().storage).unwrap().burn_fee.unwrap(),
                     fee.burn_fee.unwrap()
                 ),
                 TestType::StreamingFee => assert_eq!(
@@ -308,11 +304,14 @@ mod tests {
                         .unwrap()
                         .streaming_fee
                         .unwrap(),
-                    StreamingFee {
-                        rate: fee.streaming_fee.unwrap(),
-                        collected: vec![],
-                        last_collected_at: std_time,
-                    },
+                    fee.streaming_fee
+                        .map(|v| StreamingFee {
+                            rate: v.rate,
+                            collected: vec![],
+                            last_collected_at: std_time,
+                            freeze: v.freeze,
+                        })
+                        .unwrap(),
                 ),
                 _ => {}
             }

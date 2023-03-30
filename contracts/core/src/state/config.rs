@@ -20,12 +20,12 @@ impl Config {
     }
 
     pub fn assert_paused(&self, env: &Env) -> Result<(), ContractError> {
-        self.paused.refresh(env)?.assert_paused()?;
+        self.paused.clone().refresh(env)?.assert_paused()?;
         Ok(())
     }
 
     pub fn assert_not_paused(&self, env: &Env) -> Result<(), ContractError> {
-        self.paused.refresh(env)?.assert_not_paused()?;
+        self.paused.clone().refresh(env)?.assert_not_paused()?;
         Ok(())
     }
 }
@@ -68,16 +68,15 @@ mod tests {
 
     #[test]
     fn test_assert_paused() {
+        use ContractError as E;
+
         let std_time = mock_env().block.time.seconds();
 
-        let err_not_paused = Err(ContractError::NotPaused {});
-        let err_paused = Err(ContractError::Paused {});
-
         let cases = [
-            (false, None, err_not_paused, Ok(())),
-            (true, Some(std_time - 1), err_not_paused, Ok(())),
-            (true, Some(std_time + 1), Ok(()), err_paused),
-            (true, None, Ok(()), err_paused),
+            (false, None, Err(E::NotPaused), Ok(())),
+            (true, Some(std_time - 1), Err(E::NotPaused), Ok(())),
+            (true, Some(std_time + 1), Ok(()), Err(E::Paused)),
+            (true, None, Ok(()), Err(E::Paused)),
         ];
 
         for (paused, expiry, expect_p, expect_np) in cases {

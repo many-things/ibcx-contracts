@@ -1,9 +1,9 @@
-use std::{collections::BTreeMap, vec::IntoIter};
+use std::{collections::BTreeMap, ops::Deref, str::FromStr, vec::IntoIter};
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{coin, Coin, Decimal, StdResult, Uint128};
+use cosmwasm_std::{coin, Coin, Decimal, StdError, Uint128};
 
-use crate::error::ContractError;
+use crate::{error::ContractError, StdResult};
 
 pub type Unit = (String, Decimal);
 
@@ -23,11 +23,27 @@ impl<'a> From<&'a [Unit]> for Units {
     }
 }
 
+impl<'a> From<Vec<(&'a str, &'a str)>> for Units {
+    fn from(v: Vec<(&'a str, &'a str)>) -> Self {
+        v.into_iter()
+            .map(|(denom, unit)| (denom.to_string(), Decimal::from_str(unit).unwrap()))
+            .collect()
+    }
+}
+
 impl Extend<Unit> for Units {
     fn extend<T: IntoIterator<Item = Unit>>(&mut self, iter: T) {
         for elem in iter {
             self.0.push(elem)
         }
+    }
+}
+
+impl Deref for Units {
+    type Target = Vec<Unit>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
@@ -40,7 +56,22 @@ impl IntoIterator for Units {
     }
 }
 
+impl FromIterator<Unit> for Units {
+    fn from_iter<T: IntoIterator<Item = Unit>>(iter: T) -> Self {
+        iter.into_iter().collect::<Vec<_>>().into()
+    }
+}
+
 impl Units {
+    pub fn prettify(&self) -> String {
+        self.iter()
+            .map(|(denom, unit)| -> String { format!("(\"{denom}\",\"{unit}\")") })
+            .fold("[".to_string(), |acc, s| acc + &s + ",")
+            .trim_end_matches(',')
+            .to_string()
+            + "]"
+    }
+
     pub fn add_key(&mut self, k: &str, v: Decimal) -> StdResult<()> {
         match self.0.iter().position(|(denom, _)| denom == k) {
             Some(i) => {
@@ -52,6 +83,27 @@ impl Units {
         }
 
         Ok(())
+    }
+
+    pub fn sub_key(&mut self, k: &str, v: Decimal) -> StdResult<()> {
+        match self.0.iter().position(|(denom, _)| denom == k) {
+            Some(i) => {
+                let unit = self.0.get_mut(i).unwrap();
+
+                unit.1 = unit.1.checked_sub(v)?;
+            }
+            None => return Err(StdError::not_found("unit to sub").into()),
+        }
+
+        Ok(())
+    }
+
+    pub fn get_key(&self, key: &str) -> Option<&Unit> {
+        if let Some(i) = self.0.iter().position(|u| u.0 == key) {
+            self.0.get(i)
+        } else {
+            None
+        }
     }
 
     pub fn pop_key(&mut self, key: &str) -> Option<Unit> {
@@ -95,7 +147,7 @@ impl Units {
     }
 
     pub fn check_empty(&self) -> bool {
-        self.0.iter().all(|(_, unit)| !unit.is_zero())
+        self.0.iter().all(|(_, unit)| unit.is_zero())
     }
 
     pub fn check_duplicate(&self) -> bool {
@@ -115,11 +167,7 @@ mod tests {
 
     #[test]
     fn test_pop_key() {
-        let mut units: Units = vec![
-            ("uatom".to_string(), Decimal::from_ratio(1u128, 2u128)),
-            ("uosmo".to_string(), Decimal::from_ratio(1u128, 4u128)),
-        ]
-        .into();
+        let mut units: Units = vec![("uatom", "0.5"), ("uosmo", "0.25")].into();
 
         // pop uatom
         assert_eq!(
@@ -143,47 +191,23 @@ mod tests {
             units.pop_key("uosmo"),
             Some(("uosmo".to_string(), Decimal::from_ratio(1u128, 4u128)))
         );
-        assert_eq!(units, vec![].into());
+        assert_eq!(units, Units::default());
     }
 
     #[test]
     fn test_prune_zero() {
-        let mut units: Units = vec![
-            ("uatom".to_string(), Decimal::from_ratio(1u128, 2u128)),
-            ("uosmo".to_string(), Decimal::from_ratio(1u128, 4u128)),
-            ("ujuno".to_string(), Decimal::zero()),
-        ]
-        .into();
+        let mut units: Units = vec![("uatom", "0.5"), ("uosmo", "0.25"), ("ujuno", "0.0")].into();
 
         units.prune_zero();
 
-        assert_eq!(
-            units,
-            vec![
-                ("uatom".to_string(), Decimal::from_ratio(1u128, 2u128)),
-                ("uosmo".to_string(), Decimal::from_ratio(1u128, 4u128)),
-            ]
-            .into()
-        );
+        assert_eq!(units, vec![("uatom", "0.5"), ("uosmo", "0.25")].into());
     }
 
     #[test]
     fn test_check_empty() {
         let cases = [
-            (
-                vec![
-                    ("uatom".to_string(), Decimal::from_ratio(1u128, 2u128)),
-                    ("uosmo".to_string(), Decimal::zero()),
-                ],
-                false,
-            ),
-            (
-                vec![
-                    ("uatom".to_string(), Decimal::zero()),
-                    ("uosmo".to_string(), Decimal::zero()),
-                ],
-                true,
-            ),
+            (vec![("uatom", "0.5"), ("uosmo", "0.0")], false),
+            (vec![("uatom", "0.0"), ("uosmo", "0.0")], true),
             (vec![], true),
         ];
 
@@ -195,20 +219,8 @@ mod tests {
     #[test]
     fn test_check_duplication() {
         let cases = [
-            (
-                vec![
-                    ("uatom".to_string(), Decimal::from_ratio(1u128, 2u128)),
-                    ("uatom".to_string(), Decimal::from_ratio(1u128, 4u128)),
-                ],
-                true,
-            ),
-            (
-                vec![
-                    ("uatom".to_string(), Decimal::from_ratio(1u128, 2u128)),
-                    ("uosmo".to_string(), Decimal::from_ratio(1u128, 4u128)),
-                ],
-                false,
-            ),
+            (vec![("uatom", "0.5"), ("uatom", "0.25")], true),
+            (vec![("uatom", "0.5"), ("uosmo", "0.25")], false),
         ];
 
         for (units, expect) in cases {

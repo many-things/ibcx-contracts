@@ -25,21 +25,20 @@ pub const TOTAL_SUPPLY: Item<Uint128> = Item::new(TOTAL_SUPPLY_KEY);
 pub const INDEX_UNITS_KEY: &str = "index_units";
 pub const INDEX_UNITS: Item<Units> = Item::new(INDEX_UNITS_KEY);
 
-pub const RESERVE_UNITS_KEY: &str = "reserve_units";
-pub const RESERVE_UNITS: Item<Units> = Item::new(RESERVE_UNITS_KEY);
-
 pub const REBALANCE_KEY: &str = "rebalances";
 pub const REBALANCE: Item<Rebalance> = Item::new(REBALANCE_KEY);
 
+pub const RESERVE_UNITS_KEY: &str = "reserve_units";
+pub const RESERVE_UNITS: Item<Units> = Item::new(RESERVE_UNITS_KEY);
+
 pub const TRADE_INFOS_PREFIX: &str = "trade_infos";
-pub const TRADE_INFOS: Map<String, TradeInfo> = Map::new(TRADE_INFOS_PREFIX);
+pub const TRADE_INFOS: Map<(&str, &str), TradeInfo> = Map::new(TRADE_INFOS_PREFIX);
 
 #[cfg(test)]
 pub mod tests {
     use std::str::FromStr;
 
     use cosmwasm_std::{Addr, Decimal, Env, StdResult, Storage};
-    use ibcx_interface::types::{SwapRoute, SwapRoutes};
 
     use super::{
         Config, Fee, PauseInfo, Rebalance, StreamingFee, TradeInfo, CONFIG, FEE, INDEX_UNITS,
@@ -50,10 +49,10 @@ pub mod tests {
         pub config: Config,
         pub fee: Fee,
         pub total_supply: u128,
-        pub index_units: &'a [(&'a str, &'a str)],
-        pub reserve_units: &'a [(&'a str, &'a str)],
+        pub index_units: Vec<(&'a str, &'a str)>,
+        pub reserve_units: Vec<(&'a str, &'a str)>,
         pub rebalance: Option<Rebalance>,
-        pub trade_infos: &'a [(&'a str, TradeInfo)],
+        pub trade_infos: Vec<(String, TradeInfo)>,
     }
 
     impl<'a> StateBuilder<'a> {
@@ -63,24 +62,24 @@ pub mod tests {
                 fee: mock_fee(env, None, None, None),
                 total_supply: 10e6 as u128,
 
-                index_units: &[("uatom", "0.5"), ("uosmo", "0.3")],
-                reserve_units: &[("uatom", "0.1"), ("uosmo", "0.12")],
+                index_units: [("uatom", "0.5"), ("uosmo", "0.3")].to_vec(),
+                reserve_units: [("uatom", "0.1"), ("uosmo", "0.12")].to_vec(),
 
                 rebalance: None,
-                trade_infos: &[
+                trade_infos: vec![
                     (
-                        "uatom",
+                        "uatom".to_string(),
                         TradeInfo {
-                            routes: SwapRoutes(vec![SwapRoute::new(0, "uosmo")]),
+                            routes: vec![(0, "uosmo")].into(),
                             cooldown: 86400u64,
                             max_trade_amount: (10e6 as u128).into(),
                             last_traded_at: Some(env.block.time.seconds()),
                         },
                     ),
                     (
-                        "uosmo",
+                        "uosmo".to_string(),
                         TradeInfo {
-                            routes: SwapRoutes(vec![SwapRoute::new(0, "uatom")]),
+                            routes: vec![(0, "uatom")].into(),
                             cooldown: 86400u64,
                             max_trade_amount: (10e6 as u128).into(),
                             last_traded_at: Some(env.block.time.seconds()),
@@ -113,8 +112,9 @@ pub mod tests {
         pub fn with_streaming_fee(mut self, streaming_fee: &str, collected_at: u64) -> Self {
             self.fee.streaming_fee = Some(StreamingFee {
                 rate: Decimal::from_str(streaming_fee).unwrap(),
-                collected: vec![].into(),
+                collected: vec![],
                 last_collected_at: collected_at,
+                freeze: false,
             });
             self
         }
@@ -124,23 +124,23 @@ pub mod tests {
             self
         }
 
-        pub fn add_index_unit(mut self, denom: &str, unit: &str) -> Self {
-            self.index_units = &[self.index_units, &[(denom, unit)]].concat();
+        pub fn add_index_unit(mut self, denom: &'a str, unit: &'a str) -> Self {
+            self.index_units.push((denom, unit));
             self
         }
 
         pub fn clear_index_units(mut self) -> Self {
-            self.index_units = &[];
+            self.index_units = vec![];
             self
         }
 
-        pub fn add_reserve_unit(mut self, denom: &str, unit: &str) -> Self {
-            self.reserve_units = &[self.reserve_units, &[(denom, unit)]].concat();
+        pub fn add_reserve_unit(mut self, denom: &'a str, unit: &'a str) -> Self {
+            self.reserve_units.push((denom, unit));
             self
         }
 
         pub fn clear_reserve_unit(mut self) -> Self {
-            self.reserve_units = &[];
+            self.reserve_units = vec![];
             self
         }
 
@@ -150,12 +150,12 @@ pub mod tests {
         }
 
         pub fn add_trade_info(mut self, denom: &str, trade_info: TradeInfo) -> Self {
-            self.trade_infos = &[self.trade_infos, &[(denom, trade_info)]].concat();
+            self.trade_infos.push((denom.to_string(), trade_info));
             self
         }
 
         pub fn clear_trade_infos(mut self) -> Self {
-            self.trade_infos = &[];
+            self.trade_infos = vec![];
             self
         }
 
@@ -163,30 +163,10 @@ pub mod tests {
             CONFIG.save(storage, &self.config).unwrap();
             FEE.save(storage, &self.fee).unwrap();
 
-            INDEX_UNITS
-                .save(
-                    storage,
-                    &self
-                        .index_units
-                        .into_iter()
-                        .map(|(k, v)| Ok((k.to_string(), Decimal::from_str(v)?)))
-                        .collect::<StdResult<Vec<_>>>()
-                        .unwrap()
-                        .into(),
-                )
-                .unwrap();
+            INDEX_UNITS.save(storage, &self.index_units.into()).unwrap();
 
             RESERVE_UNITS
-                .save(
-                    storage,
-                    &self
-                        .index_units
-                        .into_iter()
-                        .map(|(k, v)| Ok((k.to_string(), Decimal::from_str(v)?)))
-                        .collect::<StdResult<Vec<_>>>()
-                        .unwrap()
-                        .into(),
-                )
+                .save(storage, &self.reserve_units.into())
                 .unwrap();
 
             TOTAL_SUPPLY
@@ -234,14 +214,15 @@ pub mod tests {
     ) -> Fee {
         Fee {
             collector: Addr::unchecked("collector"),
-            mint_fee: mint_fee.map(|v| Decimal::from_str(v)).transpose().unwrap(),
-            burn_fee: burn_fee.map(|v| Decimal::from_str(v)).transpose().unwrap(),
+            mint_fee: mint_fee.map(Decimal::from_str).transpose().unwrap(),
+            burn_fee: burn_fee.map(Decimal::from_str).transpose().unwrap(),
             streaming_fee: streaming_fee
                 .map(|v| -> StdResult<_> {
                     Ok(StreamingFee {
                         rate: Decimal::from_str(v)?,
-                        collected: vec![].into(),
+                        collected: vec![],
                         last_collected_at: env.block.time.seconds(),
+                        freeze: false,
                     })
                 })
                 .transpose()

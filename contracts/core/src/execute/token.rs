@@ -1,15 +1,15 @@
-use std::convert::identity;
-
 use cosmwasm_std::{
     attr, coin, coins, Addr, Api, Attribute, BankMsg, CosmosMsg, DepsMut, Env, MessageInfo,
-    Response, StdResult, Uint128,
+    Response, Uint128,
 };
 use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgBurn, MsgMint};
 
 use crate::{
-    error::ContractError,
+    error::RebalanceError,
     state::{CONFIG, FEE, INDEX_UNITS, REBALANCE, TOTAL_SUPPLY},
 };
+
+use crate::StdResult;
 
 fn unwrap_addr(api: &dyn Api, addr: Option<String>, fallback: &Addr) -> StdResult<Addr> {
     Ok(addr
@@ -18,7 +18,12 @@ fn unwrap_addr(api: &dyn Api, addr: Option<String>, fallback: &Addr) -> StdResul
         .unwrap_or_else(|| fallback.clone()))
 }
 
-fn mint_event(sender: &Addr, receiver: &Addr, refund_to: &Addr, amount: Uint128) -> Vec<Attribute> {
+fn mint_event(
+    sender: impl Into<String>,
+    receiver: impl Into<String>,
+    refund_to: impl Into<String>,
+    amount: Uint128,
+) -> Vec<Attribute> {
     vec![
         attr("method", "mint"),
         attr("executor", sender),
@@ -35,12 +40,12 @@ pub fn mint(
     amount: Uint128,
     receiver: Option<String>,
     refund_to: Option<String>,
-) -> Result<Response, ContractError> {
+) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
     config.assert_not_paused(&env)?;
     if REBALANCE.may_load(deps.storage)?.is_some() {
-        return Err(ContractError::RebalanceNotFinalized {});
+        return Err(RebalanceError::OnRebalancing.into());
     }
 
     // addresses
@@ -77,12 +82,12 @@ pub fn mint(
 
     // send 100 - fee to minter
     let mint_send_msg = BankMsg::Send {
-        to_address: receiver.into_string(),
+        to_address: receiver.to_string(),
         amount: coins(mint_send.u128(), &config.index_denom),
     };
     // and send rest of funds to minter
     let refund_send_msg = BankMsg::Send {
-        to_address: refund_to.into_string(),
+        to_address: refund_to.to_string(),
         amount: refund,
     };
 
@@ -94,17 +99,21 @@ pub fn mint(
         Some(refund_send_msg.into()),
     ]
     .into_iter()
-    .filter_map(identity)
+    .flatten()
     .collect::<Vec<CosmosMsg>>();
 
-    let attrs = mint_event(&info.sender, &receiver, &refund_to, amount);
+    let attrs = mint_event(info.sender, receiver, refund_to, amount);
 
     let resp = Response::new().add_messages(msgs).add_attributes(attrs);
 
     Ok(resp)
 }
 
-fn burn_event(sender: &Addr, redeem_to: &Addr, amount: Uint128) -> Vec<Attribute> {
+fn burn_event(
+    sender: impl Into<String>,
+    redeem_to: impl Into<String>,
+    amount: Uint128,
+) -> Vec<Attribute> {
     vec![
         attr("method", "burn"),
         attr("executor", sender),
@@ -118,12 +127,12 @@ pub fn burn(
     env: Env,
     info: MessageInfo,
     redeem_to: Option<String>,
-) -> Result<Response, ContractError> {
+) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
     config.assert_not_paused(&env)?;
     if REBALANCE.may_load(deps.storage)?.is_some() {
-        return Err(ContractError::RebalanceNotFinalized {});
+        return Err(RebalanceError::OnRebalancing.into());
     }
 
     // addresses
@@ -160,7 +169,7 @@ pub fn burn(
 
     // send (100 - fee) * units to burner
     let burn_send_msg = BankMsg::Send {
-        to_address: redeem_to.into_string(),
+        to_address: redeem_to.to_string(),
         amount: burn_send_amount,
     };
 
@@ -171,10 +180,10 @@ pub fn burn(
         Some(burn_send_msg.into()),
     ]
     .into_iter()
-    .filter_map(identity)
+    .flatten()
     .collect::<Vec<CosmosMsg>>();
 
-    let attrs = burn_event(&info.sender, &redeem_to, burn_amount);
+    let attrs = burn_event(info.sender, redeem_to, burn_amount);
 
     let resp = Response::new().add_messages(msgs).add_attributes(attrs);
 
@@ -186,7 +195,7 @@ mod tests {
     use cosmwasm_std::{
         coin, coins,
         testing::{mock_dependencies_with_balances, mock_env, mock_info, MOCK_CONTRACT_ADDR},
-        Addr, BankMsg, Coin, CosmosMsg, SubMsg, Uint128,
+        BankMsg, Coin, CosmosMsg, SubMsg, Uint128,
     };
     use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgBurn, MsgMint};
 
@@ -217,7 +226,7 @@ mod tests {
         if let Some((fee_collector, fee_amount)) = fee_amount {
             expected_msgs.push(
                 BankMsg::Send {
-                    to_address: fee_amount.to_string(),
+                    to_address: fee_collector.to_string(),
                     amount: coins(fee_amount, "uibcx"),
                 }
                 .into(),
@@ -261,29 +270,24 @@ mod tests {
         let amount = 100u128.into();
         let refund = 10u128.into();
         let index_units = INDEX_UNITS.load(deps.as_ref().storage).unwrap();
-        let index_funds = index_units.calc_require_amount(amount + refund).as_slice();
-        let refund_funds = index_units.calc_require_amount(refund).as_slice();
+        let index_funds = index_units.calc_require_amount(amount + refund);
+        let refund_funds = index_units.calc_require_amount(refund);
 
-        let minter = mock_info("minter", index_funds);
+        let minter = mock_info("minter", &index_funds);
         let recv = Some("receiver".to_string());
         let rfnd = Some("refund_to".to_string());
 
         let mint_resp = mint(deps.as_mut(), env, minter, amount, recv, rfnd).unwrap();
         assert_eq!(
             mint_resp.attributes,
-            mint_event(
-                &Addr::unchecked("minter"),
-                &Addr::unchecked("receiver"),
-                &Addr::unchecked("refund_to"),
-                amount
-            )
+            mint_event("minter", "receiver", "refund_to", amount)
         );
         assert_mint_resp_msgs(
             mint_resp.messages,
             (MOCK_CONTRACT_ADDR, 100),
             Some(("collector", 10)),
             ("receiver", 90),
-            ("refund_to", refund_funds),
+            ("refund_to", &refund_funds),
         );
 
         assert_eq!(
@@ -302,29 +306,24 @@ mod tests {
         let amount = 100u128.into();
         let refund = 10u128.into();
         let index_units = INDEX_UNITS.load(deps.as_ref().storage).unwrap();
-        let index_funds = index_units.calc_require_amount(amount + refund).as_slice();
-        let refund_funds = index_units.calc_require_amount(refund).as_slice();
+        let index_funds = index_units.calc_require_amount(amount + refund);
+        let refund_funds = index_units.calc_require_amount(refund);
 
-        let minter = mock_info("minter", index_funds);
+        let minter = mock_info("minter", &index_funds);
         let recv = Some("receiver".to_string());
         let rfnd = Some("refund_to".to_string());
 
         let mint_resp = mint(deps.as_mut(), env, minter, amount, recv, rfnd).unwrap();
         assert_eq!(
             mint_resp.attributes,
-            mint_event(
-                &Addr::unchecked("minter"),
-                &Addr::unchecked("receiver"),
-                &Addr::unchecked("refund_to"),
-                amount
-            )
+            mint_event("minter", "receiver", "refund_to", amount)
         );
         assert_mint_resp_msgs(
             mint_resp.messages,
             (MOCK_CONTRACT_ADDR, 100),
             None,
             ("receiver", 100),
-            ("refund_to", refund_funds),
+            ("refund_to", &refund_funds),
         );
 
         assert_eq!(
@@ -352,7 +351,7 @@ mod tests {
         if let Some((fee_collector, fee_amount)) = fee_amount {
             expected_msgs.push(
                 BankMsg::Send {
-                    to_address: fee_amount.to_string(),
+                    to_address: fee_collector.to_string(),
                     amount: coins(fee_amount, "uibcx"),
                 }
                 .into(),
@@ -388,7 +387,7 @@ mod tests {
         let amount: Uint128 = 100u128.into();
         let amount_deducted = 80u128.into();
         let index_units = INDEX_UNITS.load(deps.as_ref().storage).unwrap();
-        let index_funds = index_units.calc_require_amount(amount_deducted).as_slice();
+        let index_funds = index_units.calc_require_amount(amount_deducted);
 
         let burn_resp = super::burn(
             deps.as_mut(),
@@ -399,22 +398,18 @@ mod tests {
         .unwrap();
         assert_eq!(
             burn_resp.attributes,
-            burn_event(
-                &Addr::unchecked("burner"),
-                &Addr::unchecked("redeem_to"),
-                amount
-            )
+            burn_event("burner", "redeem_to", amount_deducted)
         );
         assert_burn_resp_msgs(
             burn_resp.messages,
-            (MOCK_CONTRACT_ADDR, 100),
-            Some(("collector", 20)),
-            ("redeem_to", index_funds),
+            (MOCK_CONTRACT_ADDR, amount_deducted.u128()),
+            Some(("collector", amount.u128() - amount_deducted.u128())),
+            ("redeem_to", &index_funds),
         );
 
         assert_eq!(
             TOTAL_SUPPLY.load(deps.as_ref().storage).unwrap(),
-            Uint128::from((10e6 as u128) - 80),
+            Uint128::from((10e6 as u128) - amount_deducted.u128()),
         );
     }
 
@@ -427,7 +422,7 @@ mod tests {
 
         let amount = 100u128.into();
         let index_units = INDEX_UNITS.load(deps.as_ref().storage).unwrap();
-        let index_funds = index_units.calc_require_amount(amount).as_slice();
+        let index_funds = index_units.calc_require_amount(amount);
 
         let burn_resp = super::burn(
             deps.as_mut(),
@@ -438,17 +433,13 @@ mod tests {
         .unwrap();
         assert_eq!(
             burn_resp.attributes,
-            burn_event(
-                &Addr::unchecked("burner"),
-                &Addr::unchecked("redeem_to"),
-                amount
-            )
+            burn_event("burner", "redeem_to", amount)
         );
         assert_burn_resp_msgs(
             burn_resp.messages,
             (MOCK_CONTRACT_ADDR, 100),
             None,
-            ("redeem_to", index_funds),
+            ("redeem_to", &index_funds),
         );
 
         assert_eq!(

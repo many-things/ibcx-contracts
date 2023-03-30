@@ -5,11 +5,18 @@ use crate::types::SwapRoutes;
 
 #[cw_serde]
 #[derive(Default)]
+pub struct StreamingFeePayload {
+    pub rate: Decimal,
+    pub freeze: bool,
+}
+
+#[cw_serde]
+#[derive(Default)]
 pub struct FeePayload {
     pub collector: String,
     pub mint_fee: Option<Decimal>,
     pub burn_fee: Option<Decimal>,
-    pub streaming_fee: Option<Decimal>,
+    pub streaming_fee: Option<StreamingFeePayload>,
 }
 
 #[cw_serde]
@@ -45,14 +52,14 @@ pub enum GovMsg {
 pub enum RebalanceTradeMsg {
     // TOKEN => RESERVE
     Deflate {
-        denom: String,
-        amount: Uint128,
+        target_denom: String,
+        amount_out: Uint128,
         max_amount_in: Uint128,
     },
     // RESERVE => TOKEN
     Inflate {
-        denom: String,
-        amount: Uint128,
+        target_denom: String,
+        amount_in: Uint128,
         min_amount_out: Uint128,
     },
 }
@@ -60,7 +67,7 @@ pub enum RebalanceTradeMsg {
 #[cw_serde]
 pub enum RebalanceMsg {
     Init {
-        manager: String,
+        manager: Option<String>,
         deflation: Vec<(String, Decimal)>, // target units
         inflation: Vec<(String, Decimal)>, // conversion weights
     },

@@ -1,42 +1,47 @@
-use std::convert::identity;
-
-use cosmwasm_std::{attr, BankMsg, CosmosMsg, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{attr, BankMsg, CosmosMsg, DepsMut, MessageInfo, Response, Storage};
 
 use crate::{
     assert_sender,
-    error::ContractError,
     state::{FEE, INDEX_UNITS, TOTAL_SUPPLY},
 };
 
-pub fn realize(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
-    let fee = FEE.load(deps.storage)?;
-    assert_sender(&fee.collector, &info.sender)?;
+use crate::StdResult;
 
-    let total_supply = TOTAL_SUPPLY.load(deps.storage)?;
+pub fn collect_streaming_fee(storage: &mut dyn Storage, now_in_sec: u64) -> StdResult<()> {
+    let mut fee = FEE.load(storage)?;
+    let total_supply = TOTAL_SUPPLY.load(storage)?;
 
-    let mut msgs: Vec<Option<CosmosMsg>> = vec![];
-
-    // collect streaming fee
-    if let Some(mut streaming_fee) = fee.streaming_fee {
-        let index_units = INDEX_UNITS.load(deps.storage)?;
-
-        let (new_index_units, collected) =
-            streaming_fee.collect(&env, index_units, total_supply)?;
-
-        let msg = collected.map(|v| {
-            BankMsg::Send {
-                to_address: fee.collector.to_string(),
-                amount: v,
-            }
-            .into()
-        });
-
-        INDEX_UNITS.save(deps.storage, &new_index_units)?;
-
-        msgs.push(msg);
+    if let Some(streaming_fee) = fee.streaming_fee.as_mut() {
+        let index_units = INDEX_UNITS.load(storage)?;
+        let (new_index_units, _) = streaming_fee.collect(index_units, now_in_sec, total_supply)?;
+        INDEX_UNITS.save(storage, &new_index_units)?;
     }
 
-    let msgs = msgs.into_iter().filter_map(identity).collect::<Vec<_>>();
+    FEE.save(storage, &fee)?;
+
+    Ok(())
+}
+
+pub fn realize_streaming_fee(deps: DepsMut, info: MessageInfo) -> StdResult<Response> {
+    let mut fee = FEE.load(deps.storage)?;
+    assert_sender(&fee.collector, &info.sender)?;
+
+    let mut msgs: Vec<CosmosMsg> = vec![];
+
+    // collect streaming fee
+    if let Some(mut streaming_fee) = fee.streaming_fee.as_mut() {
+        msgs.push(
+            BankMsg::Send {
+                to_address: fee.collector.to_string(),
+                amount: streaming_fee.collected.clone(),
+            }
+            .into(),
+        );
+
+        streaming_fee.collected = vec![];
+    }
+
+    FEE.save(deps.storage, &fee)?;
 
     Ok(Response::new().add_messages(msgs).add_attributes(vec![
         attr("method", "realize"),

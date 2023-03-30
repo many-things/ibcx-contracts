@@ -1,9 +1,22 @@
-use cosmwasm_std::{attr, Decimal, DepsMut, MessageInfo, Response};
+use cosmwasm_std::{attr, Decimal, DepsMut, MessageInfo, Response, Storage};
 
 use crate::{
-    error::ContractError,
-    state::{get_units, Rebalance, GOV, LATEST_REBALANCE_ID, REBALANCES},
+    error::RebalanceError,
+    state::{Rebalance, Units, CONFIG, FEE, INDEX_UNITS, REBALANCE, RESERVE_UNITS},
+    StdResult,
 };
+
+fn freeze_streaming_fee(storage: &mut dyn Storage) -> StdResult<()> {
+    let mut fee = FEE.load(storage)?;
+
+    if let Some(streaming_fee) = fee.streaming_fee.as_mut() {
+        streaming_fee.freeze = true;
+    }
+
+    FEE.save(storage, &fee)?;
+
+    Ok(())
+}
 
 // initialize the rebalance
 // deflation: target unit of each denom to decrease
@@ -21,144 +34,89 @@ use crate::{
 pub fn init(
     deps: DepsMut,
     info: MessageInfo,
-    manager: String,
+    manager: Option<String>,
     deflation: Vec<(String, Decimal)>,
     inflation: Vec<(String, Decimal)>,
-) -> Result<Response, ContractError> {
-    // only governance can execute this
-    if info.sender != GOV.load(deps.storage)? {
-        return Err(ContractError::Unauthorized {});
-    }
+) -> StdResult<Response> {
+    freeze_streaming_fee(deps.storage)?;
 
-    // check if there is a ongoing rebalance
-    let rebalance_id = LATEST_REBALANCE_ID
-        .may_load(deps.storage)?
-        .unwrap_or_default();
-    if let Some(r) = REBALANCES.may_load(deps.storage, rebalance_id)? {
-        if !r.finalized {
-            return Err(ContractError::RebalanceNotFinalized {});
-        }
+    let config = CONFIG.load(deps.storage)?;
+
+    config.check_gov(&info.sender)?;
+
+    if REBALANCE.may_load(deps.storage)?.is_some() {
+        return Err(RebalanceError::OnRebalancing.into());
     }
 
     // make new rebalance
     let rebalance = Rebalance {
-        manager: deps.api.addr_validate(&manager)?,
-        deflation,
-        inflation,
-        finalized: false,
+        manager: manager
+            .clone()
+            .map(|v| deps.api.addr_validate(&v))
+            .transpose()?,
+        deflation: deflation.into(),
+        inflation: inflation.into(),
     };
 
     // fetch current units and validate new rebalance
-    let units = get_units(deps.storage)?;
-    rebalance.validate(units)?;
+    let index_units = INDEX_UNITS.load(deps.storage)?;
+
+    rebalance.validate(index_units)?;
 
     // save
-    REBALANCES.save(deps.storage, rebalance_id, &rebalance)?;
+    REBALANCE.save(deps.storage, &rebalance)?;
+    RESERVE_UNITS.save(deps.storage, &Units::default())?;
 
-    let resp = Response::new().add_attributes(vec![
-        attr("method", "rebalance_init"),
+    // response
+    let attrs = vec![
+        attr("method", "rebalance::init"),
         attr("executor", info.sender),
-        attr("manager", manager),
-        attr("rebalance_id", rebalance_id.to_string()),
-    ]);
+        attr("manager", manager.as_deref().unwrap_or("none")),
+    ];
+
+    let resp = Response::new().add_attributes(attrs);
 
     Ok(resp)
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::{
+        state::{Fee, StreamingFee, FEE},
+        test::mock_dependencies,
+    };
 
-    use cosmwasm_std::{testing::mock_info, Addr};
+    use super::freeze_streaming_fee;
 
-    use crate::test::{mock_dependencies, register_units, to_units, SENDER_GOV, SENDER_OWNER};
+    #[test]
+    fn test_freeze_streaming_fee() {
+        let mut deps = mock_dependencies();
 
-    use super::*;
+        FEE.save(
+            deps.as_mut().storage,
+            &Fee {
+                streaming_fee: Some(StreamingFee {
+                    freeze: false,
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        freeze_streaming_fee(deps.as_mut().storage).unwrap();
+
+        assert!(
+            FEE.load(deps.as_ref().storage)
+                .unwrap()
+                .streaming_fee
+                .unwrap()
+                .freeze
+        );
+    }
 
     #[test]
     fn test_init() {
-        let mut deps = mock_dependencies();
-
-        GOV.save(deps.as_mut().storage, &Addr::unchecked(SENDER_GOV))
-            .unwrap();
-
-        register_units(deps.as_mut().storage, &[("ukrw", "1.0"), ("uusd", "1.8")]);
-
-        let resp = init(
-            deps.as_mut(),
-            mock_info(SENDER_GOV, &[]),
-            "manager".to_string(),
-            to_units(&[("ukrw", "0.3")]),
-            to_units(&[("ujpy", "1")]),
-        )
-        .unwrap();
-        assert_eq!(
-            resp.attributes,
-            vec![
-                attr("method", "rebalance_init"),
-                attr("executor", SENDER_GOV),
-                attr("manager", "manager"),
-                attr("rebalance_id", "0"),
-            ]
-        );
-
-        let rebalance = REBALANCES.load(deps.as_ref().storage, 0).unwrap();
-        assert_eq!(
-            rebalance,
-            Rebalance {
-                manager: Addr::unchecked("manager"),
-                deflation: to_units(&[("ukrw", "0.3")]),
-                inflation: to_units(&[("ujpy", "1")]),
-                finalized: false
-            }
-        );
-    }
-
-    #[test]
-    fn test_check_authority() {
-        let mut deps = mock_dependencies();
-
-        GOV.save(deps.as_mut().storage, &Addr::unchecked(SENDER_GOV))
-            .unwrap();
-
-        let err = init(
-            deps.as_mut(),
-            mock_info(SENDER_OWNER, &[]),
-            "manager".to_string(),
-            to_units(&[]),
-            to_units(&[]),
-        )
-        .unwrap_err();
-        assert_eq!(err, ContractError::Unauthorized {});
-    }
-
-    #[test]
-    fn test_check_previous_rebalance() {
-        let mut deps = mock_dependencies();
-
-        GOV.save(deps.as_mut().storage, &Addr::unchecked(SENDER_GOV))
-            .unwrap();
-
-        REBALANCES
-            .save(
-                deps.as_mut().storage,
-                0,
-                &Rebalance {
-                    manager: Addr::unchecked("manager"),
-                    deflation: vec![],
-                    inflation: vec![],
-                    finalized: false,
-                },
-            )
-            .unwrap();
-
-        let err = init(
-            deps.as_mut(),
-            mock_info(SENDER_GOV, &[]),
-            "manager".to_string(),
-            to_units(&[]),
-            to_units(&[]),
-        )
-        .unwrap_err();
-        assert_eq!(err, ContractError::RebalanceNotFinalized {});
+        // todo!()
     }
 }

@@ -23,7 +23,7 @@ pub fn mint_exact_amount_out(
     // input & output
     let max_input_amount = cw_utils::must_pay(&info, &input_asset)?;
     let max_input = coin(max_input_amount.u128(), &input_asset);
-    let output = coin(output_amount.u128(), core_config.denom);
+    let output = coin(output_amount.u128(), core_config.index_denom);
 
     let sim_resp = core.simulate_mint(&deps.querier, output.amount, None)?;
 
@@ -72,8 +72,8 @@ pub fn burn_exact_amount_in(
     let core_config = core.get_config(&deps.querier)?;
 
     // input & output
-    let input_amount = cw_utils::must_pay(&info, &core_config.denom)?;
-    let input = coin(input_amount.u128(), &core_config.denom);
+    let input_amount = cw_utils::must_pay(&info, &core_config.index_denom)?;
+    let input = coin(input_amount.u128(), &core_config.index_denom);
     let min_output = coin(min_output_amount.u128(), output_asset);
 
     let expected = core
@@ -82,7 +82,7 @@ pub fn burn_exact_amount_in(
 
     let burn_msg = core.call_with_funds(
         core::ExecuteMsg::Burn { redeem_to: None },
-        vec![coin(input.amount.u128(), &core_config.denom)],
+        vec![coin(input.amount.u128(), &core_config.index_denom)],
     )?;
 
     // save to context
