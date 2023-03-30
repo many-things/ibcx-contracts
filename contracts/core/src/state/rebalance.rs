@@ -19,6 +19,14 @@ pub struct Rebalance {
 
 impl Rebalance {
     pub fn validate(&self, index_units: Units) -> Result<(), ContractError> {
+        // check empty
+        if self.deflation.len() == 0 {
+            return Err(ValidationError::invalid_rebalance("deflation", "empty").into());
+        }
+        if self.inflation.len() == 0 {
+            return Err(ValidationError::invalid_rebalance("inflation", "empty").into());
+        }
+
         // check duplication
         if self.deflation.check_duplicate() {
             return Err(ValidationError::invalid_rebalance("deflation", "duplicate denom").into());
@@ -112,7 +120,7 @@ impl TradeInfo {
 
 #[cfg(test)]
 mod test {
-    use crate::error::ValidationError;
+    use crate::{error::ValidationError, state::Units};
 
     use super::Rebalance;
 
@@ -121,7 +129,24 @@ mod test {
         let cases = [
             (
                 Rebalance {
+                    inflation: vec![("ukrw", "1.0")].into(),
+                    ..Default::default()
+                },
+                Units::default(),
+                Err(ValidationError::invalid_rebalance("deflation", "empty").into()),
+            ),
+            (
+                Rebalance {
+                    deflation: vec![("ukrw", "1.0")].into(),
+                    ..Default::default()
+                },
+                Units::default(),
+                Err(ValidationError::invalid_rebalance("inflation", "empty").into()),
+            ),
+            (
+                Rebalance {
                     deflation: vec![("uatom", "1.0"), ("uatom", "1.2")].into(),
+                    inflation: vec![("ukrw", "1.0")].into(),
                     ..Default::default()
                 },
                 vec![("uatom", "2.3")].into(),
@@ -129,6 +154,7 @@ mod test {
             ),
             (
                 Rebalance {
+                    deflation: vec![("ukrw", "1.0")].into(),
                     inflation: vec![("uosmo", "1.0"), ("uosmo", "1.2")].into(),
                     ..Default::default()
                 },
@@ -138,6 +164,7 @@ mod test {
             (
                 Rebalance {
                     deflation: vec![("uatom", "2.3")].into(),
+                    inflation: vec![("ukrw", "1.0")].into(),
                     ..Default::default()
                 },
                 vec![("uatom", "1.0")].into(),
@@ -146,6 +173,7 @@ mod test {
             (
                 Rebalance {
                     deflation: vec![("uosmo", "2.3")].into(),
+                    inflation: vec![("ukrw", "1.0")].into(),
                     ..Default::default()
                 },
                 vec![("uatom", "1.0")].into(),
