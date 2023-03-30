@@ -80,11 +80,12 @@ impl IbcCore {
     pub fn get_pause_info<CQ>(
         &self,
         querier: &QuerierWrapper<CQ>,
+        time: Option<u64>,
     ) -> StdResult<GetPauseInfoResponse>
     where
         CQ: CustomQuery,
     {
-        let msg = QueryMsg::GetPauseInfo {};
+        let msg = QueryMsg::GetPauseInfo { time };
 
         querier.query(
             &WasmQuery::Smart {
@@ -95,11 +96,15 @@ impl IbcCore {
         )
     }
 
-    pub fn get_portfolio<CQ>(&self, querier: &QuerierWrapper<CQ>) -> StdResult<GetPortfolioResponse>
+    pub fn get_portfolio<CQ>(
+        &self,
+        querier: &QuerierWrapper<CQ>,
+        time: Option<u64>,
+    ) -> StdResult<GetPortfolioResponse>
     where
         CQ: CustomQuery,
     {
-        let msg = QueryMsg::GetPortfolio {};
+        let msg = QueryMsg::GetPortfolio { time };
 
         querier.query(
             &WasmQuery::Smart {
@@ -115,6 +120,7 @@ impl IbcCore {
         querier: &QuerierWrapper<CQ>,
         amount: Uint128,
         funds: Option<Vec<Coin>>,
+        time: Option<u64>,
     ) -> StdResult<SimulateMintResponse>
     where
         CQ: CustomQuery,
@@ -122,6 +128,7 @@ impl IbcCore {
         let msg = QueryMsg::SimulateMint {
             amount,
             funds: funds.unwrap_or_default(),
+            time,
         };
 
         querier.query(
@@ -137,11 +144,12 @@ impl IbcCore {
         &self,
         querier: &QuerierWrapper<CQ>,
         amount: Uint128,
+        time: Option<u64>,
     ) -> StdResult<SimulateBurnResponse>
     where
         CQ: CustomQuery,
     {
-        let msg = QueryMsg::SimulateBurn { amount };
+        let msg = QueryMsg::SimulateBurn { amount, time };
 
         querier.query(
             &WasmQuery::Smart {

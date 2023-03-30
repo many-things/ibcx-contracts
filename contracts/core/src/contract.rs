@@ -132,21 +132,23 @@ fn to_binary<T: Serialize>(res: StdResult<T>) -> StdResult<QueryResponse> {
 }
 
 #[entry_point]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<QueryResponse> {
-    // use crate::query;
-    // use QueryMsg::*;
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<QueryResponse> {
+    use crate::query;
+    use QueryMsg::*;
 
-    // match msg {
-    //     GetBalance { account } => to_binary(query::balance(deps, env, account)),
-    //     GetConfig {} => to_binary(query::config(deps, env)),
-    //     GetFee { time } => to_binary(query::fee(deps, env, time)),
-    //     GetPauseInfo {} => to_binary(query::pause_info(deps, env)),
-    //     GetPortfolio {} => to_binary(query::portfolio(deps, env)),
-    //     SimulateMint { amount, funds } => to_binary(query::simulate_mint(deps, env, amount, funds)),
-    //     SimulateBurn { amount } => to_binary(query::simulate_burn(deps, env, amount)),
-    // }
-
-    to_binary(Ok(()))
+    match msg {
+        GetBalance { account } => to_binary(query::get_balance(deps, env, account)),
+        GetConfig {} => to_binary(query::get_config(deps, env)),
+        GetFee { time } => to_binary(query::get_fee(deps, env, time)),
+        GetPauseInfo { time } => to_binary(query::get_pause_info(deps, env, time)),
+        GetPortfolio { time } => to_binary(query::get_portfolio(deps, env, time)),
+        SimulateMint {
+            amount,
+            funds,
+            time,
+        } => to_binary(query::simulate_mint(deps, env, amount, funds, time)),
+        SimulateBurn { amount, time } => to_binary(query::simulate_burn(deps, env, amount, time)),
+    }
 }
 
 #[entry_point]

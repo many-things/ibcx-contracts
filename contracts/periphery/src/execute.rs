@@ -25,7 +25,7 @@ pub fn mint_exact_amount_out(
     let max_input = coin(max_input_amount.u128(), &input_asset);
     let output = coin(output_amount.u128(), core_config.index_denom);
 
-    let sim_resp = core.simulate_mint(&deps.querier, output.amount, None)?;
+    let sim_resp = core.simulate_mint(&deps.querier, output.amount, None, None)?;
 
     let (swap_msgs, _) = make_mint_swap_exact_out_msgs(
         &deps.querier,
@@ -77,7 +77,7 @@ pub fn burn_exact_amount_in(
     let min_output = coin(min_output_amount.u128(), output_asset);
 
     let expected = core
-        .simulate_burn(&deps.querier, input.amount)?
+        .simulate_burn(&deps.querier, input.amount, None)?
         .redeem_amount;
 
     let burn_msg = core.call_with_funds(

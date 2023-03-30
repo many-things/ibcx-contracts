@@ -11,6 +11,12 @@ pub type Unit = (String, Decimal);
 #[derive(Default)]
 pub struct Units(Vec<Unit>);
 
+impl From<Units> for Vec<Unit> {
+    fn from(val: Units) -> Self {
+        val.0
+    }
+}
+
 impl From<Vec<Unit>> for Units {
     fn from(v: Vec<Unit>) -> Self {
         Self(v)
