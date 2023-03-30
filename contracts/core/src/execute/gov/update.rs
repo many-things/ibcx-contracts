@@ -284,7 +284,7 @@ mod tests {
                 None,
                 FeePayload {
                     streaming_fee: Some(StreamingFeePayload {
-                        rate: Decimal::from_str("0.1").unwrap(),
+                        rate: Decimal::from_str("0.000000021979553").unwrap(),
                         freeze: false,
                     }),
                     ..fee_base
