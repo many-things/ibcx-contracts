@@ -165,6 +165,17 @@ pub mod tests {
             assert!(fee.amount < Uint128::new(fee_lt));
             assert!(fee.amount > Uint128::new(fee_gt));
 
+            let fee = match streaming_fee
+                .collected
+                .iter()
+                .position(|v| v.denom == denom)
+            {
+                Some(i) => streaming_fee.collected.remove(i),
+                None => panic!("no way"),
+            };
+            assert!(fee.amount < Uint128::new(fee_lt));
+            assert!(fee.amount > Uint128::new(fee_gt));
+
             let (_, next) = new_units.pop_key(denom).unwrap();
             assert!(next < Decimal::from_str(next_lt).unwrap());
             assert!(next > Decimal::from_str(next_gt).unwrap());
