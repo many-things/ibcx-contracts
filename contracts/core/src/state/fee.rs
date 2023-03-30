@@ -122,9 +122,9 @@ pub mod tests {
 
     use cosmwasm_std::{Decimal, Uint128};
 
-    use crate::state::Units;
+    use crate::{error::ValidationError, state::Units};
 
-    use super::StreamingFee;
+    use super::{Fee, StreamingFee};
 
     #[test]
     fn test_streaming_fee_collect() {
@@ -198,5 +198,63 @@ pub mod tests {
             .unwrap();
         assert_eq!(fee_units, None);
         assert_eq!(index_units, new_units);
+    }
+
+    #[test]
+    fn test_fee_check_rates() {
+        let cases = [
+            (
+                Fee {
+                    mint_fee: Some(Decimal::from_str("1.1").unwrap()),
+                    ..Default::default()
+                },
+                Err(ValidationError::invalid_fee("mint_fee", "1.1 is invalid").into()),
+            ),
+            (
+                Fee {
+                    mint_fee: Some(Decimal::from_str("0.9").unwrap()),
+                    ..Default::default()
+                },
+                Ok(()),
+            ),
+            (
+                Fee {
+                    burn_fee: Some(Decimal::from_str("1.1").unwrap()),
+                    ..Default::default()
+                },
+                Err(ValidationError::invalid_fee("burn_fee", "1.1 is invalid").into()),
+            ),
+            (
+                Fee {
+                    mint_fee: Some(Decimal::from_str("0.9").unwrap()),
+                    ..Default::default()
+                },
+                Ok(()),
+            ),
+            (
+                Fee {
+                    streaming_fee: Some(StreamingFee {
+                        rate: Decimal::from_str("1.1").unwrap(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                },
+                Err(ValidationError::invalid_fee("streaming_fee", "1.1 is invalid").into()),
+            ),
+            (
+                Fee {
+                    streaming_fee: Some(StreamingFee {
+                        rate: Decimal::from_str("0.9").unwrap(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                },
+                Ok(()),
+            ),
+        ];
+
+        for (fee, expected) in cases {
+            assert_eq!(fee.check_rates(), expected);
+        }
     }
 }
