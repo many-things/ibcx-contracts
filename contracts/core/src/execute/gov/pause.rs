@@ -1,7 +1,7 @@
 use cosmwasm_std::{attr, DepsMut, Env, MessageInfo, Response};
 
 use crate::{
-    error::ContractError,
+    error::ValidationError,
     state::{Config, PauseInfo, CONFIG},
     StdResult,
 };
@@ -18,9 +18,7 @@ pub fn pause(
 
     if let Some(expires_at) = expires_at {
         if env.block.time.seconds() >= expires_at {
-            return Err(ContractError::InvalidArgument(
-                "expires_at must be in the future".to_string(),
-            ));
+            return Err(ValidationError::invalid_pause_info("expiry must be in the future").into());
         }
     }
 
@@ -88,7 +86,7 @@ mod tests {
     };
 
     use crate::{
-        error::ContractError,
+        error::{ContractError, ValidationError},
         execute::gov::pause::release,
         state::{tests::mock_config, Config, PauseInfo, CONFIG},
     };
@@ -121,9 +119,7 @@ mod tests {
                 },
                 Some(std_time - 1),
                 std_time,
-                Err(ContractError::InvalidArgument(
-                    "expires_at must be in the future".to_string(),
-                )),
+                Err(ValidationError::invalid_pause_info("expiry must be in the future").into()),
             ),
             // paused
             (
@@ -142,9 +138,7 @@ mod tests {
                 },
                 Some(std_time - 1),
                 std_time,
-                Err(ContractError::InvalidArgument(
-                    "expires_at must be in the future".to_string(),
-                )),
+                Err(ValidationError::invalid_pause_info("expiry must be in the future").into()),
             ),
             (
                 PauseInfo {

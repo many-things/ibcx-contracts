@@ -1,9 +1,30 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Uint128};
 
-use crate::error::ContractError;
+use crate::{
+    error::{ContractError, ValidationError},
+    StdResult,
+};
 
 use super::Units;
+
+fn rate_checker(field: &str, rate: Option<Decimal>) -> StdResult<()> {
+    if rate.is_none() {
+        return Ok(());
+    }
+
+    let rate = rate.unwrap();
+
+    if !(Decimal::zero() < rate && rate < Decimal::one()) {
+        return Err(ValidationError::InvalidFee {
+            field: field.to_string(),
+            reason: format!("{rate} is invalid"),
+        }
+        .into());
+    }
+
+    Ok(())
+}
 
 #[cw_serde]
 #[derive(Default)]
@@ -30,6 +51,7 @@ impl StreamingFee {
             .checked_pow(delta as u32)?
             .checked_sub(Decimal::one())?;
 
+        // calculate new units with fee and amount of collect fees
         let (new_units, collected): (Units, Units) = index_units
             .into_iter()
             .map(|(denom, unit)| {
@@ -42,6 +64,7 @@ impl StreamingFee {
             .into_iter()
             .unzip();
 
+        // apply to self.collected
         for (denom, amount) in collected
             .into_iter()
             .map(|(denom, unit)| (denom, unit * total_supply))
@@ -70,6 +93,16 @@ pub struct Fee {
     pub mint_fee: Option<Decimal>,
     pub burn_fee: Option<Decimal>,
     pub streaming_fee: Option<StreamingFee>,
+}
+
+impl Fee {
+    pub fn check_rates(&self) -> StdResult<()> {
+        rate_checker("mint_fee", self.mint_fee)?;
+        rate_checker("burn_fee", self.burn_fee)?;
+        rate_checker("streaming_fee", self.streaming_fee.as_ref().map(|v| v.rate))?;
+
+        Ok(())
+    }
 }
 
 impl Default for Fee {
@@ -129,7 +162,7 @@ pub mod tests {
                 Some(i) => fee_units.remove(i),
                 None => panic!("no way"),
             };
-            println!("{} {fee_lt}", fee.amount);
+            assert!(fee.amount < Uint128::new(fee_lt));
             assert!(fee.amount > Uint128::new(fee_gt));
 
             let (_, next) = new_units.pop_key(denom).unwrap();

@@ -3,7 +3,7 @@ use cosmwasm_std::{Addr, Uint128};
 use ibcx_interface::types::SwapRoutes;
 
 use crate::{
-    error::{ContractError, RebalanceError},
+    error::{ContractError, RebalanceError, ValidationError},
     StdResult,
 };
 
@@ -21,10 +21,10 @@ impl Rebalance {
     pub fn validate(&self, index_units: Units) -> Result<(), ContractError> {
         // check duplication
         if self.deflation.check_duplicate() {
-            return Err(ContractError::DenomDuplicated {});
+            return Err(ValidationError::invalid_rebalance("deflation", "duplicate denom").into());
         }
         if self.inflation.check_duplicate() {
-            return Err(ContractError::DenomDuplicated {});
+            return Err(ValidationError::invalid_rebalance("inflation", "duplicate denom").into());
         }
 
         // check index_units <-> deflation
@@ -37,19 +37,21 @@ impl Rebalance {
                     // check overflow
                     Some(item) => {
                         if item.1 < deflation.1 {
-                            return Err(ContractError::InvalidArgument(format!(
-                                "deflation overflow: {}",
-                                deflation.0
-                            )));
+                            return Err(ValidationError::invalid_rebalance(
+                                "deflation",
+                                format!("overflow: {}", deflation.0),
+                            )
+                            .into());
                         }
                     }
 
                     // check missing denom
                     None => {
-                        return Err(ContractError::InvalidArgument(format!(
-                            "cannot deflate non-portfolio asset: {}",
-                            deflation.0
-                        )))
+                        return Err(ValidationError::invalid_rebalance(
+                            "deflation",
+                            format!("missing denom: {}", deflation.0),
+                        )
+                        .into());
                     }
                 }
             }
@@ -65,7 +67,11 @@ impl Rebalance {
                 .collect::<Units>()
                 .check_duplicate();
             if conflict {
-                return Err(ContractError::DenomDuplicated {});
+                return Err(ValidationError::invalid_rebalance(
+                    "deflation/inflation",
+                    "denom conflict",
+                )
+                .into());
             }
         }
 
@@ -106,7 +112,7 @@ impl TradeInfo {
 
 #[cfg(test)]
 mod test {
-    use crate::error::ContractError;
+    use crate::error::ValidationError;
 
     use super::Rebalance;
 
@@ -119,7 +125,7 @@ mod test {
                     ..Default::default()
                 },
                 vec![("uatom", "2.3")].into(),
-                Err(ContractError::DenomDuplicated {}),
+                Err(ValidationError::invalid_rebalance("deflation", "duplicate denom").into()),
             ),
             (
                 Rebalance {
@@ -127,7 +133,7 @@ mod test {
                     ..Default::default()
                 },
                 vec![("uatom", "2.3")].into(),
-                Err(ContractError::DenomDuplicated {}),
+                Err(ValidationError::invalid_rebalance("inflation", "duplicate denom").into()),
             ),
             (
                 Rebalance {
@@ -135,9 +141,7 @@ mod test {
                     ..Default::default()
                 },
                 vec![("uatom", "1.0")].into(),
-                Err(ContractError::InvalidArgument(
-                    "deflation overflow: uatom".to_string(),
-                )),
+                Err(ValidationError::invalid_rebalance("deflation", "overflow: uatom").into()),
             ),
             (
                 Rebalance {
@@ -145,9 +149,7 @@ mod test {
                     ..Default::default()
                 },
                 vec![("uatom", "1.0")].into(),
-                Err(ContractError::InvalidArgument(
-                    "cannot deflate non-portfolio asset: uosmo".to_string(),
-                )),
+                Err(ValidationError::invalid_rebalance("deflation", "missing denom: uosmo").into()),
             ),
             (
                 Rebalance {
@@ -156,7 +158,10 @@ mod test {
                     ..Default::default()
                 },
                 vec![("uatom", "2.3")].into(),
-                Err(ContractError::DenomDuplicated {}),
+                Err(
+                    ValidationError::invalid_rebalance("deflation/inflation", "denom conflict")
+                        .into(),
+                ),
             ),
             (
                 Rebalance {

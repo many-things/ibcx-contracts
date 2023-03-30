@@ -7,6 +7,7 @@ use ibcx_interface::core::{
 };
 use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgCreateDenom, MsgCreateDenomResponse};
 
+use crate::error::ValidationError;
 use crate::state::{Config, Fee, StreamingFee, Units, CONFIG, FEE, INDEX_UNITS, TOTAL_SUPPLY};
 use crate::StdResult;
 use crate::{error::ContractError, CONTRACT_NAME, CONTRACT_VERSION, REPLY_ID_DENOM_CREATION};
@@ -20,9 +21,10 @@ pub fn instantiate(
 ) -> StdResult<Response> {
     cw2::set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
+    // validation
     let index_units: Units = msg.index_units.into();
     if index_units.check_duplicate() {
-        return Err(ContractError::DenomDuplicated {});
+        return Err(ValidationError::invalid_config("index_units", "duplicate denom").into());
     }
 
     // fee
@@ -37,6 +39,7 @@ pub fn instantiate(
             freeze: v.freeze,
         }),
     };
+    fee.check_rates()?;
 
     // config
     let config = Config {

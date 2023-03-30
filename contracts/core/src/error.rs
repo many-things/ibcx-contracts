@@ -33,6 +33,53 @@ impl RebalanceError {
 }
 
 #[derive(Error, Debug, PartialEq)]
+pub enum ValidationError {
+    #[error("invalid config. field:{field}, reason:{reason}")]
+    InvalidConfig { field: String, reason: String },
+
+    #[error("invalid pause info. reason:{reason}")]
+    InvalidPauseInfo { reason: String },
+
+    #[error("invalid fee. field:{field}, reason:{reason}")]
+    InvalidFee { field: String, reason: String },
+
+    #[error("invalid units. reason:{reason}")]
+    InvalidUnits { reason: String },
+
+    #[error("invalid rebalance. field:{field}, reason:{reason}")]
+    InvalidRebalance { field: String, reason: String },
+}
+
+impl ValidationError {
+    pub fn invalid_config(field: impl Into<String>, reason: impl Into<String>) -> Self {
+        ValidationError::InvalidConfig {
+            field: field.into(),
+            reason: reason.into(),
+        }
+    }
+
+    pub fn invalid_pause_info(reason: impl Into<String>) -> Self {
+        ValidationError::InvalidPauseInfo {
+            reason: reason.into(),
+        }
+    }
+
+    pub fn invalid_fee(field: impl Into<String>, reason: impl Into<String>) -> Self {
+        ValidationError::InvalidFee {
+            field: field.into(),
+            reason: reason.into(),
+        }
+    }
+
+    pub fn invalid_rebalance(field: impl Into<String>, reason: impl Into<String>) -> Self {
+        ValidationError::InvalidRebalance {
+            field: field.into(),
+            reason: reason.into(),
+        }
+    }
+}
+
+#[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
@@ -58,17 +105,8 @@ pub enum ContractError {
     #[error("{0}")]
     RebalanceError(#[from] RebalanceError),
 
-    #[error("denom {reserved:?} already reserved")]
-    DenomReserved { reserved: String },
-
-    #[error("not found")]
-    NotFound,
-
-    #[error("duplicated denom in units")]
-    DenomDuplicated,
-
-    #[error("length of assets exceeded. limit:{limit:?}")]
-    InvalidAssetLength { limit: u32 },
+    #[error("{0}")]
+    ValidationError(#[from] ValidationError),
 
     #[error("Paused")]
     Paused,
@@ -82,18 +120,6 @@ pub enum ContractError {
     #[error("Unknown reply id {id:?}")]
     UnknownReplyId { id: u64 },
 
-    #[error("Invalid argument: {0}")]
-    InvalidArgument(String),
-
     #[error("Insufficient funds: {0}")]
     InsufficientFunds(String),
-
-    #[error("Unable to finalize")]
-    UnableToFinalize,
-
-    #[error("Insufficient balance")]
-    InsufficientBalance,
-
-    #[error("Over slippage allowance")]
-    OverSlippageAllowance,
 }
