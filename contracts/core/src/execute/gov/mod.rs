@@ -16,6 +16,9 @@ pub fn handle_msg(deps: DepsMut, env: Env, info: MessageInfo, msg: GovMsg) -> St
 
         UpdateGov(new_gov) => update::update_gov(deps, info, new_gov),
         UpdateFeeStrategy(new_fee) => update::update_fee(deps, env, info, new_fee),
+        UpdateRebalanceManager(new_manager) => {
+            update::update_rebalance_manager(deps, info, new_manager)
+        }
         UpdateReserveDenom(new_denom) => update::update_reserve_denom(deps, info, new_denom),
         UpdateTradeInfo {
             denom,

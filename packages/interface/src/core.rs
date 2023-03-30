@@ -39,6 +39,7 @@ pub enum GovMsg {
 
     UpdateGov(String),
     UpdateFeeStrategy(FeePayload),
+    UpdateRebalanceManager(Option<String>),
     UpdateReserveDenom(String),
     UpdateTradeInfo {
         denom: String,

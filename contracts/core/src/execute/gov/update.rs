@@ -3,7 +3,7 @@ use ibcx_interface::{core::FeePayload, types::SwapRoutes};
 
 use crate::{
     error::RebalanceError,
-    state::{Config, StreamingFee, TradeInfo, CONFIG, FEE, REBALANCE, TRADE_INFOS},
+    state::{Config, Rebalance, StreamingFee, TradeInfo, CONFIG, FEE, REBALANCE, TRADE_INFOS},
     StdResult,
 };
 
@@ -61,6 +61,39 @@ pub fn update_fee(
     let attrs = vec![
         attr("method", "gov::update_fee"),
         attr("executor", info.sender),
+    ];
+
+    let resp = Response::new().add_attributes(attrs);
+
+    Ok(resp)
+}
+
+pub fn update_rebalance_manager(
+    deps: DepsMut,
+    info: MessageInfo,
+    new_manager: Option<String>,
+) -> StdResult<Response> {
+    let rebalance = match REBALANCE.may_load(deps.storage)? {
+        Some(r) => r,
+        None => return Err(RebalanceError::NotOnRebalancing.into()),
+    };
+
+    REBALANCE.save(
+        deps.storage,
+        &Rebalance {
+            manager: new_manager
+                .clone()
+                .map(|v| deps.api.addr_validate(&v))
+                .transpose()?,
+            ..rebalance
+        },
+    )?;
+
+    // response
+    let attrs = vec![
+        attr("method", "gov::update_rebalance_manager"),
+        attr("executor", info.sender),
+        attr("new_manager", new_manager.as_deref().unwrap_or("none")),
     ];
 
     let resp = Response::new().add_attributes(attrs);
@@ -150,11 +183,14 @@ mod tests {
     use crate::{
         error::{ContractError, RebalanceError},
         execute::gov::update::update_fee,
-        state::{tests::mock_config, Fee, Rebalance, StreamingFee, CONFIG, FEE, REBALANCE},
+        state::{
+            tests::{mock_config, StateBuilder},
+            Fee, Rebalance, StreamingFee, CONFIG, FEE, REBALANCE,
+        },
         test::mock_dependencies,
     };
 
-    use super::update_gov;
+    use super::{update_gov, update_rebalance_manager};
 
     #[test]
     fn test_update_gov() {
@@ -316,5 +352,47 @@ mod tests {
                 _ => {}
             }
         }
+    }
+
+    #[test]
+    fn test_update_rebalance_manager() {
+        let mut deps = mock_dependencies();
+
+        StateBuilder::default()
+            .with_rebalance(Rebalance {
+                manager: Some(Addr::unchecked("manager")),
+                ..Default::default()
+            })
+            .build(deps.as_mut().storage);
+
+        let res = update_rebalance_manager(deps.as_mut(), mock_info("gov", &[]), None).unwrap();
+        assert_eq!(
+            res.attributes,
+            vec![
+                attr("method", "gov::update_rebalance_manager"),
+                attr("executor", "gov"),
+                attr("new_manager", "none"),
+            ]
+        );
+        assert_eq!(REBALANCE.load(deps.as_ref().storage).unwrap().manager, None);
+
+        let res = update_rebalance_manager(
+            deps.as_mut(),
+            mock_info("gov", &[]),
+            Some("manager".to_string()),
+        )
+        .unwrap();
+        assert_eq!(
+            res.attributes,
+            vec![
+                attr("method", "gov::update_rebalance_manager"),
+                attr("executor", "gov"),
+                attr("new_manager", "manager"),
+            ]
+        );
+        assert_eq!(
+            REBALANCE.load(deps.as_ref().storage).unwrap().manager,
+            Some(Addr::unchecked("manager"))
+        );
     }
 }
