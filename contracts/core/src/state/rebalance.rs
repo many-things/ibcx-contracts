@@ -118,11 +118,25 @@ impl TradeInfo {
     }
 }
 
+impl Default for TradeInfo {
+    fn default() -> Self {
+        Self {
+            routes: SwapRoutes(vec![]),
+            cooldown: Default::default(),
+            max_trade_amount: Default::default(),
+            last_traded_at: Default::default(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use crate::{error::ValidationError, state::Units};
+    use crate::{
+        error::{RebalanceError, ValidationError},
+        state::Units,
+    };
 
-    use super::Rebalance;
+    use super::{Rebalance, TradeInfo};
 
     #[test]
     fn test_rebalance_validate() {
@@ -205,5 +219,35 @@ mod test {
         for (rebalance, index_units, expected) in cases {
             assert_eq!(rebalance.validate(index_units), expected);
         }
+    }
+
+    #[test]
+    fn test_trade_info_assert_cooldown() {
+        let cases = [
+            (60, None, 40, Ok(())),
+            (60, Some(0), 40, Err(RebalanceError::OnTradeCooldown.into())),
+            (60, Some(0), 70, Ok(())),
+        ];
+
+        for (cooldown, last_traded_at, now, expected) in cases {
+            let trade_info = TradeInfo {
+                cooldown,
+                last_traded_at,
+                ..Default::default()
+            };
+
+            assert_eq!(trade_info.assert_cooldown(now), expected);
+        }
+    }
+
+    #[test]
+    fn test_trade_info_update_last_traded_at() {
+        // chaining
+        assert_eq!(
+            TradeInfo::default()
+                .update_last_traded_at(12345)
+                .last_traded_at,
+            Some(12345)
+        );
     }
 }
