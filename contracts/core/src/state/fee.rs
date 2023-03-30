@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Uint128};
 
@@ -7,6 +9,9 @@ use crate::{
 };
 
 use super::Units;
+
+// APR 100%
+const MAX_STREAMING_FEE_RATE: &str = "0.000000021979553";
 
 fn rate_checker(field: &str, rate: Option<Decimal>) -> StdResult<()> {
     if rate.is_none() {
@@ -101,6 +106,18 @@ impl Fee {
         rate_checker("burn_fee", self.burn_fee)?;
         rate_checker("streaming_fee", self.streaming_fee.as_ref().map(|v| v.rate))?;
 
+        if let Some(streaming_fee) = &self.streaming_fee {
+            let max = Decimal::from_str(MAX_STREAMING_FEE_RATE)?;
+            let rate = streaming_fee.rate;
+            if max < rate {
+                return Err(ValidationError::InvalidFee {
+                    field: "streaming_fee".to_string(),
+                    reason: format!("{rate} is greater than max rate {max}"),
+                }
+                .into());
+            }
+        }
+
         Ok(())
     }
 }
@@ -124,7 +141,7 @@ pub mod tests {
 
     use crate::{error::ValidationError, state::Units};
 
-    use super::{Fee, StreamingFee};
+    use super::{Fee, StreamingFee, MAX_STREAMING_FEE_RATE};
 
     #[test]
     fn test_streaming_fee_collect() {
@@ -262,7 +279,22 @@ pub mod tests {
             (
                 Fee {
                     streaming_fee: Some(StreamingFee {
-                        rate: Decimal::from_str("0.9").unwrap(),
+                        rate: Decimal::from_str(MAX_STREAMING_FEE_RATE).unwrap()
+                            + Decimal::from_str("0.000000000047529").unwrap(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                },
+                Err(ValidationError::invalid_fee(
+                    "streaming_fee",
+                    format!("0.000000022027082 is greater than max rate {MAX_STREAMING_FEE_RATE}"),
+                )
+                .into()),
+            ),
+            (
+                Fee {
+                    streaming_fee: Some(StreamingFee {
+                        rate: Decimal::from_str("0.000000000047529").unwrap(),
                         ..Default::default()
                     }),
                     ..Default::default()

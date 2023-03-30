@@ -54,6 +54,7 @@ pub fn update_fee(
         last_collected_at: env.block.time.seconds(),
         freeze: v.freeze,
     });
+    fee.check_rates()?;
 
     FEE.save(deps.storage, &fee)?;
 
