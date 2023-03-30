@@ -165,6 +165,65 @@ pub fn deflate(
 
 #[cfg(test)]
 mod tests {
+    use cosmwasm_std::{attr, testing::mock_info};
+
+    use crate::{
+        state::{tests::StateBuilder, Rebalance, INDEX_UNITS, RESERVE_UNITS},
+        test::mock_dependencies,
+    };
+
+    use super::deflate_reserve;
+
+    #[test]
+    fn test_deflate_reserve() {
+        let mut deps = mock_dependencies();
+
+        // deflate uatom (unit)     1.0 -> 0.8
+        //               (amount) 10000 -> 8000
+        // inflate ukrw  (unit)     0.0 -> 0.12
+        //               (amount)     0 -> 1200
+        // inflate ujpy  (unit)     0.0 -> 0.08
+        //               (amount)     0 -> 800
+
+        StateBuilder::default()
+            .add_index_unit("uatom", "1.0")
+            .empty_reserve_units()
+            .with_total_supply(10000)
+            .with_rebalance(Rebalance {
+                deflation: vec![("uatom", "0.8")].into(),
+                inflation: vec![("ukrw", "6"), ("ujpy", "4")].into(),
+                ..Default::default()
+            })
+            .build(deps.as_mut().storage);
+
+        let res = deflate_reserve(
+            deps.as_mut(),
+            mock_info("manager", &[]),
+            "uatom".to_string(),
+        )
+        .unwrap();
+        assert_eq!(
+            res.attributes,
+            vec![
+                attr("method", "deflate"),
+                attr("executor", "manager"),
+                attr("denom", "uatom"),
+                attr("amount_in", "2000"),
+                attr("amount_out", "2000"),
+                attr("is_reserve", "true"),
+            ]
+        );
+
+        assert_eq!(
+            INDEX_UNITS.load(deps.as_ref().storage).unwrap(),
+            vec![("uatom", "0.8")].into()
+        );
+        assert_eq!(
+            RESERVE_UNITS.load(deps.as_ref().storage).unwrap(),
+            vec![("ukrw", "0.12"), ("ujpy", "0.08")].into()
+        );
+    }
+
     #[test]
     fn test_deflate() {}
 }

@@ -192,16 +192,18 @@ pub fn burn(
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use cosmwasm_std::{
         coin, coins,
         testing::{mock_dependencies_with_balances, mock_env, mock_info, MOCK_CONTRACT_ADDR},
-        BankMsg, Coin, CosmosMsg, SubMsg, Uint128,
+        Addr, BankMsg, Coin, CosmosMsg, Decimal, SubMsg, Uint128,
     };
     use osmosis_std::types::osmosis::tokenfactory::v1beta1::{MsgBurn, MsgMint};
 
     use crate::{
         execute::token::{burn_event, mint_event},
-        state::{tests::StateBuilder, INDEX_UNITS, TOTAL_SUPPLY},
+        state::{tests::StateBuilder, Config, Fee, INDEX_UNITS, TOTAL_SUPPLY},
     };
 
     use super::mint;
@@ -263,8 +265,18 @@ mod tests {
         let env = mock_env();
         let mut deps = mock_dependencies_with_balances(&[]);
 
-        StateBuilder::new(&env)
-            .with_mint_fee("0.1") // 10%
+        StateBuilder::default()
+            .add_index_unit("uatom", "1.0")
+            .with_config(Config {
+                index_denom: "uibcx".to_string(),
+                ..Default::default()
+            })
+            .with_fee(Fee {
+                collector: Addr::unchecked("collector"),
+                mint_fee: Some(Decimal::from_str("0.1").unwrap()),
+                ..Default::default()
+            }) // 10%
+            .with_total_supply(10e6 as u128)
             .build(deps.as_mut().storage);
 
         let amount = 100u128.into();
@@ -301,7 +313,18 @@ mod tests {
         let env = mock_env();
         let mut deps = mock_dependencies_with_balances(&[]);
 
-        StateBuilder::new(&env).build(deps.as_mut().storage);
+        StateBuilder::default()
+            .add_index_unit("uatom", "1.0")
+            .with_config(Config {
+                index_denom: "uibcx".to_string(),
+                ..Default::default()
+            })
+            .with_fee(Fee {
+                collector: Addr::unchecked("collector"),
+                ..Default::default()
+            })
+            .with_total_supply(10e6 as u128)
+            .build(deps.as_mut().storage);
 
         let amount = 100u128.into();
         let refund = 10u128.into();
@@ -380,8 +403,18 @@ mod tests {
         let env = mock_env();
         let mut deps = mock_dependencies_with_balances(&[]);
 
-        StateBuilder::new(&env)
-            .with_burn_fee("0.2")
+        StateBuilder::default()
+            .add_index_unit("uatom", "1.0")
+            .with_config(Config {
+                index_denom: "uibcx".to_string(),
+                ..Default::default()
+            })
+            .with_fee(Fee {
+                collector: Addr::unchecked("collector"),
+                burn_fee: Some(Decimal::from_str("0.2").unwrap()),
+                ..Default::default()
+            }) // 20%
+            .with_total_supply(10e6 as u128)
             .build(deps.as_mut().storage);
 
         let amount: Uint128 = 100u128.into();
@@ -418,7 +451,15 @@ mod tests {
         let env = mock_env();
         let mut deps = mock_dependencies_with_balances(&[]);
 
-        StateBuilder::new(&env).build(deps.as_mut().storage);
+        StateBuilder::default()
+            .add_index_unit("uatom", "1.0")
+            .with_config(Config {
+                index_denom: "uibcx".to_string(),
+                ..Default::default()
+            })
+            .with_fee(Fee::default())
+            .with_total_supply(10e6 as u128)
+            .build(deps.as_mut().storage);
 
         let amount = 100u128.into();
         let index_units = INDEX_UNITS.load(deps.as_ref().storage).unwrap();
