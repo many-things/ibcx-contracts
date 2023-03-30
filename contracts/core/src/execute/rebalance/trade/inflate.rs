@@ -67,7 +67,7 @@ pub fn inflate(
     // calculate available amount to swap
     let reserve_amount = reserve_unit * total_supply;
     if reserve_amount < amount_in {
-        return Err(RebalanceError::trade_error("inflate", "insufficient amoount to swap").into());
+        return Err(RebalanceError::trade_error("inflate", "insufficient amount to swap").into());
     }
 
     let sim_amount_out = trade_info.routes.sim_swap_exact_in(
@@ -122,4 +122,192 @@ pub fn inflate(
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use cosmwasm_std::{
+        attr,
+        testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR},
+        Addr, Attribute, SubMsg, Timestamp,
+    };
+    use ibcx_interface::types::SwapRoutes;
+
+    use crate::{
+        error::RebalanceError,
+        state::{tests::StateBuilder, Config, TradeInfo, INDEX_UNITS, RESERVE_UNITS, TRADE_INFOS},
+        test::mock_dependencies,
+    };
+
+    use super::{inflate, inflate_reserve};
+
+    fn event_builder(
+        sender: &str,
+        denom: &str,
+        amount_in: u128,
+        amount_out: u128,
+        is_reserve: bool,
+    ) -> Vec<Attribute> {
+        vec![
+            attr("method", "inflate"),
+            attr("executor", sender),
+            attr("denom", denom),
+            attr("amount_in", amount_in.to_string()),
+            attr("amount_out", amount_out.to_string()),
+            attr("is_reserve", if is_reserve { "true" } else { "false" }),
+        ]
+    }
+
+    #[test]
+    fn test_inflate_reserve() {
+        let mut deps = mock_dependencies();
+
+        // deflate uatom (reserve)  1.2 -> 0.0
+        // inflate uatom (non-rsrv) 0.8 -> 2.0
+        //               (amount)   400
+        StateBuilder::default()
+            .add_index_unit("uatom", "0.8")
+            .add_reserve_unit("uatom", "1.2")
+            .with_total_supply(10000)
+            .build(deps.as_mut().storage);
+
+        let res = inflate_reserve(
+            deps.as_mut(),
+            mock_info("manager", &[]),
+            "uatom".to_string(),
+        )
+        .unwrap();
+        assert_eq!(
+            res.attributes,
+            event_builder("manager", "uatom", 12000, 12000, true)
+        );
+
+        assert_eq!(
+            INDEX_UNITS.load(deps.as_ref().storage).unwrap(),
+            vec![("uatom", "2.0")].into()
+        );
+        assert_eq!(
+            RESERVE_UNITS.load(deps.as_ref().storage).unwrap(),
+            vec![("uatom", "0.0")].into()
+        );
+    }
+
+    #[test]
+    fn test_inflate() {
+        let std_time = mock_env().block.time.seconds();
+        let mut deps = mock_dependencies();
+
+        // 2 : 1
+        deps.querier.stargate.register_sim_swap_exact_in("0.5");
+
+        // deflate uosmo (reserve)  1.0 -> 0.0
+        //=========================================
+        // trade uosmo -> ukrw
+        //=========================================
+        // inflate ukrw (unit)   0.8 -> 2.0
+        //              (amount) 400
+        let routes: SwapRoutes = vec![(0, "ukrw")].into();
+        let cooldown = 60;
+        let max_reserve_amount = 10000u128;
+        let max_trade_amount = 20000u128;
+        let builder = StateBuilder::default()
+            .with_config(Config {
+                reserve_denom: "uosmo".to_string(),
+                ..Default::default()
+            })
+            .with_total_supply(10000)
+            .empty_index_units()
+            .add_reserve_unit("ukrw", "1.0")
+            .add_trade_info(
+                "uosmo",
+                "ukrw",
+                TradeInfo {
+                    routes: routes.clone(),
+                    cooldown,
+                    max_trade_amount: max_trade_amount.into(),
+                    last_traded_at: Some(std_time - cooldown),
+                },
+            );
+
+        let cases = [
+            (
+                "manager",
+                std_time,
+                max_reserve_amount,
+                max_reserve_amount / 2,
+                Ok((vec![("ukrw", "0.5")].into(), vec![("ukrw", "0.0")].into())),
+            ),
+            (
+                "manager",
+                std_time,
+                max_trade_amount + 1,
+                (max_trade_amount + 1) / 2,
+                Err(RebalanceError::trade_error("inflate", "exceeds maximum trade limit").into()),
+            ),
+            (
+                "manager",
+                std_time,
+                max_reserve_amount + 1,
+                (max_reserve_amount + 1) / 2,
+                Err(RebalanceError::trade_error("inflate", "insufficient amount to swap").into()),
+            ),
+            (
+                "manager",
+                std_time,
+                max_reserve_amount,
+                max_reserve_amount / 2 + 1,
+                Err(RebalanceError::trade_error("inflate", "over slippage allowance").into()),
+            ),
+        ];
+
+        for (sender, time_in_sec, amount_in, min_amount_out, expected) in cases {
+            builder.clone().build(deps.as_mut().storage);
+
+            let mut env = mock_env();
+            env.block.time = Timestamp::from_seconds(time_in_sec);
+
+            let res = inflate(
+                deps.as_mut(),
+                env.clone(),
+                mock_info(sender, &[]),
+                "ukrw".to_string(),
+                amount_in.into(),
+                min_amount_out.into(),
+            );
+            match res {
+                Ok(res) => {
+                    let (index_units, reserve_units) = expected.unwrap();
+
+                    assert_eq!(
+                        res.messages,
+                        vec![SubMsg::new(routes.msg_swap_exact_in(
+                            &Addr::unchecked(MOCK_CONTRACT_ADDR),
+                            "uosmo",
+                            amount_in.into(),
+                            min_amount_out.into()
+                        ))]
+                    );
+
+                    assert_eq!(
+                        res.attributes,
+                        event_builder(sender, "ukrw", amount_in, min_amount_out, false)
+                    );
+
+                    assert_eq!(
+                        INDEX_UNITS.load(deps.as_ref().storage).unwrap(),
+                        index_units
+                    );
+                    assert_eq!(
+                        RESERVE_UNITS.load(deps.as_ref().storage).unwrap(),
+                        reserve_units
+                    );
+                    assert_eq!(
+                        TRADE_INFOS
+                            .load(deps.as_ref().storage, ("uosmo", "ukrw"))
+                            .unwrap()
+                            .last_traded_at,
+                        Some(env.block.time.seconds())
+                    )
+                }
+                Err(err) => assert_eq!(err, expected.unwrap_err()),
+            }
+        }
+    }
+}
