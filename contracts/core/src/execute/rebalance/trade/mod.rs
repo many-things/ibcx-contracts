@@ -67,4 +67,70 @@ pub fn trade(
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use cosmwasm_std::{
+        testing::{mock_env, mock_info},
+        Addr, StdError, Uint128,
+    };
+    use ibcx_interface::core::RebalanceTradeMsg;
+
+    use crate::{
+        error::{ContractError, RebalanceError},
+        state::{Rebalance, REBALANCE},
+        test::mock_dependencies,
+    };
+
+    use super::trade;
+
+    #[test]
+    fn test_trade() {
+        let mut deps = mock_dependencies();
+
+        let cases = [
+            (
+                "user",
+                None,
+                None,
+                Err(RebalanceError::NotOnRebalancing.into()),
+            ),
+            (
+                "user",
+                Some(Rebalance::default()),
+                None,
+                Err(StdError::not_found("ibcx_core::state::config::Config").into()), // ok
+            ),
+            (
+                "user",
+                Some(Rebalance::default()),
+                Some("manager"),
+                Err(ContractError::Unauthorized),
+            ),
+            (
+                "manager",
+                Some(Rebalance::default()),
+                Some("manager"),
+                Err(StdError::not_found("ibcx_core::state::config::Config").into()), // ok
+            ),
+        ];
+
+        for (sender, rebalance, manager, expected) in cases {
+            REBALANCE.remove(deps.as_mut().storage);
+            if let Some(mut rebalance) = rebalance {
+                rebalance.manager = manager.map(Addr::unchecked);
+                REBALANCE.save(deps.as_mut().storage, &rebalance).unwrap();
+            }
+
+            let res = trade(
+                deps.as_mut(),
+                mock_env(),
+                mock_info(sender, &[]),
+                RebalanceTradeMsg::Deflate {
+                    target_denom: "".to_string(),
+                    amount_out: Uint128::zero(),
+                    max_amount_in: Uint128::zero(),
+                },
+            );
+            assert_eq!(res, expected);
+        }
+    }
+}
