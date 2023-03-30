@@ -201,6 +201,24 @@ pub mod tests {
     }
 
     #[test]
+    fn test_streaming_fee_collect_freeze() {
+        let mut streaming_fee = StreamingFee {
+            rate: Decimal::one(),
+            collected: vec![],
+            last_collected_at: 0,
+            freeze: true,
+        };
+
+        let index_units: Units = vec![("uatom", "2.0"), ("uosmo", "1.0")].into();
+
+        let (new_units, fee_units) = streaming_fee
+            .collect(index_units.clone(), 86400, 100u128.into())
+            .unwrap();
+        assert_eq!(fee_units, None);
+        assert_eq!(index_units, new_units);
+    }
+
+    #[test]
     fn test_fee_check_rates() {
         let cases = [
             (
