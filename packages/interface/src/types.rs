@@ -14,8 +14,33 @@ pub struct SwapRoute {
     pub token_denom: String,
 }
 
+impl SwapRoute {
+    pub fn new(pool_id: u64, token_denom: &str) -> Self {
+        Self {
+            pool_id,
+            token_denom: token_denom.to_string(),
+        }
+    }
+}
+
 #[cw_serde]
 pub struct SwapRoutes(pub Vec<SwapRoute>);
+
+impl From<Vec<SwapRoute>> for SwapRoutes {
+    fn from(val: Vec<SwapRoute>) -> Self {
+        Self(val)
+    }
+}
+
+impl<'a> From<Vec<(u64, &'a str)>> for SwapRoutes {
+    fn from(val: Vec<(u64, &'a str)>) -> Self {
+        Self(
+            val.into_iter()
+                .map(|(pool_id, token_denom)| SwapRoute::new(pool_id, token_denom))
+                .collect(),
+        )
+    }
+}
 
 impl From<SwapRoutes> for Vec<SwapAmountInRoute> {
     fn from(val: SwapRoutes) -> Self {
@@ -42,6 +67,14 @@ impl From<SwapRoutes> for Vec<SwapAmountOutRoute> {
 }
 
 impl SwapRoutes {
+    pub fn dneom_first(&self) -> String {
+        self.0.last().unwrap().token_denom.clone()
+    }
+
+    pub fn denom_last(&self) -> String {
+        self.0.first().unwrap().token_denom.clone()
+    }
+
     pub fn sim_swap_exact_in(
         &self,
         querier: &QuerierWrapper,

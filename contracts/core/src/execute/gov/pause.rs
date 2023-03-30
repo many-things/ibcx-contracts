@@ -1,195 +1,235 @@
 use cosmwasm_std::{attr, DepsMut, Env, MessageInfo, Response};
 
-use crate::{error::ContractError, state::PAUSED};
+use crate::{
+    error::ValidationError,
+    state::{Config, PauseInfo, CONFIG},
+    StdResult,
+};
 
 pub fn pause(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    expires_at: u64,
-) -> Result<Response, ContractError> {
-    let mut pause_info = PAUSED
-        .load(deps.storage)?
-        .refresh(&env)?
-        .assert_not_paused()?;
+    expires_at: Option<u64>,
+) -> StdResult<Response> {
+    let config = CONFIG.load(deps.storage)?;
+    config.check_gov(&info.sender)?;
+    config.assert_not_paused(&env)?;
 
-    if env.block.time.seconds() >= expires_at {
-        return Err(ContractError::InvalidArgument(
-            "expires_at must be in the future".to_string(),
-        ));
+    if let Some(expires_at) = expires_at {
+        if env.block.time.seconds() >= expires_at {
+            return Err(ValidationError::invalid_pause_info("expiry must be in the future").into());
+        }
     }
 
-    pause_info.paused = true;
-    pause_info.expires_at = Some(expires_at);
+    let new_pause_info = PauseInfo {
+        paused: true,
+        expires_at,
+    };
 
-    PAUSED.save(deps.storage, &pause_info)?;
+    CONFIG.save(
+        deps.storage,
+        &Config {
+            paused: new_pause_info,
+            ..config
+        },
+    )?;
 
-    let resp = Response::new().add_attributes(vec![
+    // response
+    let attrs = vec![
         attr("method", "gov::pause"),
         attr("executor", info.sender),
-        attr("expires_at", pause_info.expires_at.unwrap().to_string()),
-    ]);
+        attr(
+            "expires_at",
+            expires_at
+                .map(|v| v.to_string())
+                .as_deref()
+                .unwrap_or("never"),
+        ),
+    ];
+
+    let resp = Response::new().add_attributes(attrs);
 
     Ok(resp)
 }
 
-pub fn release(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
-    PAUSED.load(deps.storage)?.refresh(&env)?.assert_paused()?;
-    PAUSED.save(deps.storage, &Default::default())?;
+pub fn release(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Response> {
+    let config = CONFIG.load(deps.storage)?;
+    config.check_gov(&info.sender)?;
+    config.assert_paused(&env)?;
 
-    let resp = Response::new().add_attributes(vec![
+    CONFIG.save(
+        deps.storage,
+        &Config {
+            paused: Default::default(),
+            ..config
+        },
+    )?;
+
+    // response
+    let attrs = vec![
         attr("method", "gov::release"),
         attr("executor", info.sender),
-    ]);
+    ];
+
+    let resp = Response::new().add_attributes(attrs);
 
     Ok(resp)
 }
 
 #[cfg(test)]
 mod tests {
-
     use cosmwasm_std::{
+        attr,
         testing::{mock_dependencies, mock_env, mock_info},
-        Addr, StdError,
+        Timestamp,
     };
 
     use crate::{
-        state::{PauseInfo, GOV},
-        test::SENDER_GOV,
+        error::{ContractError, ValidationError},
+        execute::gov::pause::release,
+        state::{tests::mock_config, Config, PauseInfo, CONFIG},
     };
 
-    use super::*;
-
-    fn setup(deps: DepsMut, gov: Option<&str>) {
-        let gov = Addr::unchecked(gov.unwrap_or(SENDER_GOV));
-        GOV.save(deps.storage, &gov).unwrap();
-        PAUSED.save(deps.storage, &Default::default()).unwrap();
-    }
-
-    fn assert_pause_resp(resp: Response, sender: &str, expires_at: u64) {
-        assert_eq!(
-            resp.attributes,
-            vec![
-                attr("method", "gov::pause"),
-                attr("executor", sender),
-                attr("expires_at", expires_at.to_string())
-            ]
-        );
-    }
-
-    fn assert_release_resp(resp: Response, sender: &str) {
-        assert_eq!(
-            resp.attributes,
-            vec![attr("method", "gov::release"), attr("executor", sender),]
-        )
-    }
+    use super::pause;
 
     #[test]
-    fn test_pause_and_release() {
-        let mut deps = mock_dependencies();
+    fn test_pause() {
+        let std_time = mock_env().block.time.seconds();
 
-        let env = mock_env();
-        let now = env.block.time.seconds();
-
-        setup(deps.as_mut(), Some(SENDER_GOV));
-
-        let expire = now + 1000;
-        let sender = mock_info(SENDER_GOV, &[]);
-
-        // pause
-        let resp = pause(deps.as_mut(), env.clone(), sender.clone(), expire).unwrap();
-        assert_pause_resp(resp, SENDER_GOV, expire);
-
-        let paused = PAUSED.load(deps.as_ref().storage).unwrap();
-        assert!(paused.paused);
-        assert_eq!(paused.expires_at, Some(expire));
-
-        // release
-        let resp = release(deps.as_mut(), env, sender).unwrap();
-        assert_release_resp(resp, SENDER_GOV);
-
-        let paused = PAUSED.load(deps.as_ref().storage).unwrap();
-        assert!(!paused.paused);
-        assert!(paused.expires_at.is_none());
-    }
-
-    #[test]
-    fn test_past_expiry() {
-        let mut deps = mock_dependencies();
-
-        let env = mock_env();
-        let now = env.block.time.seconds();
-
-        setup(deps.as_mut(), Some(SENDER_GOV));
-
-        let sender = mock_info(SENDER_GOV, &[]);
-        let err = pause(deps.as_mut(), env, sender, now - 1).unwrap_err();
-        assert!(
-            matches!(err, ContractError::InvalidArgument(msg) if msg == "expires_at must be in the future")
-        );
-    }
-
-    #[test]
-    fn test_double_pause() {
-        let mut deps = mock_dependencies();
-
-        let env = mock_env();
-        let now = env.block.time.seconds();
-
-        setup(deps.as_mut(), Some(SENDER_GOV));
-
-        let sender = mock_info(SENDER_GOV, &[]);
-
-        // first pause
-        pause(deps.as_mut(), env.clone(), sender.clone(), now + 1).unwrap();
-
-        // second pause
-        assert_eq!(
-            pause(deps.as_mut(), env, sender, now + 1).unwrap_err(),
-            ContractError::Paused {}
-        );
-    }
-
-    #[test]
-    fn test_not_found_pause_info() {
-        let mut deps = mock_dependencies();
-
-        let env = mock_env();
-
-        setup(deps.as_mut(), Some(SENDER_GOV));
-
-        let sender = mock_info(SENDER_GOV, &[]);
-
-        PAUSED.remove(deps.as_mut().storage);
-
-        assert_eq!(
-            release(deps.as_mut(), env, sender).unwrap_err(),
-            ContractError::Std(StdError::not_found("ibcx_core::state::pause::PauseInfo"))
-        );
-    }
-
-    #[test]
-    fn test_not_paused() {
-        let mut deps = mock_dependencies();
-
-        let env = mock_env();
-        let now = env.block.time.seconds();
-
-        setup(deps.as_mut(), Some(SENDER_GOV));
-
-        PAUSED
-            .save(
-                deps.as_mut().storage,
-                &PauseInfo {
-                    paused: true,
-                    expires_at: Some(now - 1000),
+        let cases = [
+            // not paused
+            (
+                PauseInfo {
+                    paused: false,
+                    expires_at: None,
                 },
-            )
-            .unwrap();
+                None,
+                std_time,
+                Ok(vec![
+                    attr("method", "gov::pause"),
+                    attr("executor", "gov"),
+                    attr("expires_at", "never"),
+                ]),
+            ),
+            (
+                PauseInfo {
+                    paused: false,
+                    expires_at: None,
+                },
+                Some(std_time - 1),
+                std_time,
+                Err(ValidationError::invalid_pause_info("expiry must be in the future").into()),
+            ),
+            // paused
+            (
+                PauseInfo {
+                    paused: true,
+                    expires_at: None,
+                },
+                None,
+                std_time,
+                Err(ContractError::Paused {}),
+            ),
+            (
+                PauseInfo {
+                    paused: true,
+                    expires_at: Some(std_time - 1),
+                },
+                Some(std_time - 1),
+                std_time,
+                Err(ValidationError::invalid_pause_info("expiry must be in the future").into()),
+            ),
+            (
+                PauseInfo {
+                    paused: true,
+                    expires_at: Some(std_time - 1),
+                },
+                Some(std_time + 1),
+                std_time,
+                Ok(vec![
+                    attr("method", "gov::pause"),
+                    attr("executor", "gov"),
+                    attr("expires_at", (std_time + 1).to_string()),
+                ]),
+            ),
+        ];
 
-        assert!(matches!(
-            release(deps.as_mut(), env, mock_info(SENDER_GOV, &[])).unwrap_err(),
-            ContractError::NotPaused {},
-        ));
+        let mut deps = mock_dependencies();
+
+        for (paused, expiry, exec_at, expected) in cases {
+            CONFIG
+                .save(
+                    deps.as_mut().storage,
+                    &Config {
+                        paused,
+                        ..mock_config()
+                    },
+                )
+                .unwrap();
+
+            let mut env = mock_env();
+            env.block.time = Timestamp::from_seconds(exec_at);
+
+            let res = pause(deps.as_mut(), env, mock_info("gov", &[]), expiry);
+            assert_eq!(res.map(|v| v.attributes), expected);
+        }
+    }
+
+    #[test]
+    fn test_release() {
+        let std_time = mock_env().block.time.seconds();
+
+        let cases = [
+            // not paused
+            (
+                PauseInfo {
+                    paused: false,
+                    expires_at: None,
+                },
+                std_time,
+                Err(ContractError::NotPaused {}),
+            ),
+            // paused
+            (
+                PauseInfo {
+                    paused: true,
+                    expires_at: None,
+                },
+                std_time,
+                Ok(vec![
+                    attr("method", "gov::release"),
+                    attr("executor", "gov"),
+                ]),
+            ),
+            (
+                PauseInfo {
+                    paused: true,
+                    expires_at: Some(std_time - 1),
+                },
+                std_time,
+                Err(ContractError::NotPaused {}),
+            ),
+        ];
+
+        let mut deps = mock_dependencies();
+
+        for (paused, exec_at, expected) in cases {
+            CONFIG
+                .save(
+                    deps.as_mut().storage,
+                    &Config {
+                        paused,
+                        ..mock_config()
+                    },
+                )
+                .unwrap();
+
+            let mut env = mock_env();
+            env.block.time = Timestamp::from_seconds(exec_at);
+
+            let res = release(deps.as_mut(), env, mock_info("gov", &[]));
+            assert_eq!(res.map(|v| v.attributes), expected);
+        }
     }
 }

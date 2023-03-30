@@ -5,11 +5,18 @@ use crate::types::SwapRoutes;
 
 #[cw_serde]
 #[derive(Default)]
+pub struct StreamingFeePayload {
+    pub rate: Decimal,
+    pub freeze: bool,
+}
+
+#[cw_serde]
+#[derive(Default)]
 pub struct FeePayload {
     pub collector: String,
     pub mint_fee: Option<Decimal>,
     pub burn_fee: Option<Decimal>,
-    pub streaming_fee: Option<Decimal>,
+    pub streaming_fee: Option<StreamingFeePayload>,
 }
 
 #[cw_serde]
@@ -45,14 +52,14 @@ pub enum GovMsg {
 pub enum RebalanceTradeMsg {
     // TOKEN => RESERVE
     Deflate {
-        denom: String,
-        amount: Uint128,
+        target_denom: String,
+        amount_out: Uint128,
         max_amount_in: Uint128,
     },
     // RESERVE => TOKEN
     Inflate {
-        denom: String,
-        amount: Uint128,
+        target_denom: String,
+        amount_in: Uint128,
         min_amount_out: Uint128,
     },
 }
@@ -60,7 +67,7 @@ pub enum RebalanceTradeMsg {
 #[cw_serde]
 pub enum RebalanceMsg {
     Init {
-        manager: String,
+        manager: Option<String>,
         deflation: Vec<(String, Decimal)>, // target units
         inflation: Vec<(String, Decimal)>, // conversion weights
     },
@@ -97,16 +104,20 @@ pub enum QueryMsg {
     GetFee { time: Option<u64> },
 
     #[returns(GetPauseInfoResponse)]
-    GetPauseInfo {},
+    GetPauseInfo { time: Option<u64> },
 
     #[returns(GetPortfolioResponse)]
-    GetPortfolio {},
+    GetPortfolio { time: Option<u64> },
 
     #[returns(SimulateMintResponse)]
-    SimulateMint { amount: Uint128, funds: Vec<Coin> },
+    SimulateMint {
+        amount: Uint128,
+        funds: Vec<Coin>,
+        time: Option<u64>,
+    },
 
     #[returns(SimulateBurnResponse)]
-    SimulateBurn { amount: Uint128 },
+    SimulateBurn { amount: Uint128, time: Option<u64> },
 }
 
 #[cw_serde]
@@ -117,14 +128,19 @@ pub struct GetConfigResponse {
 }
 
 #[cw_serde]
+pub struct StreamingFeeResponse {
+    pub rate: Decimal,
+    pub collected: Vec<Coin>,
+    pub freeze: bool,
+    pub last_collected_at: u64,
+}
+
+#[cw_serde]
 pub struct GetFeeResponse {
     pub collector: Addr,
-    pub collected: Vec<(String, Decimal)>,
-    pub realized: Vec<(String, Uint128)>,
-    pub mint: Option<Decimal>,
-    pub burn: Option<Decimal>,
-    pub stream: Option<Decimal>,
-    pub stream_last_collected_at: u64,
+    pub mint_fee: Option<Decimal>,
+    pub burn_fee: Option<Decimal>,
+    pub streaming_fee: Option<StreamingFeeResponse>,
 }
 
 #[cw_serde]
