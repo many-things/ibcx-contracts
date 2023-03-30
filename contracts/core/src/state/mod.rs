@@ -45,7 +45,7 @@ pub mod tests {
         REBALANCE, RESERVE_UNITS, TOTAL_SUPPLY, TRADE_INFOS,
     };
 
-    #[derive(Default)]
+    #[derive(Default, Clone)]
     pub struct StateBuilder<'a> {
         config: Option<Config>,
         fee: Option<Fee>,
