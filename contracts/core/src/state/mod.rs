@@ -4,7 +4,7 @@ mod pause;
 mod rebalance;
 mod units;
 
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Addr, Uint128};
 use cw_storage_plus::{Item, Map};
 
 pub use config::Config;
@@ -15,6 +15,9 @@ pub use units::Units;
 
 pub const CONFIG_KEY: &str = "config";
 pub const CONFIG: Item<Config> = Item::new(CONFIG_KEY);
+
+pub const PENDING_GOV_KEY: &str = "pending_gov";
+pub const PENDING_GOV: Item<Addr> = Item::new(PENDING_GOV_KEY);
 
 pub const FEE_KEY: &str = "fee";
 pub const FEE: Item<Fee> = Item::new(FEE_KEY);

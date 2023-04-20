@@ -15,6 +15,8 @@ pub fn handle_msg(deps: DepsMut, env: Env, info: MessageInfo, msg: GovMsg) -> St
         Release {} => pause::release(deps, env, info),
 
         UpdateGov(new_gov) => update::update_gov(deps, info, new_gov),
+        AcceptGov {} => update::accept_gov(deps, info),
+        RevokeGov {} => update::revoke_gov(deps, info),
         UpdateFeeStrategy(new_fee) => update::update_fee(deps, env, info, new_fee),
         UpdateRebalanceManager(new_manager) => {
             update::update_rebalance_manager(deps, info, new_manager)

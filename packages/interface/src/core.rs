@@ -38,6 +38,9 @@ pub enum GovMsg {
     Release {},
 
     UpdateGov(String),
+    AcceptGov {},
+    RevokeGov {},
+
     UpdateFeeStrategy(FeePayload),
     UpdateRebalanceManager(Option<String>),
     UpdateReserveDenom(String),

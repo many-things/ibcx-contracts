@@ -1,9 +1,13 @@
-use cosmwasm_std::{attr, DepsMut, Env, MessageInfo, Response, Uint128};
+use cosmwasm_std::{attr, DepsMut, Env, MessageInfo, Response, StdError, Uint128};
 use ibcx_interface::{core::FeePayload, types::SwapRoutes};
 
 use crate::{
+    assert_sender,
     error::RebalanceError,
-    state::{Config, Rebalance, StreamingFee, TradeInfo, CONFIG, FEE, REBALANCE, TRADE_INFOS},
+    state::{
+        Config, Rebalance, StreamingFee, TradeInfo, CONFIG, FEE, PENDING_GOV, REBALANCE,
+        TRADE_INFOS,
+    },
     StdResult,
 };
 
@@ -12,18 +16,53 @@ pub fn update_gov(deps: DepsMut, info: MessageInfo, new_gov: String) -> StdResul
 
     config.check_gov(&info.sender)?;
 
-    CONFIG.save(
-        deps.storage,
-        &Config {
-            gov: deps.api.addr_validate(&new_gov)?,
-            ..config
-        },
-    )?;
+    if PENDING_GOV.may_load(deps.storage)?.is_some() {
+        return Err(StdError::generic_err("pending gov exists").into());
+    }
+    PENDING_GOV.save(deps.storage, &deps.api.addr_validate(&new_gov)?)?;
 
     let resp = Response::new().add_attributes(vec![
         attr("method", "gov::update_gov"),
         attr("executor", info.sender),
-        attr("new_gov", new_gov),
+        attr("pending_gov", new_gov),
+    ]);
+
+    Ok(resp)
+}
+
+pub fn accept_gov(deps: DepsMut, info: MessageInfo) -> StdResult<Response> {
+    let pending_gov = PENDING_GOV.load(deps.storage)?;
+    assert_sender(&pending_gov, &info.sender)?;
+    PENDING_GOV.remove(deps.storage);
+
+    let mut config = CONFIG.load(deps.storage)?;
+
+    config.gov = pending_gov;
+
+    CONFIG.save(deps.storage, &config)?;
+
+    let resp = Response::new().add_attributes(vec![
+        attr("method", "gov::accept_gov"),
+        attr("executor", info.sender),
+        attr("gov", config.gov),
+    ]);
+
+    Ok(resp)
+}
+
+pub fn revoke_gov(deps: DepsMut, info: MessageInfo) -> StdResult<Response> {
+    let pending_gov = PENDING_GOV.load(deps.storage)?;
+
+    let config = CONFIG.load(deps.storage)?;
+
+    config.check_gov(&info.sender)?;
+
+    PENDING_GOV.remove(deps.storage);
+
+    let resp = Response::new().add_attributes(vec![
+        attr("method", "gov::revoke_gov"),
+        attr("executor", info.sender),
+        attr("pending_gov", pending_gov),
     ]);
 
     Ok(resp)
@@ -205,7 +244,7 @@ mod tests {
                 Ok(vec![
                     attr("method", "gov::update_gov"),
                     attr("executor", "gov"),
-                    attr("new_gov", "new_gov"),
+                    attr("pending_gov", "new_gov"),
                 ]),
             ),
         ];
