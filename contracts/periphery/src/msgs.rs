@@ -100,8 +100,8 @@ pub fn make_burn_swap_msgs(
             .sim_swap_exact_in(querier, contract, coin(expected.u128(), &denom))
             .map_err(|e| ContractError::SimulateQueryError {
                 err: e.to_string(),
-                input: min_output.denom.clone(),
-                output: denom.clone(),
+                input: denom.clone(),
+                output: min_output.denom.clone(),
                 amount: expected,
             })?;
 
