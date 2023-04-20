@@ -33,8 +33,7 @@ pub fn make_mint_swap_exact_out_msgs(
             .ok_or(ContractError::SwapRouteNotFound {
                 from: max_input.denom.clone(),
                 to: denom.clone(),
-            })?
-            .clone();
+            })?;
 
         let simulated_token_in = swap_info
             .sim_swap_exact_out(querier, contract, coin(want.u128(), &denom))
