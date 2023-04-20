@@ -137,16 +137,21 @@ impl Units {
         index_amount: Uint128,
     ) -> Result<Vec<Coin>, ContractError> {
         let required = self.calc_require_amount(index_amount);
+        let mut denoms: Vec<_> = funds.clone().into_iter().map(|v| Some(v.denom)).collect();
 
         for Coin { denom, amount } in required {
             match funds.iter().position(|v| v.denom == denom) {
                 Some(i) => {
-                    let fund = funds.get_mut(i).unwrap();
-
-                    fund.amount = fund.amount.checked_sub(amount)?;
+                    denoms[i] = None;
+                    funds[i].amount = funds[i].amount.checked_sub(amount)?;
                 }
                 None => return Err(ContractError::InsufficientFunds(denom)),
             }
+        }
+
+        let denoms: Vec<_> = denoms.into_iter().flatten().collect();
+        if !denoms.is_empty() {
+            return Err(StdError::generic_err(format!("{denoms:?}")).into());
         }
 
         Ok(funds.into_iter().filter(|v| !v.amount.is_zero()).collect())
@@ -168,8 +173,10 @@ impl Units {
 
 #[cfg(test)]
 mod tests {
+    use crate::error::ContractError;
+
     use super::Units;
-    use cosmwasm_std::Decimal;
+    use cosmwasm_std::{coin, Decimal, StdError, Uint128};
 
     #[test]
     fn test_pop_key() {
@@ -232,5 +239,33 @@ mod tests {
         for (units, expect) in cases {
             assert_eq!(Units::from(units).check_duplicate(), expect);
         }
+    }
+
+    #[test]
+    fn test_calc_refund_amount() {
+        let units: Units = vec![("uatom", "0.5"), ("uosmo", "0.25")].into();
+
+        let refund = units
+            .calc_refund_amount(
+                vec![coin(55u128, "uatom"), coin(30u128, "uosmo")],
+                Uint128::new(100u128),
+            )
+            .unwrap();
+        assert_eq!(refund, vec![coin(5u128, "uatom"), coin(5u128, "uosmo")]);
+
+        let err = units
+            .calc_refund_amount(
+                vec![
+                    coin(55u128, "uatom"),
+                    coin(30u128, "uosmo"),
+                    coin(20u128, "ujuno"),
+                ],
+                Uint128::new(100u128),
+            )
+            .unwrap_err();
+        assert_eq!(
+            err,
+            ContractError::Std(StdError::generic_err(format!("{:?}", vec!["ujuno"])))
+        )
     }
 }
