@@ -24,6 +24,20 @@ codegen({
       bundleFile: "index.ts",
       scope: "contracts",
     },
+    client: {
+      enabled: true,
+    },
+    reactQuery: {
+      enabled: true,
+      version: "v4",
+      mutations: false,
+    },
+    // recoil: {
+    //   enabled: true,
+    // },
+    messageComposer: {
+      enabled: true,
+    },
   },
 }).then(() => {
   console.log("✨ Typescript code is generated successfully!");
