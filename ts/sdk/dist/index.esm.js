@@ -1397,18 +1397,15 @@ var _15 = /*#__PURE__*/Object.freeze({
 * DO NOT MODIFY IT BY HAND. Instead, modify the source JSONSchema file,
 * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
 */
-var contracts;
+var contracts$1;
 (function (contracts) {
     contracts.Airdrop = __assign(__assign(__assign(__assign({}, _0), _1), _2), _3);
     contracts.Core = __assign(__assign(__assign(__assign({}, _4), _5), _6), _7);
     contracts.Faucet = __assign(__assign(__assign(__assign({}, _8), _9), _10), _11);
     contracts.Periphery = __assign(__assign(__assign(__assign({}, _12), _13), _14), _15);
-})(contracts || (contracts = {}));
+})(contracts$1 || (contracts$1 = {}));
 
-var index = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    get contracts () { return contracts; }
-});
+var contracts = contracts$1;
 
-export { index as contracts };
+export { contracts as default };
 //# sourceMappingURL=index.esm.js.map
