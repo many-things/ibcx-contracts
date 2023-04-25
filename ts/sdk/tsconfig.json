@@ -14,7 +14,6 @@
 
     // Strictness and quality settings.
     "alwaysStrict": true,
-    "exactOptionalPropertyTypes": true,
     "forceConsistentCasingInFileNames": true,
     // "importsNotUsedAsValues": "error",
     "noFallthroughCasesInSwitch": true,

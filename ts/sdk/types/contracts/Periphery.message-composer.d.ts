@@ -3,10 +3,10 @@
 * DO NOT MODIFY IT BY HAND. Instead, modify the source JSONSchema file,
 * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
 */
-import { Coin, StdFee } from "@cosmjs/amino";
-import { SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
+import { Coin } from "@cosmjs/amino";
+import { MsgExecuteContractEncodeObject } from "cosmwasm";
 import { Uint128, RouteKey } from "./Periphery.types";
-export interface PeripheryInterface {
+export interface PeripheryMessage {
     contractAddress: string;
     sender: string;
     mintExactAmountOut: ({ coreAddr, inputAsset, outputAmount, swapInfo }: {
@@ -14,30 +14,29 @@ export interface PeripheryInterface {
         inputAsset: string;
         outputAmount: Uint128;
         swapInfo: RouteKey[][];
-    }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+    }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
     burnExactAmountIn: ({ coreAddr, minOutputAmount, outputAsset, swapInfo }: {
         coreAddr: string;
         minOutputAmount: Uint128;
         outputAsset: string;
         swapInfo: RouteKey[][];
-    }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+    }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
 }
-export declare class PeripheryClient implements PeripheryInterface {
-    client: SigningCosmWasmClient;
+export declare class PeripheryMessageComposer implements PeripheryMessage {
     sender: string;
     contractAddress: string;
-    constructor(client: SigningCosmWasmClient, sender: string, contractAddress: string);
+    constructor(sender: string, contractAddress: string);
     mintExactAmountOut: ({ coreAddr, inputAsset, outputAmount, swapInfo }: {
         coreAddr: string;
         inputAsset: string;
         outputAmount: Uint128;
         swapInfo: RouteKey[][];
-    }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+    }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
     burnExactAmountIn: ({ coreAddr, minOutputAmount, outputAsset, swapInfo }: {
         coreAddr: string;
         minOutputAmount: Uint128;
         outputAsset: string;
         swapInfo: RouteKey[][];
-    }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+    }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
 }
-//# sourceMappingURL=Periphery.client.d.ts.map
+//# sourceMappingURL=Periphery.message-composer.d.ts.map
