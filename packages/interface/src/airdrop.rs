@@ -276,10 +276,10 @@ impl ListAirdropsQueryOptions {
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     #[returns(GetAirdropResponse)]
-    GetAirdrop(AirdropId),
+    GetAirdrop { id: AirdropId },
 
     #[returns(ListAirdropsResponse)]
-    ListAirdrops(ListAirdropsQueryOptions),
+    ListAirdrops { option: ListAirdropsQueryOptions },
 
     #[returns(LatestAirdropResponse)]
     LatestAirdropId {},
@@ -291,7 +291,7 @@ pub enum QueryMsg {
     },
 
     #[returns(VerifyClaimResponse)]
-    VerifyClaim(ClaimPayload),
+    VerifyClaim { claim: ClaimPayload },
 
     #[returns(ListClaimsResponse)]
     ListClaims {
@@ -302,7 +302,7 @@ pub enum QueryMsg {
     },
 
     #[returns(GetLabelResponse)]
-    GetLabel(String),
+    GetLabel { label: String },
 
     #[returns(ListLabelsResponse)]
     ListLabels {

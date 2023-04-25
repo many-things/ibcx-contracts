@@ -53,12 +53,12 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, Cont
     use QueryMsg::*;
 
     match msg {
-        GetAirdrop(airdrop) => to_binary(query::get_airdrop(deps, airdrop)),
-        ListAirdrops(option) => to_binary(query::list_airdrops(deps, option)),
+        GetAirdrop { id: airdrop } => to_binary(query::get_airdrop(deps, airdrop)),
+        ListAirdrops { option } => to_binary(query::list_airdrops(deps, option)),
         LatestAirdropId {} => to_binary(query::latest_airdrop_id(deps)),
 
         GetClaim { airdrop, claim_key } => to_binary(query::get_claim(deps, airdrop, claim_key)),
-        VerifyClaim(payload) => to_binary(query::verify_claim(deps, payload)),
+        VerifyClaim { claim: payload } => to_binary(query::verify_claim(deps, payload)),
         ListClaims {
             airdrop,
             start_after,
@@ -66,7 +66,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<QueryResponse, Cont
             order,
         } => to_binary(query::list_claims(deps, airdrop, start_after, limit, order)),
 
-        GetLabel(label) => to_binary(query::get_label(deps, label)),
+        GetLabel { label } => to_binary(query::get_label(deps, label)),
         ListLabels {
             start_after,
             limit,
