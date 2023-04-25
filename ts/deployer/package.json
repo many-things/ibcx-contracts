@@ -12,7 +12,8 @@
     "@cosmjs/crypto": "^0.30.1",
     "@cosmjs/encoding": "^0.30.1",
     "@cosmjs/proto-signing": "^0.30.1",
-    "@cosmjs/stargate": "^0.30.1"
+    "@cosmjs/stargate": "^0.30.1",
+    "@many-things/ibcx-contracts-sdk": "link:./../sdk"
   },
   "devDependencies": {
     "@types/node": "^18.16.0",
