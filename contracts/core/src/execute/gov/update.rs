@@ -113,6 +113,10 @@ pub fn update_rebalance_manager(
     info: MessageInfo,
     new_manager: Option<String>,
 ) -> StdResult<Response> {
+    let config = CONFIG.load(deps.storage)?;
+
+    config.check_gov(&info.sender)?;
+
     let rebalance = match REBALANCE.may_load(deps.storage)? {
         Some(r) => r,
         None => return Err(RebalanceError::NotOnRebalancing.into()),
@@ -225,7 +229,7 @@ mod tests {
         execute::gov::update::update_fee,
         state::{
             tests::{mock_config, StateBuilder},
-            Fee, Rebalance, StreamingFee, CONFIG, FEE, REBALANCE,
+            Config, Fee, Rebalance, StreamingFee, CONFIG, FEE, REBALANCE,
         },
         test::mock_dependencies,
     };
@@ -399,11 +403,19 @@ mod tests {
         let mut deps = mock_dependencies();
 
         StateBuilder::default()
+            .with_config(Config {
+                gov: Addr::unchecked("gov"),
+                ..Default::default()
+            })
             .with_rebalance(Rebalance {
                 manager: Some(Addr::unchecked("manager")),
                 ..Default::default()
             })
             .build(deps.as_mut().storage);
+
+        let err =
+            update_rebalance_manager(deps.as_mut(), mock_info("abuser", &[]), None).unwrap_err();
+        assert_eq!(err, ContractError::Unauthorized);
 
         let res = update_rebalance_manager(deps.as_mut(), mock_info("gov", &[]), None).unwrap();
         assert_eq!(
