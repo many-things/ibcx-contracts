@@ -59,7 +59,7 @@ pub fn instantiate(
     let msg_create_denom = SubMsg::reply_on_success(
         MsgCreateDenom {
             sender: env.contract.address.into_string(),
-            subdenom: config.index_denom,
+            subdenom: msg.index_denom,
         },
         REPLY_ID_DENOM_CREATION,
     );
