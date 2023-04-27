@@ -1,6 +1,8 @@
-import { SigningStargateClient } from "@cosmjs/stargate";
+import { GasPrice, SigningStargateClient } from "@cosmjs/stargate";
 import { osmosis } from "osmojs";
+
 import config from "./config";
+import { registry, aminoTypes } from "./codec";
 
 const { createRPCQueryClient } = osmosis.ClientFactory;
 const { createDenom, mint, burn, setBeforeSendHook } =
@@ -14,27 +16,32 @@ async function main() {
 
   const stargateClient = await SigningStargateClient.connectWithSigner(
     config.args.endpoint,
-    signer
+    signer,
+    { registry, aminoTypes, gasPrice: GasPrice.fromString("0.025uosmo") }
   );
   const queryClient = await createRPCQueryClient({
     rpcEndpoint: config.args.endpoint,
   });
 
+  const { balances } = await queryClient.cosmos.bank.v1beta1.allBalances({
+    address: wallet.address,
+  });
+  console.log(balances);
+
   const createDenomRes = await stargateClient.signAndBroadcast(
     wallet.address,
     [
-      createDenom({ sender: wallet.address, subdenom: "utatom" }),
-      createDenom({ sender: wallet.address, subdenom: "utosmo " }),
-      createDenom({ sender: wallet.address, subdenom: "utjuno " }),
-      createDenom({ sender: wallet.address, subdenom: "utscrt" }),
-      createDenom({ sender: wallet.address, subdenom: "utevmos" }),
-      createDenom({ sender: wallet.address, subdenom: "utstars" }),
-      createDenom({ sender: wallet.address, subdenom: "utakt" }),
-      createDenom({ sender: wallet.address, subdenom: "utaxl" }),
-      createDenom({ sender: wallet.address, subdenom: "utregen" }),
-      createDenom({ sender: wallet.address, subdenom: "utstrd" }),
-      createDenom({ sender: wallet.address, subdenom: "utumee" }),
-      createDenom({ sender: wallet.address, subdenom: "ution" }),
+      createDenom({ sender: wallet.address, subdenom: "ibcx-test0-uatom" }),
+      createDenom({ sender: wallet.address, subdenom: "ibcx-test0-ujuno" }),
+      createDenom({ sender: wallet.address, subdenom: "ibcx-test0-uscrt" }),
+      createDenom({ sender: wallet.address, subdenom: "ibcx-test0-uevmos" }),
+      createDenom({ sender: wallet.address, subdenom: "ibcx-test0-ustars" }),
+      createDenom({ sender: wallet.address, subdenom: "ibcx-test0-uakt" }),
+      createDenom({ sender: wallet.address, subdenom: "ibcx-test0-uaxl" }),
+      createDenom({ sender: wallet.address, subdenom: "ibcx-test0-uregen" }),
+      createDenom({ sender: wallet.address, subdenom: "ibcx-test0-ustrd" }),
+      createDenom({ sender: wallet.address, subdenom: "ibcx-test0-uumee" }),
+      createDenom({ sender: wallet.address, subdenom: "ibcx-test0-uion" }),
     ],
     "auto"
   );

@@ -1,10 +1,14 @@
 import { osmosis } from "osmojs";
 const { createRPCQueryClient } = osmosis.ClientFactory;
 
-import config from "./config";
+import { GasPrice } from "@cosmjs/stargate";
 import { SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
 import CoreTypes from "@many-things/ibcx-contracts-sdk/types/contracts/Core.types";
 import PeripheryTypes from "@many-things/ibcx-contracts-sdk/types/contracts/Periphery.types";
+
+import config from "./config";
+import { AssetInfo } from "./portfolio";
+import { registry, aminoTypes } from "./codec";
 
 async function main() {
   const signer = await config.getSigner();
@@ -12,7 +16,8 @@ async function main() {
 
   const cosmwasmClient = await SigningCosmWasmClient.connectWithSigner(
     config.args.endpoint,
-    signer
+    signer,
+    { registry, aminoTypes, gasPrice: GasPrice.fromString("0.025uosmo") }
   );
   const queryClient = await createRPCQueryClient({
     rpcEndpoint: config.args.endpoint,
@@ -29,7 +34,7 @@ async function main() {
     },
     gov: config.args.addresses.dao,
     index_denom: "uibcx",
-    index_units: [["uosmo", "1.2"]],
+    index_units: AssetInfo.map(({ denom, unit }) => [denom, `${unit}`]),
     reserve_denom: "uosmo",
   };
   const initCoreRes = await cosmwasmClient.instantiate(
