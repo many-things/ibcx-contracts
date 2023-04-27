@@ -71,13 +71,6 @@ async function main() {
     deployed: initPeripheryRes.contractAddress,
     txHash: initPeripheryRes.transactionHash,
   });
-
-  // const airdrop = new sdk.Airdrop.AirdropClient(cwc, "", "");
-  // const core = new sdk.Core.CoreClient(cwc, "", "");
-  // const faucet = new sdk.Faucet.FaucetClient(cwc, "", "");
-  // const periphery = new sdk.Periphery.PeripheryClient(cwc, "", "");
-
-  // console.log(config);
 }
 
 main().catch(console.error);

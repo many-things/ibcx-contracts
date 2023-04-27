@@ -5,7 +5,7 @@ import config from "./config";
 import { registry, aminoTypes } from "./codec";
 
 const { createRPCQueryClient } = osmosis.ClientFactory;
-const { createDenom, mint, burn, setBeforeSendHook } =
+const { createDenom } =
   osmosis.tokenfactory.v1beta1.MessageComposer.withTypeUrl;
 
 async function main() {

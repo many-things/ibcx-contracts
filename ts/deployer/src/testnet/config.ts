@@ -1,7 +1,4 @@
-import { SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
 import { DirectSecp256k1HdWallet, OfflineSigner } from "@cosmjs/proto-signing";
-import { SigningStargateClient } from "@cosmjs/stargate";
-import { osmosis } from "osmojs";
 import { readFileSync } from "fs";
 import yaml from "js-yaml";
 

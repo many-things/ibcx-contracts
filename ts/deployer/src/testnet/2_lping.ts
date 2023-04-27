@@ -7,8 +7,6 @@ import Long from "long";
 import { AssetInfo } from "./portfolio";
 
 const { createRPCQueryClient } = osmosis.ClientFactory;
-const { createDenom, mint, burn, setBeforeSendHook } =
-  osmosis.tokenfactory.v1beta1.MessageComposer.withTypeUrl;
 const { joinPool } = osmosis.gamm.v1beta1.MessageComposer.withTypeUrl;
 const { createBalancerPool } =
   osmosis.gamm.poolmodels.balancer.v1beta1.MessageComposer.withTypeUrl;
