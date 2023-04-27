@@ -1,0 +1,9 @@
+mnemonic: "test test test test test test test test test test test test test test test test test test test test test test test test"
+endpoint: "https://rpc.testnet.osmosis.zone:443"
+addresses:
+  dao: osmo1deadbeefdeadbeef
+codes:
+  airdrop: 0
+  core: 0
+  faucet: 0
+  periphery: 0
