@@ -26,6 +26,11 @@ function createOutputOptions(options) {
     name: "counter-sdk",
     exports: "named",
     sourcemap: true,
+    globals: {
+      "cosmjs-types/cosmwasm/wasm/v1/tx": "tx",
+      "@cosmjs/encoding": "encoding",
+      "@tanstack/react-query": "reactQuery",
+    },
     ...options,
   };
 }
@@ -68,6 +73,11 @@ const options = {
       useTsconfigDeclarationDir: true,
       tsconfig: "./tsconfig.bundle.json",
     }),
+  ],
+  external: [
+    "@tanstack/react-query",
+    "cosmjs-types/cosmwasm/wasm/v1/tx",
+    "@cosmjs/encoding",
   ],
 };
 

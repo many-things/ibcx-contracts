@@ -58,5 +58,9 @@
     "@cosmjs/cosmwasm-stargate": "^0.30.1",
     "@tanstack/react-query": "^4.29.5",
     "cosmwasm": "^1.1.1"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   }
 }
