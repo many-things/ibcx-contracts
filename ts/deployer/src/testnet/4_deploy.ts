@@ -6,9 +6,9 @@ import { SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
 import CoreTypes from "@many-things/ibcx-contracts-sdk/types/contracts/Core.types";
 import PeripheryTypes from "@many-things/ibcx-contracts-sdk/types/contracts/Periphery.types";
 
-import config from "./config";
+import config from "../config";
 import { AssetInfo } from "./portfolio";
-import { registry, aminoTypes } from "./codec";
+import { registry, aminoTypes } from "../codec";
 
 async function main() {
   const signer = await config.getSigner();

@@ -1,8 +1,8 @@
 import { GasPrice, SigningStargateClient } from "@cosmjs/stargate";
 import { osmosis } from "osmojs";
 
-import config from "./config";
-import { registry, aminoTypes } from "./codec";
+import config from "../config";
+import { registry, aminoTypes } from "../codec";
 import Long from "long";
 import { AssetInfo } from "./portfolio";
 
