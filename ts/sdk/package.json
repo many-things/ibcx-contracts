@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@cosmwasm/ts-codegen": "^0.27.0",
+    "@rollup/plugin-node-resolve": "^15.0.2",
     "@swc/core": "^1.2.198",
     "@swc/helpers": "^0.3.17",
     "@types/eslint": "^8.4.1",
