@@ -4,5 +4,5 @@
 * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
 */
 
-import { InstantiateMsg, ExecuteMsg, Uint128, RouteKey, SwapRoutes, SwapRoute, MigrateMsg } from "./Periphery.types";
+import { InstantiateMsg, ExecuteMsg, Uint128, SwapInfo, RouteKey, SwapRoutes, SwapRoute, MigrateMsg } from "./Periphery.types";
 import "./Periphery.client";

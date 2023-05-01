@@ -8,7 +8,7 @@ import { Coin } from "@cosmjs/amino";
 import { MsgExecuteContractEncodeObject } from "cosmwasm";
 import { MsgExecuteContract } from "cosmjs-types/cosmwasm/wasm/v1/tx";
 import { toUtf8 } from "@cosmjs/encoding";
-import { InstantiateMsg, ExecuteMsg, Uint128, RouteKey, SwapRoutes, SwapRoute, MigrateMsg } from "./Periphery.types";
+import { InstantiateMsg, ExecuteMsg, Uint128, SwapInfo, RouteKey, SwapRoutes, SwapRoute, MigrateMsg } from "./Periphery.types";
 export interface PeripheryMessage {
   contractAddress: string;
   sender: string;
@@ -21,7 +21,7 @@ export interface PeripheryMessage {
     coreAddr: string;
     inputAsset: string;
     outputAmount: Uint128;
-    swapInfo: RouteKey[][];
+    swapInfo: SwapInfo[];
   }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
   burnExactAmountIn: ({
     coreAddr,
@@ -32,7 +32,7 @@ export interface PeripheryMessage {
     coreAddr: string;
     minOutputAmount: Uint128;
     outputAsset: string;
-    swapInfo: RouteKey[][];
+    swapInfo: SwapInfo[];
   }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
 }
 export class PeripheryMessageComposer implements PeripheryMessage {
@@ -55,7 +55,7 @@ export class PeripheryMessageComposer implements PeripheryMessage {
     coreAddr: string;
     inputAsset: string;
     outputAmount: Uint128;
-    swapInfo: RouteKey[][];
+    swapInfo: SwapInfo[];
   }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
     return {
       typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
@@ -83,7 +83,7 @@ export class PeripheryMessageComposer implements PeripheryMessage {
     coreAddr: string;
     minOutputAmount: Uint128;
     outputAsset: string;
-    swapInfo: RouteKey[][];
+    swapInfo: SwapInfo[];
   }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
     return {
       typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",

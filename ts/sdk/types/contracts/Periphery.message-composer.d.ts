@@ -5,7 +5,7 @@
 */
 import { Coin } from "@cosmjs/amino";
 import { MsgExecuteContractEncodeObject } from "cosmwasm";
-import { Uint128, RouteKey } from "./Periphery.types";
+import { Uint128, SwapInfo } from "./Periphery.types";
 export interface PeripheryMessage {
     contractAddress: string;
     sender: string;
@@ -13,13 +13,13 @@ export interface PeripheryMessage {
         coreAddr: string;
         inputAsset: string;
         outputAmount: Uint128;
-        swapInfo: RouteKey[][];
+        swapInfo: SwapInfo[];
     }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
     burnExactAmountIn: ({ coreAddr, minOutputAmount, outputAsset, swapInfo }: {
         coreAddr: string;
         minOutputAmount: Uint128;
         outputAsset: string;
-        swapInfo: RouteKey[][];
+        swapInfo: SwapInfo[];
     }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
 }
 export declare class PeripheryMessageComposer implements PeripheryMessage {
@@ -30,13 +30,13 @@ export declare class PeripheryMessageComposer implements PeripheryMessage {
         coreAddr: string;
         inputAsset: string;
         outputAmount: Uint128;
-        swapInfo: RouteKey[][];
+        swapInfo: SwapInfo[];
     }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
     burnExactAmountIn: ({ coreAddr, minOutputAmount, outputAsset, swapInfo }: {
         coreAddr: string;
         minOutputAmount: Uint128;
         outputAsset: string;
-        swapInfo: RouteKey[][];
+        swapInfo: SwapInfo[];
     }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
 }
 //# sourceMappingURL=Periphery.message-composer.d.ts.map
