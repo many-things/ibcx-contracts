@@ -8,6 +8,8 @@ type ConfigArgs = {
 
   addresses: {
     dao: string;
+    core: string; // ibcx-core
+    perp: string; // ibcx-periphery
   };
 
   codes: {
