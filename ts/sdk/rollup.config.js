@@ -75,7 +75,7 @@ const options = {
     commonjs({
       dynamicRequireTargets: [
         // include using a glob pattern (either a string or an array of strings)
-        "node_modules/cosmjs-types/cosmwasm/wasm/v1/tx",
+        "node_modules/cosmjs-types/*",
       ],
     }),
     typescript2({
