@@ -2,6 +2,8 @@
 
 import { terser } from "rollup-plugin-terser";
 import typescript2 from "rollup-plugin-typescript2";
+import resolve from "@rollup/plugin-node-resolve";
+import commonjs from "@rollup/plugin-commonjs";
 
 import pkg from "./package.json";
 
@@ -23,14 +25,14 @@ const banner = `/*!
 function createOutputOptions(options) {
   return {
     banner,
-    name: "counter-sdk",
+    name: "ibcx-contracts-sdk",
     exports: "named",
     sourcemap: true,
-    globals: {
-      "cosmjs-types/cosmwasm/wasm/v1/tx": "tx",
-      "@cosmjs/encoding": "encoding",
-      "@tanstack/react-query": "reactQuery",
-    },
+    // globals: {
+    //   // "cosmjs-types/cosmwasm/wasm/v1/tx": "tx",
+    //   "@cosmjs/encoding": "encoding",
+    //   "@tanstack/react-query": "reactQuery",
+    // },
     ...options,
   };
 }
@@ -68,6 +70,14 @@ const options = {
     }),
   ],
   plugins: [
+    resolve(),
+    // commonjs(),
+    commonjs({
+      dynamicRequireTargets: [
+        // include using a glob pattern (either a string or an array of strings)
+        "node_modules/cosmjs-types/cosmwasm/wasm/v1/tx",
+      ],
+    }),
     typescript2({
       clean: true,
       useTsconfigDeclarationDir: true,
@@ -75,9 +85,10 @@ const options = {
     }),
   ],
   external: [
+    "cosmjs-types",
     "@tanstack/react-query",
-    "cosmjs-types/cosmwasm/wasm/v1/tx",
     "@cosmjs/encoding",
+    "@cosmjs/cosmwasm-stargate",
   ],
 };
 
