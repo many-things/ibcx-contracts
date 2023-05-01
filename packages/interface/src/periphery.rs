@@ -10,18 +10,21 @@ pub struct InstantiateMsg {}
 pub struct RouteKey(pub (String, String));
 
 #[cw_serde]
+pub struct SwapInfo(pub (RouteKey, SwapRoutes));
+
+#[cw_serde]
 pub enum ExecuteMsg {
     MintExactAmountOut {
         core_addr: String,
         output_amount: Uint128,
         input_asset: String,
-        swap_info: Vec<(RouteKey, SwapRoutes)>,
+        swap_info: Vec<SwapInfo>,
     },
     BurnExactAmountIn {
         core_addr: String,
         output_asset: String,
         min_output_amount: Uint128,
-        swap_info: Vec<(RouteKey, SwapRoutes)>,
+        swap_info: Vec<SwapInfo>,
     },
 }
 
@@ -33,7 +36,7 @@ pub enum QueryMsg {
         core_addr: String,
         output_amount: Uint128,
         input_asset: Coin,
-        swap_info: Vec<(RouteKey, SwapRoutes)>,
+        swap_info: Vec<SwapInfo>,
     },
 
     #[returns(SimulateBurnExactAmountInResponse)]
@@ -42,7 +45,7 @@ pub enum QueryMsg {
         input_amount: Uint128,
         output_asset: String,
         min_output_amount: Uint128,
-        swap_info: Vec<(RouteKey, SwapRoutes)>,
+        swap_info: Vec<SwapInfo>,
     },
 }
 

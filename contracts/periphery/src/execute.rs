@@ -1,7 +1,7 @@
 use cosmwasm_std::{attr, coin, Env, MessageInfo, SubMsg, Uint128};
 use cosmwasm_std::{DepsMut, Response};
-use ibcx_interface::periphery::RouteKey;
-use ibcx_interface::{core, helpers::IbcCore, types::SwapRoutes};
+use ibcx_interface::periphery::SwapInfo;
+use ibcx_interface::{core, helpers::IbcCore};
 
 use crate::state::{Context, CONTEXT};
 use crate::REPLY_ID_BURN_EXACT_AMOUNT_IN;
@@ -14,7 +14,7 @@ pub fn mint_exact_amount_out(
     core_addr: String,
     output_amount: Uint128,
     input_asset: String,
-    swap_info: Vec<(RouteKey, SwapRoutes)>,
+    swap_info: Vec<SwapInfo>,
 ) -> Result<Response, ContractError> {
     // query to core contract
     let core = IbcCore(deps.api.addr_validate(&core_addr)?);
@@ -65,7 +65,7 @@ pub fn burn_exact_amount_in(
     core_addr: String,
     output_asset: String,
     min_output_amount: Uint128,
-    swap_info: Vec<(RouteKey, SwapRoutes)>,
+    swap_info: Vec<SwapInfo>,
 ) -> Result<Response, ContractError> {
     // query to core contract
     let core = IbcCore(deps.api.addr_validate(&core_addr)?);

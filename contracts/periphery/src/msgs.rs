@@ -1,7 +1,6 @@
 use cosmwasm_std::{coin, Addr, BankMsg, Coin, Uint128};
 use cosmwasm_std::{CosmosMsg, QuerierWrapper};
-use ibcx_interface::periphery::RouteKey;
-use ibcx_interface::types::SwapRoutes;
+use ibcx_interface::periphery::{RouteKey, SwapInfo};
 
 use crate::error::ContractError;
 
@@ -9,7 +8,7 @@ pub fn make_mint_swap_exact_out_msgs(
     querier: &QuerierWrapper,
     contract: &Addr,
     sender: &Addr,
-    swap_info: Vec<(RouteKey, SwapRoutes)>,
+    swap_info: Vec<SwapInfo>,
     desired: Vec<Coin>,
     max_input: &Coin,
 ) -> Result<(Vec<CosmosMsg>, Uint128), ContractError> {
@@ -27,9 +26,9 @@ pub fn make_mint_swap_exact_out_msgs(
             continue;
         }
 
-        let (_, swap_info) = swap_info
+        let SwapInfo((_, swap_info)) = swap_info
             .iter()
-            .find(|(RouteKey((from, to)), _)| from == &max_input.denom && to == &denom)
+            .find(|SwapInfo((RouteKey((from, to)), _))| from == &max_input.denom && to == &denom)
             .ok_or(ContractError::SwapRouteNotFound {
                 from: max_input.denom.clone(),
                 to: denom.clone(),
@@ -70,7 +69,7 @@ pub fn make_burn_swap_msgs(
     querier: &QuerierWrapper,
     contract: &Addr,
     sender: &Addr,
-    swap_info: Vec<(RouteKey, SwapRoutes)>,
+    swap_info: Vec<SwapInfo>,
     expected: Vec<Coin>,
     min_output: &Coin,
 ) -> Result<(Vec<CosmosMsg>, Uint128), ContractError> {
@@ -88,9 +87,9 @@ pub fn make_burn_swap_msgs(
             continue;
         }
 
-        let (_, swap_info) = swap_info
+        let SwapInfo((_, swap_info)) = swap_info
             .iter()
-            .find(|(RouteKey((from, to)), _)| from == &denom && to == &min_output.denom)
+            .find(|SwapInfo((RouteKey((from, to)), _))| from == &denom && to == &min_output.denom)
             .ok_or(ContractError::SwapRouteNotFound {
                 from: min_output.denom.clone(),
                 to: denom.clone(),

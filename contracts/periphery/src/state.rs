@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Coin};
 use cw_storage_plus::Item;
-use ibcx_interface::{periphery::RouteKey, types::SwapRoutes};
+use ibcx_interface::periphery::SwapInfo;
 
 #[cw_serde]
 pub enum Context {
@@ -14,7 +14,7 @@ pub enum Context {
         input: Coin,
         min_output: Coin,
         redeem_amounts: Vec<Coin>,
-        swap_info: Vec<(RouteKey, SwapRoutes)>,
+        swap_info: Vec<SwapInfo>,
     },
 }
 
