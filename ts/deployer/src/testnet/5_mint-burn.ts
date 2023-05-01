@@ -42,18 +42,17 @@ async function main() {
 
   const client = {
     b: cosmwasmClient,
-    bq: queryClient,
-    q: new sdk.Core.CoreQueryClient(cosmwasmClient, config.args.addresses.core),
-    m: new sdk.Core.CoreMessageComposer(
+    q: queryClient,
+    c: new sdk.Core.CoreClient(
+      cosmwasmClient,
       wallet.address,
       config.args.addresses.core
     ),
   };
 
-  const cfg = await client.q.getConfig();
-  console.log(cfg);
+  const { index_denom } = await client.c.getConfig();
 
-  const { units } = await client.q.getPortfolio({});
+  const { units } = await client.c.getPortfolio({});
   const funds = units
     .map(([denom, unit]) => ({
       denom,
@@ -61,48 +60,21 @@ async function main() {
     }))
     .sort((a, b) => (a.denom < b.denom ? -1 : 1));
 
-  const mintMsg = client.m.mint(
-    {
-      amount: `${1e6}`,
-      receiver: wallet.address,
-      refundTo: wallet.address,
-    },
+  const mintResp = await client.c.mint(
+    { amount: `${1e6}` },
+    "auto",
+    undefined,
     funds
-  );
-
-  const mintResp = await client.b.signAndBroadcast(
-    wallet.address,
-    [mintMsg],
-    "auto"
   );
   console.log({ action: "mint", txHash: mintResp.transactionHash });
 
-  await checkBalance(
-    client.bq,
-    wallet.address,
-    cfg.index_denom,
-    `${1e6}`,
-    "mint"
-  );
+  await checkBalance(client.q, wallet.address, index_denom, `${1e6}`, "mint");
 
-  const burnMsg = client.m.burn({}, [
-    { denom: cfg.index_denom, amount: `${1e6}` },
-  ]);
-
-  const burnResp = await client.b.signAndBroadcast(
-    wallet.address,
-    [burnMsg],
-    "auto"
-  );
+  const burnAmount = [{ denom: index_denom, amount: `${1e6}` }];
+  const burnResp = await client.c.burn({}, "auto", undefined, burnAmount);
   console.log({ action: "burn", txHash: burnResp.transactionHash });
 
-  await checkBalance(
-    client.bq,
-    wallet.address,
-    cfg.index_denom,
-    `${0}`,
-    "burn"
-  );
+  await checkBalance(client.q, wallet.address, index_denom, `${0}`, "burn");
 }
 
 main().catch(console.error);
