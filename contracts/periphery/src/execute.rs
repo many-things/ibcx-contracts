@@ -26,7 +26,8 @@ pub fn mint_exact_amount_out(
     let output = coin(output_amount.u128(), core_config.index_denom);
 
     let sim_resp = core.simulate_burn(&deps.querier, output.amount, None)?;
-    let sim_amount_desired = sim_resp.redeem_amount;
+    let mut sim_amount_desired = sim_resp.redeem_amount;
+    sim_amount_desired.sort_by(|a, b| a.denom.cmp(&b.denom));
 
     let (swap_msgs, _) = make_mint_swap_exact_out_msgs(
         &deps.querier,
