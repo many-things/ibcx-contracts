@@ -841,23 +841,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ibcx-faucet"
-version = "0.1.1"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-multi-test",
- "cw-storage-plus 1.0.1",
- "cw-utils 0.16.0",
- "cw2 1.0.1",
- "ibcx-interface",
- "ibcx-utils",
- "osmosis-std 0.15.2",
- "thiserror",
-]
-
-[[package]]
 name = "ibcx-interface"
 version = "0.1.1"
 dependencies = [

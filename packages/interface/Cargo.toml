@@ -21,7 +21,7 @@ cw-storage-plus = "1.0.1"
 cw2 = "1.0.0"
 thiserror = { version = "1.0.37" }
 
-osmosis-std = "0.15.0"
+osmosis-std = "0.15.2"
 
 [dev-dependencies]
 cw-multi-test = "0.16.1"
