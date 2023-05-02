@@ -9,10 +9,6 @@ incremental = false
 codegen-units = 1
 incremental = false
 
-[profile.release.package.ibcx-faucet]
-codegen-units = 1
-incremental = false
-
 [profile.release.package.ibcx-periphery]
 codegen-units = 1
 incremental = false
