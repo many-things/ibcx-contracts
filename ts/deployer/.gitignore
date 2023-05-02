@@ -1,2 +1,6 @@
+!out/
+out/*/*/*
+!out/*/*/run-latest.json
+
 config.*.yaml
 !config.example.yaml

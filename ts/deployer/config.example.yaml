@@ -1,9 +1,15 @@
 mnemonic: "test test test test test test test test test test test test test test test test test test test test test test test test"
+keyring:
+  name: test
+  backend: test
 endpoint: "https://rpc.testnet.osmosis.zone:443"
+
 addresses:
   dao: osmo1deadbeefdeadbeef
-codes:
-  airdrop: 0
-  core: 0
-  faucet: 0
-  periphery: 0
+
+assets:
+  ujuno:
+    alias: ujuno-v0
+    unit: 11.38742
+    price: 1.03522
+    weight: 11
