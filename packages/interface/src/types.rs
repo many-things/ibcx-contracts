@@ -1,11 +1,14 @@
 use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{coin, Addr, Coin, Order, StdResult, Uint128};
+use cosmwasm_std::{
+    coin, from_binary, to_vec, Addr, Coin, ContractResult, Empty, Order, QueryRequest, StdError,
+    StdResult, SystemResult, Uint128,
+};
 use cosmwasm_std::{CosmosMsg, QuerierWrapper};
 use osmosis_std::types::osmosis::poolmanager::v1beta1::{
-    MsgSwapExactAmountIn, MsgSwapExactAmountOut, PoolmanagerQuerier, SwapAmountInRoute,
-    SwapAmountOutRoute,
+    EstimateSwapExactAmountOutRequest, EstimateSwapExactAmountOutResponse, MsgSwapExactAmountIn,
+    MsgSwapExactAmountOut, PoolmanagerQuerier, SwapAmountInRoute, SwapAmountOutRoute,
 };
 
 #[cw_serde]
@@ -93,22 +96,42 @@ impl SwapRoutes {
         Uint128::from_str(&resp.token_out_amount)
     }
 
+    // TODO: not to use double encoding after fix
     pub fn sim_swap_exact_out(
         &self,
         querier: &QuerierWrapper,
         sender: &Addr,
         token_out: Coin,
     ) -> StdResult<Uint128> {
-        let client = PoolmanagerQuerier::new(querier);
-
-        let resp = client.estimate_swap_exact_amount_out(
-            sender.to_string(),
-            self.0.first().unwrap().pool_id,
-            self.clone().into(),
-            token_out.to_string(),
+        let req = to_vec::<QueryRequest<Empty>>(
+            &EstimateSwapExactAmountOutRequest {
+                sender: sender.to_string(),
+                pool_id: self.0.first().unwrap().pool_id,
+                routes: self.clone().into(),
+                token_out: token_out.to_string(),
+            }
+            .into(),
         )?;
 
-        Uint128::from_str(&resp.token_in_amount)
+        match querier.raw_query(&req) {
+            SystemResult::Err(system_err) => Err(StdError::generic_err(format!(
+                "Querier system error: {}",
+                system_err
+            ))),
+            SystemResult::Ok(ContractResult::Err(contract_err)) => Err(StdError::generic_err(
+                format!("Querier contract error: {}", contract_err),
+            )),
+            SystemResult::Ok(ContractResult::Ok(value)) => {
+                let enc_a = from_binary::<EstimateSwapExactAmountOutRequest>(&value);
+                let enc_b = from_binary::<EstimateSwapExactAmountOutResponse>(&value);
+
+                match (enc_a, enc_b) {
+                    (Ok(v), Err(_)) => Uint128::from_str(&v.sender),
+                    (Err(_), Ok(v)) => Uint128::from_str(&v.token_in_amount),
+                    _ => Err(StdError::generic_err("encoding error")),
+                }
+            }
+        }
     }
 
     pub fn msg_swap_exact_in(
