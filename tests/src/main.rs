@@ -4,15 +4,44 @@ use cosmwasm_std::{coin, Decimal, Uint128};
 
 use osmosis_test_tube::{
     cosmrs::proto::cosmos::bank::v1beta1::QueryBalanceRequest,
-    osmosis_std::types::osmosis::tokenfactory::v1beta1::{
-        MsgCreateDenom, MsgMint, QueryParamsRequest,
+    fn_query,
+    osmosis_std::types::osmosis::{
+        gamm::v1beta1::{
+            QuerySwapExactAmountInRequest, QuerySwapExactAmountInResponse,
+            QuerySwapExactAmountOutRequest, QuerySwapExactAmountOutResponse, SwapAmountInRoute,
+            SwapAmountOutRoute,
+        },
+        tokenfactory::v1beta1::{MsgCreateDenom, MsgMint, QueryParamsRequest},
     },
-    Account, Bank, Gamm, Module, OsmosisTestApp, SigningAccount, TokenFactory, Wasm,
+    Account, Bank, Gamm, Module, OsmosisTestApp, Runner, SigningAccount, TokenFactory, Wasm,
 };
 
-use ibcx_interface::{core, periphery};
+use ibcx_interface::{core, periphery, types};
 
 const NORM: u128 = 1_000_000_000_000_000;
+
+pub struct Querier<'a, R: Runner<'a>> {
+    runner: &'a R,
+}
+
+impl<'a, R: Runner<'a>> Module<'a, R> for Querier<'a, R> {
+    fn new(runner: &'a R) -> Self {
+        Self { runner }
+    }
+}
+
+impl<'a, R> Querier<'a, R>
+where
+    R: Runner<'a>,
+{
+    fn_query! {
+        pub estimate_swap_exact_amount_in["/osmosis.gamm.v1beta1.Query/EstimateSwapExactAmountIn"]: QuerySwapExactAmountInRequest => QuerySwapExactAmountInResponse
+    }
+
+    fn_query! {
+        pub estimate_swap_exact_amount_out["/osmosis.gamm.v1beta1.Query/EstimateSwapExactAmountOut"]: QuerySwapExactAmountOutRequest => QuerySwapExactAmountOutResponse
+    }
+}
 
 fn create_denom(
     fact: &TokenFactory<OsmosisTestApp>,
@@ -117,7 +146,7 @@ fn main() {
                 },
                 index_denom: "uibcx".to_string(),
                 index_units: vec![
-                    (uusd, Decimal::from_str("22.2").unwrap()),
+                    (uusd.clone(), Decimal::from_str("22.2").unwrap()),
                     (ujpy, Decimal::from_str("20.328").unwrap()),
                     (ukrw, Decimal::from_str("496.225").unwrap()),
                 ],
@@ -202,4 +231,75 @@ fn main() {
         .unwrap()
         .balance;
     assert_eq!(balance.unwrap().amount, "0");
+
+    // test estimation
+
+    let querier = Querier::new(&app);
+
+    let estimate_in_resp = querier
+        .estimate_swap_exact_amount_in(&QuerySwapExactAmountInRequest {
+            sender: acc.address(),
+            pool_id: uusd_pool,
+            token_in: coin(1_000_000, &uusd).to_string(),
+            routes: vec![SwapAmountInRoute {
+                pool_id: uusd_pool,
+                token_out_denom: "uosmo".to_string(),
+            }],
+        })
+        .unwrap();
+
+    let estimate_out_resp = querier
+        .estimate_swap_exact_amount_out(&QuerySwapExactAmountOutRequest {
+            sender: acc.address(),
+            pool_id: uusd_pool,
+            token_out: coin(estimate_in_resp.token_out_amount.parse().unwrap(), "uosmo")
+                .to_string(),
+            routes: vec![SwapAmountOutRoute {
+                pool_id: uusd_pool,
+                token_in_denom: uusd.clone(),
+            }],
+        })
+        .unwrap();
+
+    assert_eq!(estimate_out_resp.token_in_amount, format!("{}", 1_000_000));
+
+    // mint / burn (periphery)
+
+    let resp: periphery::SimulateMintExactAmountOutResponse = wasm
+        .query(
+            &perp_addr,
+            &periphery::QueryMsg::SimulateMintExactAmountOut {
+                core_addr: core_addr.clone(),
+                output_amount: Uint128::new(1_000),
+                input_asset: coin(1_000_000, "uosmo"),
+                swap_info: vec![periphery::SwapInfo((
+                    periphery::RouteKey(("uosmo".to_string(), uusd.clone())),
+                    types::SwapRoutes(vec![types::SwapRoute {
+                        pool_id: uusd_pool,
+                        token_denom: uusd.clone(),
+                    }]),
+                ))],
+            },
+        )
+        .unwrap();
+    println!("{resp:?}");
+
+    wasm.execute(
+        &perp_addr,
+        &periphery::ExecuteMsg::MintExactAmountOut {
+            core_addr,
+            output_amount: Uint128::new(1_000),
+            input_asset: "uosmo".to_string(),
+            swap_info: vec![periphery::SwapInfo((
+                periphery::RouteKey(("uosmo".to_string(), uusd.clone())),
+                types::SwapRoutes(vec![types::SwapRoute {
+                    pool_id: uusd_pool,
+                    token_denom: uusd,
+                }]),
+            ))],
+        },
+        &[coin(1_000_000, "uosmo")],
+        &acc,
+    )
+    .unwrap();
 }
