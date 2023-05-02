@@ -881,6 +881,7 @@ dependencies = [
  "ibcx-periphery",
  "osmosis-std 0.15.2",
  "osmosis-test-tube",
+ "serde_json",
 ]
 
 [[package]]

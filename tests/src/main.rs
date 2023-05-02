@@ -147,8 +147,8 @@ fn main() {
                 index_denom: "uibcx".to_string(),
                 index_units: vec![
                     (uusd.clone(), Decimal::from_str("22.2").unwrap()),
-                    (ujpy, Decimal::from_str("20.328").unwrap()),
-                    (ukrw, Decimal::from_str("496.225").unwrap()),
+                    (ujpy.clone(), Decimal::from_str("20.328").unwrap()),
+                    (ukrw.clone(), Decimal::from_str("496.225").unwrap()),
                 ],
                 reserve_denom: "uosmo".to_string(),
             },
@@ -226,7 +226,7 @@ fn main() {
     let balance = bank
         .query_balance(&QueryBalanceRequest {
             address: acc.address(),
-            denom: config.index_denom,
+            denom: config.index_denom.clone(),
         })
         .unwrap()
         .balance;
@@ -265,41 +265,94 @@ fn main() {
 
     // mint / burn (periphery)
 
-    let resp: periphery::SimulateMintExactAmountOutResponse = wasm
+    let pairs = [(uusd, uusd_pool), (ujpy, ujpy_pool), (ukrw, ukrw_pool)];
+
+    let swap_info = pairs
+        .iter()
+        .map(|(denom, pool_id)| {
+            periphery::SwapInfo((
+                periphery::RouteKey(("uosmo".to_string(), denom.clone())),
+                types::SwapRoutes(vec![types::SwapRoute {
+                    pool_id: *pool_id,
+                    token_denom: "uosmo".to_string(),
+                }]),
+            ))
+        })
+        .collect::<Vec<_>>();
+
+    let sim_mint_resp: periphery::SimulateMintExactAmountOutResponse = wasm
         .query(
             &perp_addr,
             &periphery::QueryMsg::SimulateMintExactAmountOut {
                 core_addr: core_addr.clone(),
                 output_amount: Uint128::new(1_000),
                 input_asset: coin(1_000_000, "uosmo"),
-                swap_info: vec![periphery::SwapInfo((
-                    periphery::RouteKey(("uosmo".to_string(), uusd.clone())),
-                    types::SwapRoutes(vec![types::SwapRoute {
-                        pool_id: uusd_pool,
-                        token_denom: uusd.clone(),
-                    }]),
-                ))],
+                swap_info: swap_info.clone(),
             },
         )
         .unwrap();
-    println!("{resp:?}");
 
     wasm.execute(
         &perp_addr,
         &periphery::ExecuteMsg::MintExactAmountOut {
-            core_addr,
+            core_addr: core_addr.clone(),
             output_amount: Uint128::new(1_000),
             input_asset: "uosmo".to_string(),
-            swap_info: vec![periphery::SwapInfo((
-                periphery::RouteKey(("uosmo".to_string(), uusd.clone())),
-                types::SwapRoutes(vec![types::SwapRoute {
-                    pool_id: uusd_pool,
-                    token_denom: uusd,
-                }]),
-            ))],
+            swap_info,
         },
         &[coin(1_000_000, "uosmo")],
         &acc,
     )
     .unwrap();
+
+    let swap_info = pairs
+        .iter()
+        .map(|(denom, pool_id)| {
+            periphery::SwapInfo((
+                periphery::RouteKey((denom.clone(), "uosmo".to_string())),
+                types::SwapRoutes(vec![types::SwapRoute {
+                    pool_id: *pool_id,
+                    token_denom: denom.clone(),
+                }]),
+            ))
+        })
+        .collect::<Vec<_>>();
+
+    let sim_burn_resp: periphery::SimulateBurnExactAmountInResponse = wasm
+        .query(
+            &perp_addr,
+            &periphery::QueryMsg::SimulateBurnExactAmountIn {
+                core_addr: core_addr.clone(),
+                input_amount: Uint128::new(1_000),
+                output_asset: "uosmo".to_string(),
+                min_output_amount: Uint128::zero(),
+                swap_info: swap_info.clone(),
+            },
+        )
+        .unwrap();
+
+    wasm.execute(
+        &perp_addr,
+        &periphery::ExecuteMsg::BurnExactAmountIn {
+            core_addr,
+            output_asset: "uosmo".to_string(),
+            min_output_amount: Uint128::new(500_000),
+            swap_info,
+        },
+        &[coin(1_000, &config.index_denom)],
+        &acc,
+    )
+    .unwrap();
+
+    let balance = bank
+        .query_balance(&QueryBalanceRequest {
+            address: acc.address(),
+            denom: config.index_denom,
+        })
+        .unwrap()
+        .balance;
+
+    println!("{balance:?}");
+    println!("{}", serde_json::to_string_pretty(&sim_mint_resp).unwrap());
+    println!("{}", serde_json::to_string_pretty(&sim_burn_resp).unwrap());
 }
