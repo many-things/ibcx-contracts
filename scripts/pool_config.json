@@ -1,7 +1,0 @@
-{
-  "weights": "1factory/osmo1mhyd5n05ujg90y4e3jm2yc3cdk5gpjs40fpln32ny8vzywadcztsf87ru9/utumee,1uosmo",
-  "initial-deposit": "126582278000000factory/osmo1mhyd5n05ujg90y4e3jm2yc3cdk5gpjs40fpln32ny8vzywadcztsf87ru9/utumee,10000000000uosmo",
-  "swap-fee": "0.01",
-  "exit-fee": "0.01",
-  "future-governor": "168h"
-}
