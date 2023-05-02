@@ -53,7 +53,6 @@ pub enum QueryMsg {
 pub struct SimulateMintExactAmountOutResponse {
     pub mint_amount: Uint128,
     pub mint_spend_amount: Vec<Coin>,
-    pub mint_refund_amount: Vec<Coin>,
     pub swap_refund_amount: Coin,
 }
 
