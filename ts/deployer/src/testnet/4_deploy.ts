@@ -7,23 +7,44 @@ import CoreTypes from "@many-things/ibcx-contracts-sdk/types/contracts/Core.type
 import PeripheryTypes from "@many-things/ibcx-contracts-sdk/types/contracts/Periphery.types";
 
 import config from "../config";
-import { AssetInfo } from "./portfolio";
 import { registry, aminoTypes } from "../codec";
+import { ExportReport, LoadReport } from "../util";
+
+type StoreContractReport = {
+  codes: {
+    airdrop: number;
+    core: number;
+    periphery: number;
+  };
+};
+
+type CreateDenomReport = {
+  denoms: {
+    created: string;
+    alias: string;
+    origin: string;
+  }[];
+};
 
 async function main() {
   const signer = await config.getSigner();
   const [wallet] = await signer.getAccounts();
 
-  const cosmwasmClient = await SigningCosmWasmClient.connectWithSigner(
-    config.args.endpoint,
-    signer,
-    { registry, aminoTypes, gasPrice: GasPrice.fromString("0.025uosmo") }
-  );
-  const queryClient = await createRPCQueryClient({
-    rpcEndpoint: config.args.endpoint,
-  });
+  const client = {
+    m: await SigningCosmWasmClient.connectWithSigner(
+      config.args.endpoint,
+      signer,
+      { registry, aminoTypes, gasPrice: GasPrice.fromString("0.025uosmo") }
+    ),
+    q: await createRPCQueryClient({
+      rpcEndpoint: config.args.endpoint,
+    }),
+  };
 
-  const { params } = await queryClient.osmosis.tokenfactory.v1beta1.params();
+  const { denoms } = LoadReport<CreateDenomReport>("1_setup");
+  const { codes } = LoadReport<StoreContractReport>("3_store");
+
+  const { params } = await client.q.osmosis.tokenfactory.v1beta1.params();
 
   // deploy core
   const initCoreMsg: CoreTypes.InstantiateMsg = {
@@ -34,12 +55,15 @@ async function main() {
     },
     gov: config.args.addresses.dao,
     index_denom: "uibcx",
-    index_units: AssetInfo.map(({ denom, unit }) => [denom, `${unit}`]),
+    index_units: denoms.map(({ origin, created }) => [
+      created,
+      `${config.args.assets[origin].unit}`,
+    ]),
     reserve_denom: "uosmo",
   };
-  const initCoreRes = await cosmwasmClient.instantiate(
+  const initCoreRes = await client.m.instantiate(
     wallet.address,
-    config.args.codes.core,
+    codes.core,
     initCoreMsg,
     "ibcx-core",
     "auto",
@@ -56,9 +80,9 @@ async function main() {
 
   // deploy periphery
   const initPeripheryMsg: PeripheryTypes.InstantiateMsg = {};
-  const initPeripheryRes = await cosmwasmClient.instantiate(
+  const initPeripheryRes = await client.m.instantiate(
     wallet.address,
-    config.args.codes.periphery,
+    codes.periphery,
     initPeripheryMsg,
     "ibcx-periphery",
     "auto",
@@ -70,6 +94,17 @@ async function main() {
     action: "deploy ibcx-periphery",
     deployed: initPeripheryRes.contractAddress,
     txHash: initPeripheryRes.transactionHash,
+  });
+
+  ExportReport("4_deploy", {
+    txs: {
+      core: initCoreRes,
+      periphery: initPeripheryRes,
+    },
+    contracts: {
+      core: initCoreRes.contractAddress,
+      periphery: initPeripheryRes.contractAddress,
+    },
   });
 }
 

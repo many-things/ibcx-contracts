@@ -3,90 +3,95 @@ import { osmosis } from "osmojs";
 
 import config from "../config";
 import { registry, aminoTypes } from "../codec";
-import Long from "long";
-import { AssetInfo } from "./portfolio";
+import { ExportReport, LoadReport } from "../util";
+import { execSync } from "child_process";
 
 const { createRPCQueryClient } = osmosis.ClientFactory;
-const { joinPool } = osmosis.gamm.v1beta1.MessageComposer.withTypeUrl;
 const { createBalancerPool } =
   osmosis.gamm.poolmodels.balancer.v1beta1.MessageComposer.withTypeUrl;
+
+type CreateDenomReport = {
+  denoms: {
+    created: string;
+    alias: string;
+    origin: string;
+  }[];
+};
 
 async function main() {
   const signer = await config.getSigner();
   const [wallet] = await signer.getAccounts();
 
-  const stargateClient = await SigningStargateClient.connectWithSigner(
-    config.args.endpoint,
-    signer,
-    { registry, aminoTypes, gasPrice: GasPrice.fromString("0.025uosmo") }
-  );
-  const queryClient = await createRPCQueryClient({
-    rpcEndpoint: config.args.endpoint,
-  });
+  const client = {
+    m: await SigningStargateClient.connectWithSigner(
+      config.args.endpoint,
+      signer,
+      { registry, aminoTypes, gasPrice: GasPrice.fromString("0.025uosmo") }
+    ),
+    q: await createRPCQueryClient({
+      rpcEndpoint: config.args.endpoint,
+    }),
+  };
 
-  const OSMO_AMOUNT = 1000;
+  const OSMO_AMOUNT = 5_000;
 
-  for (const { denom, poolID, price } of AssetInfo) {
-    if (denom === "uosmo") {
-      continue;
-    }
+  const { denoms } = LoadReport<CreateDenomReport>("1_setup");
 
-    if (!poolID) {
-      const createPoolMsg = createBalancerPool({
+  const createPoolMsgs = denoms
+    .filter(({ origin }) => origin !== "uosmo")
+    .map((v) =>
+      createBalancerPool({
         sender: wallet.address,
         poolParams: {
-          swapFee: "0",
+          swapFee: "10000000000000000",
           exitFee: "0",
         },
         poolAssets: [
-          // 1000 OSMO
           {
             token: {
               denom: "uosmo",
               amount: `${Math.floor(OSMO_AMOUNT * 1e6)}`,
             },
-            weight: "1",
+            weight: "1000000",
           },
           {
             token: {
-              denom,
-              amount: `${Math.floor(OSMO_AMOUNT * price * 1e6)}`,
+              denom: v.created,
+              amount: `${Math.floor(
+                OSMO_AMOUNT * config.args.assets[v.origin].price * 1e6
+              )}`,
             },
-            weight: "1",
+            weight: "1000000",
           },
         ],
         futurePoolGovernor: config.args.addresses.dao,
-      });
-      const createPoolResp = await stargateClient.signAndBroadcast(
-        wallet.address,
-        [createPoolMsg],
-        "auto"
-      );
-      console.log({
-        action: "create-pool",
-        txHash: createPoolResp.transactionHash,
-      });
-    } else {
-      const joinPoolMsg = joinPool({
-        sender: wallet.address,
-        poolId: Long.fromNumber(poolID!),
-        shareOutAmount: "100000000000000000000",
-        tokenInMaxs: [
-          { denom, amount: `${Math.floor(OSMO_AMOUNT * price * 1e6)}` },
-          { denom: "uosmo", amount: `${Math.floor(OSMO_AMOUNT * 1e6)}` },
-        ],
-      });
-      const joinPoolResp = await stargateClient.signAndBroadcast(
-        wallet.address,
-        [joinPoolMsg],
-        "auto"
-      );
-      console.log({
-        action: "join-pool",
-        txHash: joinPoolResp.transactionHash,
-      });
-    }
-  }
+      })
+    );
+
+  const createPoolResp = await client.m.signAndBroadcast(
+    wallet.address,
+    createPoolMsgs,
+    "auto"
+  );
+  console.log({
+    action: "create-pool",
+    txHash: createPoolResp.transactionHash,
+  });
+
+  const poolIds = [
+    ...new Set(
+      createPoolResp.events
+        .filter((v) => v.type === "pool_created")
+        .map((v) => v.attributes[0].value)
+    ),
+  ];
+
+  ExportReport("2_lping", {
+    txs: {
+      create: createPoolResp,
+    },
+    poolIds,
+  });
 }
 
 main().catch(console.error);

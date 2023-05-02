@@ -7,6 +7,14 @@ import sdk from "@many-things/ibcx-contracts-sdk";
 
 import config from "../config";
 import { aminoTypes, registry } from "../codec";
+import { LoadReport } from "../util";
+
+type DeployContractReport = {
+  contracts: {
+    core: string;
+    periphery: string;
+  };
+};
 
 async function checkBalance(
   client: Awaited<ReturnType<typeof createRPCQueryClient>>,
@@ -31,23 +39,23 @@ async function main() {
   const signer = await config.getSigner();
   const [wallet] = await signer.getAccounts();
 
-  const cosmwasmClient = await SigningCosmWasmClient.connectWithSigner(
-    config.args.endpoint,
-    signer,
-    { registry, aminoTypes, gasPrice: GasPrice.fromString("0.025uosmo") }
-  );
-  const queryClient = await createRPCQueryClient({
-    rpcEndpoint: config.args.endpoint,
-  });
+  const base = {
+    m: await SigningCosmWasmClient.connectWithSigner(
+      config.args.endpoint,
+      signer,
+      { registry, aminoTypes, gasPrice: GasPrice.fromString("0.025uosmo") }
+    ),
+    q: await createRPCQueryClient({
+      rpcEndpoint: config.args.endpoint,
+    }),
+  };
+
+  const { contracts } = LoadReport<DeployContractReport>("4_deploy");
 
   const client = {
-    b: cosmwasmClient,
-    q: queryClient,
-    c: new sdk.Core.CoreClient(
-      cosmwasmClient,
-      wallet.address,
-      config.args.addresses.core
-    ),
+    b: base.m,
+    q: base.q,
+    c: new sdk.Core.CoreClient(base.m, wallet.address, contracts.core),
   };
 
   const { index_denom } = await client.c.getConfig();
