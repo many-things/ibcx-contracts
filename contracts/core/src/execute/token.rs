@@ -148,7 +148,8 @@ pub fn burn(
     let received = cw_utils::must_pay(&info, &config.index_denom)?;
     let burn_fee = fee.burn_fee.map(|v| v * received);
     let burn_amount = received.checked_sub(burn_fee.unwrap_or_default())?;
-    let burn_send_amount = index_units.calc_require_amount(burn_amount);
+    let mut burn_send_amount = index_units.calc_require_amount(burn_amount);
+    burn_send_amount.sort_by(|a, b| a.denom.cmp(&b.denom));
 
     // state applier
     TOTAL_SUPPLY.save(deps.storage, &(total_supply - burn_amount))?;

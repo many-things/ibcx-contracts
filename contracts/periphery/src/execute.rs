@@ -1,7 +1,7 @@
 use cosmwasm_std::{attr, coin, Env, MessageInfo, SubMsg, Uint128};
 use cosmwasm_std::{DepsMut, Response};
-use ibcx_interface::periphery::RouteKey;
-use ibcx_interface::{core, helpers::IbcCore, types::SwapRoutes};
+use ibcx_interface::periphery::SwapInfo;
+use ibcx_interface::{core, helpers::IbcCore};
 
 use crate::state::{Context, CONTEXT};
 use crate::REPLY_ID_BURN_EXACT_AMOUNT_IN;
@@ -14,7 +14,7 @@ pub fn mint_exact_amount_out(
     core_addr: String,
     output_amount: Uint128,
     input_asset: String,
-    swap_info: Vec<(RouteKey, SwapRoutes)>,
+    swap_info: Vec<SwapInfo>,
 ) -> Result<Response, ContractError> {
     // query to core contract
     let core = IbcCore(deps.api.addr_validate(&core_addr)?);
@@ -25,14 +25,16 @@ pub fn mint_exact_amount_out(
     let max_input = coin(max_input_amount.u128(), &input_asset);
     let output = coin(output_amount.u128(), core_config.index_denom);
 
-    let sim_resp = core.simulate_mint(&deps.querier, output.amount, None, None)?;
+    let sim_resp = core.simulate_burn(&deps.querier, output.amount, None)?;
+    let mut sim_amount_desired = sim_resp.redeem_amount;
+    sim_amount_desired.sort_by(|a, b| a.denom.cmp(&b.denom));
 
     let (swap_msgs, _) = make_mint_swap_exact_out_msgs(
         &deps.querier,
         &env.contract.address,
         &info.sender,
         swap_info,
-        sim_resp.fund_spent.clone(),
+        sim_amount_desired.clone(),
         &max_input,
     )?;
 
@@ -42,7 +44,7 @@ pub fn mint_exact_amount_out(
             receiver: Some(info.sender.to_string()),
             refund_to: Some(info.sender.to_string()),
         },
-        sim_resp.fund_spent,
+        sim_amount_desired,
     )?;
 
     let resp = Response::new()
@@ -65,7 +67,7 @@ pub fn burn_exact_amount_in(
     core_addr: String,
     output_asset: String,
     min_output_amount: Uint128,
-    swap_info: Vec<(RouteKey, SwapRoutes)>,
+    swap_info: Vec<SwapInfo>,
 ) -> Result<Response, ContractError> {
     // query to core contract
     let core = IbcCore(deps.api.addr_validate(&core_addr)?);

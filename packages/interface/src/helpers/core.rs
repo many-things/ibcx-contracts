@@ -119,7 +119,7 @@ impl IbcCore {
         &self,
         querier: &QuerierWrapper<CQ>,
         amount: Uint128,
-        funds: Option<Vec<Coin>>,
+        funds: Vec<Coin>,
         time: Option<u64>,
     ) -> StdResult<SimulateMintResponse>
     where
@@ -127,7 +127,7 @@ impl IbcCore {
     {
         let msg = QueryMsg::SimulateMint {
             amount,
-            funds: funds.unwrap_or_default(),
+            funds,
             time,
         };
 

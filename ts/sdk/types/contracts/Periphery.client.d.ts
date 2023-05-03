@@ -5,7 +5,7 @@
 */
 import { Coin, StdFee } from "@cosmjs/amino";
 import { SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
-import { Uint128, RouteKey } from "./Periphery.types";
+import { Uint128, SwapInfo } from "./Periphery.types";
 export interface PeripheryInterface {
     contractAddress: string;
     sender: string;
@@ -13,13 +13,13 @@ export interface PeripheryInterface {
         coreAddr: string;
         inputAsset: string;
         outputAmount: Uint128;
-        swapInfo: RouteKey[][];
+        swapInfo: SwapInfo[];
     }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
     burnExactAmountIn: ({ coreAddr, minOutputAmount, outputAsset, swapInfo }: {
         coreAddr: string;
         minOutputAmount: Uint128;
         outputAsset: string;
-        swapInfo: RouteKey[][];
+        swapInfo: SwapInfo[];
     }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
 export declare class PeripheryClient implements PeripheryInterface {
@@ -31,13 +31,13 @@ export declare class PeripheryClient implements PeripheryInterface {
         coreAddr: string;
         inputAsset: string;
         outputAmount: Uint128;
-        swapInfo: RouteKey[][];
+        swapInfo: SwapInfo[];
     }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
     burnExactAmountIn: ({ coreAddr, minOutputAmount, outputAsset, swapInfo }: {
         coreAddr: string;
         minOutputAmount: Uint128;
         outputAsset: string;
-        swapInfo: RouteKey[][];
+        swapInfo: SwapInfo[];
     }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
 //# sourceMappingURL=Periphery.client.d.ts.map

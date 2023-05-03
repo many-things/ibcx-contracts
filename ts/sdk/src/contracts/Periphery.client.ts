@@ -6,7 +6,7 @@
 
 import { Coin, StdFee } from "@cosmjs/amino";
 import { SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
-import { InstantiateMsg, ExecuteMsg, Uint128, RouteKey, SwapRoutes, SwapRoute, MigrateMsg } from "./Periphery.types";
+import { InstantiateMsg, ExecuteMsg, Uint128, SwapInfo, RouteKey, SwapRoutes, SwapRoute, MigrateMsg } from "./Periphery.types";
 export interface PeripheryInterface {
   contractAddress: string;
   sender: string;
@@ -19,7 +19,7 @@ export interface PeripheryInterface {
     coreAddr: string;
     inputAsset: string;
     outputAmount: Uint128;
-    swapInfo: RouteKey[][];
+    swapInfo: SwapInfo[];
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
   burnExactAmountIn: ({
     coreAddr,
@@ -30,7 +30,7 @@ export interface PeripheryInterface {
     coreAddr: string;
     minOutputAmount: Uint128;
     outputAsset: string;
-    swapInfo: RouteKey[][];
+    swapInfo: SwapInfo[];
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
 export class PeripheryClient implements PeripheryInterface {
@@ -55,7 +55,7 @@ export class PeripheryClient implements PeripheryInterface {
     coreAddr: string;
     inputAsset: string;
     outputAmount: Uint128;
-    swapInfo: RouteKey[][];
+    swapInfo: SwapInfo[];
   }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       mint_exact_amount_out: {
@@ -75,7 +75,7 @@ export class PeripheryClient implements PeripheryInterface {
     coreAddr: string;
     minOutputAmount: Uint128;
     outputAsset: string;
-    swapInfo: RouteKey[][];
+    swapInfo: SwapInfo[];
   }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       burn_exact_amount_in: {
