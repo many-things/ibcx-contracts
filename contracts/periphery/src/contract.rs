@@ -124,7 +124,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
         } => {
             // query to core contract
             let core = IbcCore(deps.api.addr_validate(&core_addr)?);
-            let core_config = core.get_config(&deps.querier)?;
+            let core_config = core.get_config(&deps.querier, None)?;
 
             // input & output
             let output = coin(output_amount.u128(), core_config.index_denom);

@@ -1,7 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
 
-use crate::types::SwapRoutes;
+use crate::types::{RangeOrder, SwapRoutes};
 
 #[cw_serde]
 #[derive(Default)]
@@ -101,17 +101,31 @@ pub enum QueryMsg {
     #[returns(Uint128)]
     GetBalance { account: String },
 
+    #[returns(Uint128)]
+    GetTotalSupply {},
+
     #[returns(GetConfigResponse)]
-    GetConfig {},
+    GetConfig { time: Option<u64> },
 
     #[returns(GetFeeResponse)]
     GetFee { time: Option<u64> },
 
-    #[returns(GetPauseInfoResponse)]
-    GetPauseInfo { time: Option<u64> },
-
     #[returns(GetPortfolioResponse)]
     GetPortfolio { time: Option<u64> },
+
+    #[returns(GetRebalanceResponse)]
+    GetRebalance {},
+
+    #[returns(GetTradeInfoResponse)]
+    GetTradeInfo { denom_in: String, denom_out: String },
+
+    #[returns(ListTradeInfoResponse)]
+    ListTradeInfo {
+        denom_in: String,
+        start_after: Option<String>,
+        limit: Option<u32>,
+        order: Option<RangeOrder>,
+    },
 
     #[returns(SimulateMintResponse)]
     SimulateMint {
@@ -125,8 +139,16 @@ pub enum QueryMsg {
 }
 
 #[cw_serde]
+pub struct PausedResponse {
+    pub paused: bool,
+    pub expires_at: Option<u64>,
+}
+
+#[cw_serde]
 pub struct GetConfigResponse {
     pub gov: Addr,
+    pub pending_gov: Option<Addr>,
+    pub paused: PausedResponse,
     pub index_denom: String,
     pub reserve_denom: String,
 }
@@ -148,17 +170,40 @@ pub struct GetFeeResponse {
 }
 
 #[cw_serde]
-pub struct GetPauseInfoResponse {
-    pub paused: bool,
-    pub expires_at: Option<u64>,
-}
-
-#[cw_serde]
 pub struct GetPortfolioResponse {
     pub total_supply: Uint128,
     pub assets: Vec<Coin>,
     pub units: Vec<(String, Decimal)>,
 }
+
+#[cw_serde]
+pub struct RebalancePayload {
+    pub manager: Option<Addr>,
+    pub deflation: Vec<(String, Decimal)>,
+    pub inflation: Vec<(String, Decimal)>,
+}
+
+#[cw_serde]
+pub struct GetRebalanceResponse {
+    pub rebalance: Option<RebalancePayload>,
+}
+
+#[cw_serde]
+pub struct TradeInfoPayload {
+    pub denom_in: String,
+    pub denom_out: String,
+    pub routes: SwapRoutes,
+    pub cooldown: u64,
+    pub max_trade_amount: Uint128,
+    pub last_traded_at: Option<u64>,
+}
+#[cw_serde]
+pub struct GetTradeInfoResponse {
+    pub trade_info: Option<TradeInfoPayload>,
+}
+
+#[cw_serde]
+pub struct ListTradeInfoResponse(pub Vec<TradeInfoPayload>);
 
 #[cw_serde]
 pub struct SimulateMintResponse {

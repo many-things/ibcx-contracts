@@ -182,7 +182,7 @@ fn test() {
 
     // mint & burn (core)
     let config: core::GetConfigResponse = wasm
-        .query(&core_addr, &core::QueryMsg::GetConfig {})
+        .query(&core_addr, &core::QueryMsg::GetConfig { time: None })
         .unwrap();
     let portfolio: core::GetPortfolioResponse = wasm
         .query(&core_addr, &core::QueryMsg::GetPortfolio { time: None })
