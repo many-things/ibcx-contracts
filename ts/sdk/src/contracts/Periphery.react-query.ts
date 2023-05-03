@@ -4,5 +4,54 @@
 * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
 */
 
-import { InstantiateMsg, ExecuteMsg, Uint128, SwapInfo, RouteKey, SwapRoutes, SwapRoute, MigrateMsg } from "./Periphery.types";
-import "./Periphery.client";
+import { UseQueryOptions, useQuery } from "@tanstack/react-query";
+import { InstantiateMsg, ExecuteMsg, Uint128, SwapInfo, RouteKey, SwapRoutes, SwapRoute, QueryMsg, Coin, MigrateMsg, SimulateBurnExactAmountInResponse, SimulateMintExactAmountOutResponse } from "./Periphery.types";
+import { PeripheryQueryClient } from "./Periphery.client";
+export interface PeripheryReactQuery<TResponse, TData = TResponse> {
+  client: PeripheryQueryClient;
+  options?: Omit<UseQueryOptions<TResponse, Error, TData>, "'queryKey' | 'queryFn' | 'initialData'"> & {
+    initialData?: undefined;
+  };
+}
+export interface PeripherySimulateBurnExactAmountInQuery<TData> extends PeripheryReactQuery<SimulateBurnExactAmountInResponse, TData> {
+  args: {
+    coreAddr: string;
+    inputAmount: Uint128;
+    minOutputAmount: Uint128;
+    outputAsset: string;
+    swapInfo: SwapInfo[];
+  };
+}
+export function usePeripherySimulateBurnExactAmountInQuery<TData = SimulateBurnExactAmountInResponse>({
+  client,
+  args,
+  options
+}: PeripherySimulateBurnExactAmountInQuery<TData>) {
+  return useQuery<SimulateBurnExactAmountInResponse, Error, TData>(["peripherySimulateBurnExactAmountIn", client.contractAddress, JSON.stringify(args)], () => client.simulateBurnExactAmountIn({
+    coreAddr: args.coreAddr,
+    inputAmount: args.inputAmount,
+    minOutputAmount: args.minOutputAmount,
+    outputAsset: args.outputAsset,
+    swapInfo: args.swapInfo
+  }), options);
+}
+export interface PeripherySimulateMintExactAmountOutQuery<TData> extends PeripheryReactQuery<SimulateMintExactAmountOutResponse, TData> {
+  args: {
+    coreAddr: string;
+    inputAsset: Coin;
+    outputAmount: Uint128;
+    swapInfo: SwapInfo[];
+  };
+}
+export function usePeripherySimulateMintExactAmountOutQuery<TData = SimulateMintExactAmountOutResponse>({
+  client,
+  args,
+  options
+}: PeripherySimulateMintExactAmountOutQuery<TData>) {
+  return useQuery<SimulateMintExactAmountOutResponse, Error, TData>(["peripherySimulateMintExactAmountOut", client.contractAddress, JSON.stringify(args)], () => client.simulateMintExactAmountOut({
+    coreAddr: args.coreAddr,
+    inputAsset: args.inputAsset,
+    outputAmount: args.outputAmount,
+    swapInfo: args.swapInfo
+  }), options);
+}

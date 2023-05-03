@@ -7,7 +7,7 @@
 import { MsgExecuteContractEncodeObject } from "cosmwasm";
 import { MsgExecuteContract } from "cosmjs-types/cosmwasm/wasm/v1/tx";
 import { toUtf8 } from "@cosmjs/encoding";
-import { Decimal, InstantiateMsg, FeePayload, StreamingFeePayload, ExecuteMsg, Uint128, GovMsg, SwapRoutes, RebalanceMsg, RebalanceTradeMsg, SwapRoute, QueryMsg, Coin, Addr, GetConfigResponse, GetFeeResponse, StreamingFeeResponse, GetPauseInfoResponse, GetPortfolioResponse, SimulateBurnResponse, SimulateMintResponse } from "./Core.types";
+import { Decimal, InstantiateMsg, FeePayload, StreamingFeePayload, ExecuteMsg, Uint128, GovMsg, SwapRoutes, RebalanceMsg, RebalanceTradeMsg, SwapRoute, QueryMsg, RangeOrder, Coin, MigrateMsg, Addr, GetConfigResponse, PausedResponse, GetFeeResponse, StreamingFeeResponse, GetPortfolioResponse, GetRebalanceResponse, RebalancePayload, GetTradeInfoResponse, TradeInfoPayload, ListTradeInfoResponse, SimulateBurnResponse, SimulateMintResponse } from "./Core.types";
 export interface CoreMessage {
   contractAddress: string;
   sender: string;

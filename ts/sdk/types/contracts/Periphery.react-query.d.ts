@@ -3,5 +3,32 @@
 * DO NOT MODIFY IT BY HAND. Instead, modify the source JSONSchema file,
 * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
 */
-import "./Periphery.client";
+import { UseQueryOptions } from "@tanstack/react-query";
+import { Uint128, SwapInfo, Coin, SimulateBurnExactAmountInResponse, SimulateMintExactAmountOutResponse } from "./Periphery.types";
+import { PeripheryQueryClient } from "./Periphery.client";
+export interface PeripheryReactQuery<TResponse, TData = TResponse> {
+    client: PeripheryQueryClient;
+    options?: Omit<UseQueryOptions<TResponse, Error, TData>, "'queryKey' | 'queryFn' | 'initialData'"> & {
+        initialData?: undefined;
+    };
+}
+export interface PeripherySimulateBurnExactAmountInQuery<TData> extends PeripheryReactQuery<SimulateBurnExactAmountInResponse, TData> {
+    args: {
+        coreAddr: string;
+        inputAmount: Uint128;
+        minOutputAmount: Uint128;
+        outputAsset: string;
+        swapInfo: SwapInfo[];
+    };
+}
+export declare function usePeripherySimulateBurnExactAmountInQuery<TData = SimulateBurnExactAmountInResponse>({ client, args, options }: PeripherySimulateBurnExactAmountInQuery<TData>): import("@tanstack/react-query").UseQueryResult<TData, Error>;
+export interface PeripherySimulateMintExactAmountOutQuery<TData> extends PeripheryReactQuery<SimulateMintExactAmountOutResponse, TData> {
+    args: {
+        coreAddr: string;
+        inputAsset: Coin;
+        outputAmount: Uint128;
+        swapInfo: SwapInfo[];
+    };
+}
+export declare function usePeripherySimulateMintExactAmountOutQuery<TData = SimulateMintExactAmountOutResponse>({ client, args, options }: PeripherySimulateMintExactAmountOutQuery<TData>): import("@tanstack/react-query").UseQueryResult<TData, Error>;
 //# sourceMappingURL=Periphery.react-query.d.ts.map

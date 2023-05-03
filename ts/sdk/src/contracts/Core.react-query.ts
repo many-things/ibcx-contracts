@@ -5,7 +5,7 @@
 */
 
 import { UseQueryOptions, useQuery } from "@tanstack/react-query";
-import { Decimal, InstantiateMsg, FeePayload, StreamingFeePayload, ExecuteMsg, Uint128, GovMsg, SwapRoutes, RebalanceMsg, RebalanceTradeMsg, SwapRoute, QueryMsg, Coin, Addr, GetConfigResponse, GetFeeResponse, StreamingFeeResponse, GetPauseInfoResponse, GetPortfolioResponse, SimulateBurnResponse, SimulateMintResponse } from "./Core.types";
+import { Decimal, InstantiateMsg, FeePayload, StreamingFeePayload, ExecuteMsg, Uint128, GovMsg, SwapRoutes, RebalanceMsg, RebalanceTradeMsg, SwapRoute, QueryMsg, RangeOrder, Coin, MigrateMsg, Addr, GetConfigResponse, PausedResponse, GetFeeResponse, StreamingFeeResponse, GetPortfolioResponse, GetRebalanceResponse, RebalancePayload, GetTradeInfoResponse, TradeInfoPayload, ListTradeInfoResponse, SimulateBurnResponse, SimulateMintResponse } from "./Core.types";
 import { CoreQueryClient } from "./Core.client";
 export interface CoreReactQuery<TResponse, TData = TResponse> {
   client: CoreQueryClient;
@@ -47,6 +47,49 @@ export function useCoreSimulateMintQuery<TData = SimulateMintResponse>({
     time: args.time
   }), options);
 }
+export interface CoreListTradeInfoQuery<TData> extends CoreReactQuery<ListTradeInfoResponse, TData> {
+  args: {
+    denomIn: string;
+    limit?: number;
+    order?: RangeOrder;
+    startAfter?: string;
+  };
+}
+export function useCoreListTradeInfoQuery<TData = ListTradeInfoResponse>({
+  client,
+  args,
+  options
+}: CoreListTradeInfoQuery<TData>) {
+  return useQuery<ListTradeInfoResponse, Error, TData>(["coreListTradeInfo", client.contractAddress, JSON.stringify(args)], () => client.listTradeInfo({
+    denomIn: args.denomIn,
+    limit: args.limit,
+    order: args.order,
+    startAfter: args.startAfter
+  }), options);
+}
+export interface CoreGetTradeInfoQuery<TData> extends CoreReactQuery<GetTradeInfoResponse, TData> {
+  args: {
+    denomIn: string;
+    denomOut: string;
+  };
+}
+export function useCoreGetTradeInfoQuery<TData = GetTradeInfoResponse>({
+  client,
+  args,
+  options
+}: CoreGetTradeInfoQuery<TData>) {
+  return useQuery<GetTradeInfoResponse, Error, TData>(["coreGetTradeInfo", client.contractAddress, JSON.stringify(args)], () => client.getTradeInfo({
+    denomIn: args.denomIn,
+    denomOut: args.denomOut
+  }), options);
+}
+export interface CoreGetRebalanceQuery<TData> extends CoreReactQuery<GetRebalanceResponse, TData> {}
+export function useCoreGetRebalanceQuery<TData = GetRebalanceResponse>({
+  client,
+  options
+}: CoreGetRebalanceQuery<TData>) {
+  return useQuery<GetRebalanceResponse, Error, TData>(["coreGetRebalance", client.contractAddress], () => client.getRebalance(), options);
+}
 export interface CoreGetPortfolioQuery<TData> extends CoreReactQuery<GetPortfolioResponse, TData> {
   args: {
     time?: number;
@@ -58,20 +101,6 @@ export function useCoreGetPortfolioQuery<TData = GetPortfolioResponse>({
   options
 }: CoreGetPortfolioQuery<TData>) {
   return useQuery<GetPortfolioResponse, Error, TData>(["coreGetPortfolio", client.contractAddress, JSON.stringify(args)], () => client.getPortfolio({
-    time: args.time
-  }), options);
-}
-export interface CoreGetPauseInfoQuery<TData> extends CoreReactQuery<GetPauseInfoResponse, TData> {
-  args: {
-    time?: number;
-  };
-}
-export function useCoreGetPauseInfoQuery<TData = GetPauseInfoResponse>({
-  client,
-  args,
-  options
-}: CoreGetPauseInfoQuery<TData>) {
-  return useQuery<GetPauseInfoResponse, Error, TData>(["coreGetPauseInfo", client.contractAddress, JSON.stringify(args)], () => client.getPauseInfo({
     time: args.time
   }), options);
 }
@@ -89,12 +118,26 @@ export function useCoreGetFeeQuery<TData = GetFeeResponse>({
     time: args.time
   }), options);
 }
-export interface CoreGetConfigQuery<TData> extends CoreReactQuery<GetConfigResponse, TData> {}
+export interface CoreGetConfigQuery<TData> extends CoreReactQuery<GetConfigResponse, TData> {
+  args: {
+    time?: number;
+  };
+}
 export function useCoreGetConfigQuery<TData = GetConfigResponse>({
   client,
+  args,
   options
 }: CoreGetConfigQuery<TData>) {
-  return useQuery<GetConfigResponse, Error, TData>(["coreGetConfig", client.contractAddress], () => client.getConfig(), options);
+  return useQuery<GetConfigResponse, Error, TData>(["coreGetConfig", client.contractAddress, JSON.stringify(args)], () => client.getConfig({
+    time: args.time
+  }), options);
+}
+export interface CoreGetTotalSupplyQuery<TData> extends CoreReactQuery<Uint128, TData> {}
+export function useCoreGetTotalSupplyQuery<TData = Uint128>({
+  client,
+  options
+}: CoreGetTotalSupplyQuery<TData>) {
+  return useQuery<Uint128, Error, TData>(["coreGetTotalSupply", client.contractAddress], () => client.getTotalSupply(), options);
 }
 export interface CoreGetBalanceQuery<TData> extends CoreReactQuery<Uint128, TData> {
   args: {

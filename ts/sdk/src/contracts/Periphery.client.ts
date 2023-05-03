@@ -4,10 +4,92 @@
 * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
 */
 
-import { Coin, StdFee } from "@cosmjs/amino";
-import { SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
-import { InstantiateMsg, ExecuteMsg, Uint128, SwapInfo, RouteKey, SwapRoutes, SwapRoute, MigrateMsg } from "./Periphery.types";
-export interface PeripheryInterface {
+import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
+import { StdFee } from "@cosmjs/amino";
+import { InstantiateMsg, ExecuteMsg, Uint128, SwapInfo, RouteKey, SwapRoutes, SwapRoute, QueryMsg, Coin, MigrateMsg, SimulateBurnExactAmountInResponse, SimulateMintExactAmountOutResponse } from "./Periphery.types";
+export interface PeripheryReadOnlyInterface {
+  contractAddress: string;
+  simulateMintExactAmountOut: ({
+    coreAddr,
+    inputAsset,
+    outputAmount,
+    swapInfo
+  }: {
+    coreAddr: string;
+    inputAsset: Coin;
+    outputAmount: Uint128;
+    swapInfo: SwapInfo[];
+  }) => Promise<SimulateMintExactAmountOutResponse>;
+  simulateBurnExactAmountIn: ({
+    coreAddr,
+    inputAmount,
+    minOutputAmount,
+    outputAsset,
+    swapInfo
+  }: {
+    coreAddr: string;
+    inputAmount: Uint128;
+    minOutputAmount: Uint128;
+    outputAsset: string;
+    swapInfo: SwapInfo[];
+  }) => Promise<SimulateBurnExactAmountInResponse>;
+}
+export class PeripheryQueryClient implements PeripheryReadOnlyInterface {
+  client: CosmWasmClient;
+  contractAddress: string;
+
+  constructor(client: CosmWasmClient, contractAddress: string) {
+    this.client = client;
+    this.contractAddress = contractAddress;
+    this.simulateMintExactAmountOut = this.simulateMintExactAmountOut.bind(this);
+    this.simulateBurnExactAmountIn = this.simulateBurnExactAmountIn.bind(this);
+  }
+
+  simulateMintExactAmountOut = async ({
+    coreAddr,
+    inputAsset,
+    outputAmount,
+    swapInfo
+  }: {
+    coreAddr: string;
+    inputAsset: Coin;
+    outputAmount: Uint128;
+    swapInfo: SwapInfo[];
+  }): Promise<SimulateMintExactAmountOutResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      simulate_mint_exact_amount_out: {
+        core_addr: coreAddr,
+        input_asset: inputAsset,
+        output_amount: outputAmount,
+        swap_info: swapInfo
+      }
+    });
+  };
+  simulateBurnExactAmountIn = async ({
+    coreAddr,
+    inputAmount,
+    minOutputAmount,
+    outputAsset,
+    swapInfo
+  }: {
+    coreAddr: string;
+    inputAmount: Uint128;
+    minOutputAmount: Uint128;
+    outputAsset: string;
+    swapInfo: SwapInfo[];
+  }): Promise<SimulateBurnExactAmountInResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      simulate_burn_exact_amount_in: {
+        core_addr: coreAddr,
+        input_amount: inputAmount,
+        min_output_amount: minOutputAmount,
+        output_asset: outputAsset,
+        swap_info: swapInfo
+      }
+    });
+  };
+}
+export interface PeripheryInterface extends PeripheryReadOnlyInterface {
   contractAddress: string;
   sender: string;
   mintExactAmountOut: ({
@@ -33,12 +115,13 @@ export interface PeripheryInterface {
     swapInfo: SwapInfo[];
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
-export class PeripheryClient implements PeripheryInterface {
+export class PeripheryClient extends PeripheryQueryClient implements PeripheryInterface {
   client: SigningCosmWasmClient;
   sender: string;
   contractAddress: string;
 
   constructor(client: SigningCosmWasmClient, sender: string, contractAddress: string) {
+    super(client, contractAddress);
     this.client = client;
     this.sender = sender;
     this.contractAddress = contractAddress;

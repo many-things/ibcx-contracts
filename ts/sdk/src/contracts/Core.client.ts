@@ -6,7 +6,7 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { StdFee } from "@cosmjs/amino";
-import { Decimal, InstantiateMsg, FeePayload, StreamingFeePayload, ExecuteMsg, Uint128, GovMsg, SwapRoutes, RebalanceMsg, RebalanceTradeMsg, SwapRoute, QueryMsg, Coin, Addr, GetConfigResponse, GetFeeResponse, StreamingFeeResponse, GetPauseInfoResponse, GetPortfolioResponse, SimulateBurnResponse, SimulateMintResponse } from "./Core.types";
+import { Decimal, InstantiateMsg, FeePayload, StreamingFeePayload, ExecuteMsg, Uint128, GovMsg, SwapRoutes, RebalanceMsg, RebalanceTradeMsg, SwapRoute, QueryMsg, RangeOrder, Coin, MigrateMsg, Addr, GetConfigResponse, PausedResponse, GetFeeResponse, StreamingFeeResponse, GetPortfolioResponse, GetRebalanceResponse, RebalancePayload, GetTradeInfoResponse, TradeInfoPayload, ListTradeInfoResponse, SimulateBurnResponse, SimulateMintResponse } from "./Core.types";
 export interface CoreReadOnlyInterface {
   contractAddress: string;
   getBalance: ({
@@ -14,22 +14,41 @@ export interface CoreReadOnlyInterface {
   }: {
     account: string;
   }) => Promise<Uint128>;
-  getConfig: () => Promise<GetConfigResponse>;
+  getTotalSupply: () => Promise<Uint128>;
+  getConfig: ({
+    time
+  }: {
+    time?: number;
+  }) => Promise<GetConfigResponse>;
   getFee: ({
     time
   }: {
     time?: number;
   }) => Promise<GetFeeResponse>;
-  getPauseInfo: ({
-    time
-  }: {
-    time?: number;
-  }) => Promise<GetPauseInfoResponse>;
   getPortfolio: ({
     time
   }: {
     time?: number;
   }) => Promise<GetPortfolioResponse>;
+  getRebalance: () => Promise<GetRebalanceResponse>;
+  getTradeInfo: ({
+    denomIn,
+    denomOut
+  }: {
+    denomIn: string;
+    denomOut: string;
+  }) => Promise<GetTradeInfoResponse>;
+  listTradeInfo: ({
+    denomIn,
+    limit,
+    order,
+    startAfter
+  }: {
+    denomIn: string;
+    limit?: number;
+    order?: RangeOrder;
+    startAfter?: string;
+  }) => Promise<ListTradeInfoResponse>;
   simulateMint: ({
     amount,
     funds,
@@ -55,10 +74,13 @@ export class CoreQueryClient implements CoreReadOnlyInterface {
     this.client = client;
     this.contractAddress = contractAddress;
     this.getBalance = this.getBalance.bind(this);
+    this.getTotalSupply = this.getTotalSupply.bind(this);
     this.getConfig = this.getConfig.bind(this);
     this.getFee = this.getFee.bind(this);
-    this.getPauseInfo = this.getPauseInfo.bind(this);
     this.getPortfolio = this.getPortfolio.bind(this);
+    this.getRebalance = this.getRebalance.bind(this);
+    this.getTradeInfo = this.getTradeInfo.bind(this);
+    this.listTradeInfo = this.listTradeInfo.bind(this);
     this.simulateMint = this.simulateMint.bind(this);
     this.simulateBurn = this.simulateBurn.bind(this);
   }
@@ -74,9 +96,20 @@ export class CoreQueryClient implements CoreReadOnlyInterface {
       }
     });
   };
-  getConfig = async (): Promise<GetConfigResponse> => {
+  getTotalSupply = async (): Promise<Uint128> => {
     return this.client.queryContractSmart(this.contractAddress, {
-      get_config: {}
+      get_total_supply: {}
+    });
+  };
+  getConfig = async ({
+    time
+  }: {
+    time?: number;
+  }): Promise<GetConfigResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      get_config: {
+        time
+      }
     });
   };
   getFee = async ({
@@ -90,17 +123,6 @@ export class CoreQueryClient implements CoreReadOnlyInterface {
       }
     });
   };
-  getPauseInfo = async ({
-    time
-  }: {
-    time?: number;
-  }): Promise<GetPauseInfoResponse> => {
-    return this.client.queryContractSmart(this.contractAddress, {
-      get_pause_info: {
-        time
-      }
-    });
-  };
   getPortfolio = async ({
     time
   }: {
@@ -109,6 +131,45 @@ export class CoreQueryClient implements CoreReadOnlyInterface {
     return this.client.queryContractSmart(this.contractAddress, {
       get_portfolio: {
         time
+      }
+    });
+  };
+  getRebalance = async (): Promise<GetRebalanceResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      get_rebalance: {}
+    });
+  };
+  getTradeInfo = async ({
+    denomIn,
+    denomOut
+  }: {
+    denomIn: string;
+    denomOut: string;
+  }): Promise<GetTradeInfoResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      get_trade_info: {
+        denom_in: denomIn,
+        denom_out: denomOut
+      }
+    });
+  };
+  listTradeInfo = async ({
+    denomIn,
+    limit,
+    order,
+    startAfter
+  }: {
+    denomIn: string;
+    limit?: number;
+    order?: RangeOrder;
+    startAfter?: string;
+  }): Promise<ListTradeInfoResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      list_trade_info: {
+        denom_in: denomIn,
+        limit,
+        order,
+        start_after: startAfter
       }
     });
   };

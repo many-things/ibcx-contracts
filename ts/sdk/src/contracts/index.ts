@@ -12,14 +12,10 @@ import * as _4 from "./Core.types";
 import * as _5 from "./Core.client";
 import * as _6 from "./Core.message-composer";
 import * as _7 from "./Core.react-query";
-import * as _8 from "./Faucet.types";
-import * as _9 from "./Faucet.client";
-import * as _10 from "./Faucet.message-composer";
-import * as _11 from "./Faucet.react-query";
-import * as _12 from "./Periphery.types";
-import * as _13 from "./Periphery.client";
-import * as _14 from "./Periphery.message-composer";
-import * as _15 from "./Periphery.react-query";
+import * as _8 from "./Periphery.types";
+import * as _9 from "./Periphery.client";
+import * as _10 from "./Periphery.message-composer";
+import * as _11 from "./Periphery.react-query";
 export namespace contracts {
   export const Airdrop = { ..._0,
     ..._1,
@@ -31,14 +27,9 @@ export namespace contracts {
     ..._6,
     ..._7
   };
-  export const Faucet = { ..._8,
+  export const Periphery = { ..._8,
     ..._9,
     ..._10,
     ..._11
-  };
-  export const Periphery = { ..._12,
-    ..._13,
-    ..._14,
-    ..._15
   };
 }
