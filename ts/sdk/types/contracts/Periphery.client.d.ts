@@ -5,19 +5,18 @@
 */
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { StdFee } from "@cosmjs/amino";
-import { Uint128, SwapInfo, Coin, SimulateBurnExactAmountInResponse, SimulateMintExactAmountOutResponse } from "./Periphery.types";
+import { Uint128, SwapInfo, SimulateBurnExactAmountInResponse, Coin, SimulateMintExactAmountOutResponse } from "./Periphery.types";
 export interface PeripheryReadOnlyInterface {
     contractAddress: string;
     simulateMintExactAmountOut: ({ coreAddr, inputAsset, outputAmount, swapInfo }: {
         coreAddr: string;
-        inputAsset: Coin;
+        inputAsset: string;
         outputAmount: Uint128;
         swapInfo: SwapInfo[];
     }) => Promise<SimulateMintExactAmountOutResponse>;
-    simulateBurnExactAmountIn: ({ coreAddr, inputAmount, minOutputAmount, outputAsset, swapInfo }: {
+    simulateBurnExactAmountIn: ({ coreAddr, inputAmount, outputAsset, swapInfo }: {
         coreAddr: string;
         inputAmount: Uint128;
-        minOutputAmount: Uint128;
         outputAsset: string;
         swapInfo: SwapInfo[];
     }) => Promise<SimulateBurnExactAmountInResponse>;
@@ -28,14 +27,13 @@ export declare class PeripheryQueryClient implements PeripheryReadOnlyInterface 
     constructor(client: CosmWasmClient, contractAddress: string);
     simulateMintExactAmountOut: ({ coreAddr, inputAsset, outputAmount, swapInfo }: {
         coreAddr: string;
-        inputAsset: Coin;
+        inputAsset: string;
         outputAmount: Uint128;
         swapInfo: SwapInfo[];
     }) => Promise<SimulateMintExactAmountOutResponse>;
-    simulateBurnExactAmountIn: ({ coreAddr, inputAmount, minOutputAmount, outputAsset, swapInfo }: {
+    simulateBurnExactAmountIn: ({ coreAddr, inputAmount, outputAsset, swapInfo }: {
         coreAddr: string;
         inputAmount: Uint128;
-        minOutputAmount: Uint128;
         outputAsset: string;
         swapInfo: SwapInfo[];
     }) => Promise<SimulateBurnExactAmountInResponse>;

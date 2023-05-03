@@ -7,7 +7,7 @@
 import { MsgExecuteContractEncodeObject } from "cosmwasm";
 import { MsgExecuteContract } from "cosmjs-types/cosmwasm/wasm/v1/tx";
 import { toUtf8 } from "@cosmjs/encoding";
-import { InstantiateMsg, ExecuteMsg, Uint128, SwapInfo, RouteKey, SwapRoutes, SwapRoute, QueryMsg, Coin, MigrateMsg, SimulateBurnExactAmountInResponse, SimulateMintExactAmountOutResponse } from "./Periphery.types";
+import { InstantiateMsg, ExecuteMsg, Uint128, SwapInfo, RouteKey, SwapRoutes, SwapRoute, QueryMsg, MigrateMsg, SimulateBurnExactAmountInResponse, Coin, SimulateMintExactAmountOutResponse } from "./Periphery.types";
 export interface PeripheryMessage {
   contractAddress: string;
   sender: string;

@@ -31,7 +31,7 @@ export interface SwapRoute {
 export type QueryMsg = {
   simulate_mint_exact_amount_out: {
     core_addr: string;
-    input_asset: Coin;
+    input_asset: string;
     output_amount: Uint128;
     swap_info: SwapInfo[];
   };
@@ -39,16 +39,10 @@ export type QueryMsg = {
   simulate_burn_exact_amount_in: {
     core_addr: string;
     input_amount: Uint128;
-    min_output_amount: Uint128;
     output_asset: string;
     swap_info: SwapInfo[];
   };
 };
-export interface Coin {
-  amount: Uint128;
-  denom: string;
-  [k: string]: unknown;
-}
 export interface MigrateMsg {
   force?: boolean | null;
 }
@@ -57,8 +51,13 @@ export interface SimulateBurnExactAmountInResponse {
   burn_redeem_amount: Coin[];
   swap_result_amount: Coin;
 }
+export interface Coin {
+  amount: Uint128;
+  denom: string;
+  [k: string]: unknown;
+}
 export interface SimulateMintExactAmountOutResponse {
   mint_amount: Uint128;
   mint_spend_amount: Coin[];
-  swap_refund_amount: Coin;
+  swap_result_amount: Coin;
 }

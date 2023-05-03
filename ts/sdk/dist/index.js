@@ -7200,14 +7200,13 @@ var PeripheryQueryClient = /** @class */ (function () {
             });
         };
         this.simulateBurnExactAmountIn = function (_a) {
-            var coreAddr = _a.coreAddr, inputAmount = _a.inputAmount, minOutputAmount = _a.minOutputAmount, outputAsset = _a.outputAsset, swapInfo = _a.swapInfo;
+            var coreAddr = _a.coreAddr, inputAmount = _a.inputAmount, outputAsset = _a.outputAsset, swapInfo = _a.swapInfo;
             return __awaiter(_this, void 0, void 0, function () {
                 return __generator(this, function (_b) {
                     return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
                             simulate_burn_exact_amount_in: {
                                 core_addr: coreAddr,
                                 input_amount: inputAmount,
-                                min_output_amount: minOutputAmount,
                                 output_asset: outputAsset,
                                 swap_info: swapInfo
                             }
@@ -7349,7 +7348,6 @@ function usePeripherySimulateBurnExactAmountInQuery(_a) {
     return reactQuery.useQuery(["peripherySimulateBurnExactAmountIn", client.contractAddress, JSON.stringify(args)], function () { return client.simulateBurnExactAmountIn({
         coreAddr: args.coreAddr,
         inputAmount: args.inputAmount,
-        minOutputAmount: args.minOutputAmount,
         outputAsset: args.outputAsset,
         swapInfo: args.swapInfo
     }); }, options);

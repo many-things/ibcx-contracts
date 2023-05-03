@@ -4,7 +4,7 @@
 * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
 */
 import { UseQueryOptions } from "@tanstack/react-query";
-import { Uint128, SwapInfo, Coin, SimulateBurnExactAmountInResponse, SimulateMintExactAmountOutResponse } from "./Periphery.types";
+import { Uint128, SwapInfo, SimulateBurnExactAmountInResponse, SimulateMintExactAmountOutResponse } from "./Periphery.types";
 import { PeripheryQueryClient } from "./Periphery.client";
 export interface PeripheryReactQuery<TResponse, TData = TResponse> {
     client: PeripheryQueryClient;
@@ -16,7 +16,6 @@ export interface PeripherySimulateBurnExactAmountInQuery<TData> extends Peripher
     args: {
         coreAddr: string;
         inputAmount: Uint128;
-        minOutputAmount: Uint128;
         outputAsset: string;
         swapInfo: SwapInfo[];
     };
@@ -25,7 +24,7 @@ export declare function usePeripherySimulateBurnExactAmountInQuery<TData = Simul
 export interface PeripherySimulateMintExactAmountOutQuery<TData> extends PeripheryReactQuery<SimulateMintExactAmountOutResponse, TData> {
     args: {
         coreAddr: string;
-        inputAsset: Coin;
+        inputAsset: string;
         outputAmount: Uint128;
         swapInfo: SwapInfo[];
     };

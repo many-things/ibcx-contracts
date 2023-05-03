@@ -6,7 +6,7 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { StdFee } from "@cosmjs/amino";
-import { InstantiateMsg, ExecuteMsg, Uint128, SwapInfo, RouteKey, SwapRoutes, SwapRoute, QueryMsg, Coin, MigrateMsg, SimulateBurnExactAmountInResponse, SimulateMintExactAmountOutResponse } from "./Periphery.types";
+import { InstantiateMsg, ExecuteMsg, Uint128, SwapInfo, RouteKey, SwapRoutes, SwapRoute, QueryMsg, MigrateMsg, SimulateBurnExactAmountInResponse, Coin, SimulateMintExactAmountOutResponse } from "./Periphery.types";
 export interface PeripheryReadOnlyInterface {
   contractAddress: string;
   simulateMintExactAmountOut: ({
@@ -16,20 +16,18 @@ export interface PeripheryReadOnlyInterface {
     swapInfo
   }: {
     coreAddr: string;
-    inputAsset: Coin;
+    inputAsset: string;
     outputAmount: Uint128;
     swapInfo: SwapInfo[];
   }) => Promise<SimulateMintExactAmountOutResponse>;
   simulateBurnExactAmountIn: ({
     coreAddr,
     inputAmount,
-    minOutputAmount,
     outputAsset,
     swapInfo
   }: {
     coreAddr: string;
     inputAmount: Uint128;
-    minOutputAmount: Uint128;
     outputAsset: string;
     swapInfo: SwapInfo[];
   }) => Promise<SimulateBurnExactAmountInResponse>;
@@ -52,7 +50,7 @@ export class PeripheryQueryClient implements PeripheryReadOnlyInterface {
     swapInfo
   }: {
     coreAddr: string;
-    inputAsset: Coin;
+    inputAsset: string;
     outputAmount: Uint128;
     swapInfo: SwapInfo[];
   }): Promise<SimulateMintExactAmountOutResponse> => {
@@ -68,13 +66,11 @@ export class PeripheryQueryClient implements PeripheryReadOnlyInterface {
   simulateBurnExactAmountIn = async ({
     coreAddr,
     inputAmount,
-    minOutputAmount,
     outputAsset,
     swapInfo
   }: {
     coreAddr: string;
     inputAmount: Uint128;
-    minOutputAmount: Uint128;
     outputAsset: string;
     swapInfo: SwapInfo[];
   }): Promise<SimulateBurnExactAmountInResponse> => {
@@ -82,7 +78,6 @@ export class PeripheryQueryClient implements PeripheryReadOnlyInterface {
       simulate_burn_exact_amount_in: {
         core_addr: coreAddr,
         input_amount: inputAmount,
-        min_output_amount: minOutputAmount,
         output_asset: outputAsset,
         swap_info: swapInfo
       }

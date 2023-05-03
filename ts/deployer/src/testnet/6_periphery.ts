@@ -55,7 +55,7 @@ async function main() {
     qc: new sdk.Periphery.PeripheryClient(base.m, wallet.address, periphery),
   };
 
-  const { index_denom } = await client.cc.getConfig();
+  const { index_denom } = await client.cc.getConfig({});
 
   const mintResp = await client.qc.mintExactAmountOut(
     {
