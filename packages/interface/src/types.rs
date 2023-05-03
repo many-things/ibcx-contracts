@@ -2,8 +2,8 @@ use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    coin, from_binary, to_vec, Addr, Coin, ContractResult, Empty, Order, QueryRequest, StdError,
-    StdResult, SystemResult, Uint128,
+    coin, from_binary, to_vec, Addr, Coin, ContractResult, Empty, HexBinary, Order, QueryRequest,
+    StdError, StdResult, SystemResult, Uint128,
 };
 use cosmwasm_std::{CosmosMsg, QuerierWrapper};
 use osmosis_std::types::osmosis::poolmanager::v1beta1::{
@@ -128,7 +128,14 @@ impl SwapRoutes {
                 match (enc_a, enc_b) {
                     (Ok(v), Err(_)) => Uint128::from_str(&v.sender),
                     (Err(_), Ok(v)) => Uint128::from_str(&v.token_in_amount),
-                    _ => Err(StdError::generic_err("encoding error")),
+                    (Err(e1), Err(e2)) => Err(StdError::generic_err(format!(
+                        "decoding error. l:{e1:?} r:{e2:?} raw:{}",
+                        HexBinary::from(value)
+                    ))),
+                    _ => Err(StdError::generic_err(format!(
+                        "decoding error - both result is Ok. raw:{}",
+                        HexBinary::from(value),
+                    ))),
                 }
             }
         }
