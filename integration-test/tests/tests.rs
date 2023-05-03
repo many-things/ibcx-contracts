@@ -287,7 +287,7 @@ fn test() {
             &periphery::QueryMsg::SimulateMintExactAmountOut {
                 core_addr: core_addr.clone(),
                 output_amount: Uint128::new(1_000),
-                input_asset: coin(1_000_000, "uosmo"),
+                input_asset: "uosmo".to_string(),
                 swap_info: swap_info.clone(),
             },
         )
@@ -326,7 +326,6 @@ fn test() {
                 core_addr: core_addr.clone(),
                 input_amount: Uint128::new(1_000),
                 output_asset: "uosmo".to_string(),
-                min_output_amount: Uint128::zero(),
                 swap_info: swap_info.clone(),
             },
         )
