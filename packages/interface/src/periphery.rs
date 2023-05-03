@@ -35,7 +35,7 @@ pub enum QueryMsg {
     SimulateMintExactAmountOut {
         core_addr: String,
         output_amount: Uint128,
-        input_asset: Coin,
+        input_asset: String,
         swap_info: Vec<SwapInfo>,
     },
 
@@ -44,7 +44,6 @@ pub enum QueryMsg {
         core_addr: String,
         input_amount: Uint128,
         output_asset: String,
-        min_output_amount: Uint128,
         swap_info: Vec<SwapInfo>,
     },
 }
@@ -53,7 +52,7 @@ pub enum QueryMsg {
 pub struct SimulateMintExactAmountOutResponse {
     pub mint_amount: Uint128,
     pub mint_spend_amount: Vec<Coin>,
-    pub swap_refund_amount: Coin,
+    pub swap_result_amount: Coin,
 }
 
 #[cw_serde]
