@@ -1,5 +1,5 @@
-!out/
-out/*/*/*
+!out
+out/*/*/*.json
 !out/*/*/run-latest.json
 
 config.*.yaml
