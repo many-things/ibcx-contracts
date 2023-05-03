@@ -312,7 +312,7 @@ fn main() {
                 periphery::RouteKey((denom.clone(), "uosmo".to_string())),
                 types::SwapRoutes(vec![types::SwapRoute {
                     pool_id: *pool_id,
-                    token_denom: denom.clone(),
+                    token_denom: "uosmo".to_string(),
                 }]),
             ))
         })
@@ -336,7 +336,7 @@ fn main() {
         &periphery::ExecuteMsg::BurnExactAmountIn {
             core_addr,
             output_asset: "uosmo".to_string(),
-            min_output_amount: Uint128::new(500_000),
+            min_output_amount: Uint128::new(50_000),
             swap_info,
         },
         &[coin(1_000, &config.index_denom)],
@@ -344,7 +344,7 @@ fn main() {
     )
     .unwrap();
 
-    let balance = bank
+    let index_balance = bank
         .query_balance(&QueryBalanceRequest {
             address: acc.address(),
             denom: config.index_denom,
@@ -352,7 +352,16 @@ fn main() {
         .unwrap()
         .balance;
 
-    println!("{balance:?}");
+    let uosmo_balance = bank
+        .query_balance(&QueryBalanceRequest {
+            address: acc.address(),
+            denom: "uosmo".to_string(),
+        })
+        .unwrap()
+        .balance;
+
+    println!("{index_balance:?}");
+    println!("{uosmo_balance:?}");
     println!("{}", serde_json::to_string_pretty(&sim_mint_resp).unwrap());
     println!("{}", serde_json::to_string_pretty(&sim_burn_resp).unwrap());
 }
