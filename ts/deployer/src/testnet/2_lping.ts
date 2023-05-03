@@ -4,7 +4,6 @@ import { osmosis } from "osmojs";
 import config from "../config";
 import { registry, aminoTypes } from "../codec";
 import { ExportReport, LoadReport } from "../util";
-import { execSync } from "child_process";
 
 const { createRPCQueryClient } = osmosis.ClientFactory;
 const { createBalancerPool } =
@@ -33,7 +32,7 @@ async function main() {
     }),
   };
 
-  const OSMO_AMOUNT = 5_000;
+  const OSMO_AMOUNT = 2_000;
 
   const { denoms } = LoadReport<CreateDenomReport>("1_setup");
 

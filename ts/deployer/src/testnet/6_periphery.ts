@@ -73,7 +73,31 @@ async function main() {
     undefined,
     [{ denom: "uosmo", amount: `${1000 * 1e6}` }]
   );
-  console.log(mintResp);
+  console.log({
+    action: "mint",
+    txHash: mintResp.transactionHash,
+  });
+
+  const burnResp = await client.qc.burnExactAmountIn(
+    {
+      coreAddr: core,
+      outputAsset: "uosmo",
+      minOutputAmount: `${1e6}`,
+      swapInfo: denoms
+        .filter(({ origin }) => origin !== "uosmo")
+        .map(({ created }, i) => [
+          [created, "uosmo"],
+          [{ pool_id: Number(poolIds[i]) || 0, token_denom: "uosmo" }],
+        ]),
+    },
+    "auto",
+    undefined,
+    [{ denom: index_denom, amount: `${1e6}` }]
+  );
+  console.log({
+    action: "burn",
+    txHash: burnResp.transactionHash,
+  });
 }
 
 main().catch(console.error);
