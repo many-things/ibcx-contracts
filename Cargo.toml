@@ -1,19 +1,8 @@
 [workspace]
 members = ["contracts/*", "packages/*", "integration-test"]
 
-[profile.release.package.ibcx-airdrop]
-codegen-units = 1
-incremental = false
-
-[profile.release.package.ibcx-core]
-codegen-units = 1
-incremental = false
-
-[profile.release.package.ibcx-periphery]
-codegen-units = 1
-incremental = false
-
 [profile.release]
+codegen-units = 1
 opt-level = 3
 debug = false
 rpath = false
