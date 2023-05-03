@@ -2,16 +2,16 @@ use std::{fs, path::Path, str::FromStr};
 
 use cosmwasm_std::{coin, Decimal, Uint128};
 
+use osmosis_std::types::osmosis::poolmanager::v1beta1::{
+    EstimateSwapExactAmountInRequest, EstimateSwapExactAmountInResponse,
+    EstimateSwapExactAmountOutRequest, EstimateSwapExactAmountOutResponse, SwapAmountInRoute,
+    SwapAmountOutRoute,
+};
 use osmosis_test_tube::{
     cosmrs::proto::cosmos::bank::v1beta1::QueryBalanceRequest,
     fn_query,
-    osmosis_std::types::osmosis::{
-        gamm::v1beta1::{
-            QuerySwapExactAmountInRequest, QuerySwapExactAmountInResponse,
-            QuerySwapExactAmountOutRequest, QuerySwapExactAmountOutResponse, SwapAmountInRoute,
-            SwapAmountOutRoute,
-        },
-        tokenfactory::v1beta1::{MsgCreateDenom, MsgMint, QueryParamsRequest},
+    osmosis_std::types::osmosis::tokenfactory::v1beta1::{
+        MsgCreateDenom, MsgMint, QueryParamsRequest,
     },
     Account, Bank, Gamm, Module, OsmosisTestApp, Runner, SigningAccount, TokenFactory, Wasm,
 };
@@ -35,11 +35,11 @@ where
     R: Runner<'a>,
 {
     fn_query! {
-        pub estimate_swap_exact_amount_in["/osmosis.gamm.v1beta1.Query/EstimateSwapExactAmountIn"]: QuerySwapExactAmountInRequest => QuerySwapExactAmountInResponse
+        pub estimate_swap_exact_amount_in["/osmosis.poolmanager.v1beta1.Query/EstimateSwapExactAmountIn"]: EstimateSwapExactAmountInRequest => EstimateSwapExactAmountInResponse
     }
 
     fn_query! {
-        pub estimate_swap_exact_amount_out["/osmosis.gamm.v1beta1.Query/EstimateSwapExactAmountOut"]: QuerySwapExactAmountOutRequest => QuerySwapExactAmountOutResponse
+        pub estimate_swap_exact_amount_out["/osmosis.poolmanager.v1beta1.Query/EstimateSwapExactAmountOut"]: EstimateSwapExactAmountOutRequest => EstimateSwapExactAmountOutResponse
     }
 }
 
@@ -88,7 +88,8 @@ fn create_pool(
     .pool_id
 }
 
-fn main() {
+#[test]
+fn test() {
     let app = OsmosisTestApp::new();
 
     let acc = app.init_account(&[coin(10 * NORM, "uosmo")]).unwrap();
@@ -111,7 +112,7 @@ fn main() {
     println!("uusd: {uusd_pool}, ujpy: {ujpy_pool}, ukrw: {ukrw_pool}");
 
     // store codes
-    let base_path = Path::new("./target/wasm32-unknown-unknown/release/");
+    let base_path = Path::new("../target/wasm32-unknown-unknown/release/");
     let core_path = base_path.join("ibcx_core.wasm");
     let perp_path = base_path.join("ibcx_periphery.wasm");
 
@@ -237,7 +238,7 @@ fn main() {
     let querier = Querier::new(&app);
 
     let estimate_in_resp = querier
-        .estimate_swap_exact_amount_in(&QuerySwapExactAmountInRequest {
+        .estimate_swap_exact_amount_in(&EstimateSwapExactAmountInRequest {
             sender: acc.address(),
             pool_id: uusd_pool,
             token_in: coin(1_000_000, &uusd).to_string(),
@@ -249,7 +250,7 @@ fn main() {
         .unwrap();
 
     let estimate_out_resp = querier
-        .estimate_swap_exact_amount_out(&QuerySwapExactAmountOutRequest {
+        .estimate_swap_exact_amount_out(&EstimateSwapExactAmountOutRequest {
             sender: acc.address(),
             pool_id: uusd_pool,
             token_out: coin(estimate_in_resp.token_out_amount.parse().unwrap(), "uosmo")
