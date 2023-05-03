@@ -2,11 +2,12 @@ use std::{env::current_dir, fs::remove_dir_all};
 
 use cosmwasm_schema::write_api;
 
-use ibcx_interface::periphery::{ExecuteMsg, InstantiateMsg, MigrateMsg};
+use ibcx_interface::periphery::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 fn main() {
     write_api! {
         instantiate: InstantiateMsg,
         execute: ExecuteMsg,
+        query: QueryMsg,
         migrate: MigrateMsg,
     }
 
