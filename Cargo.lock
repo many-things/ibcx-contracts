@@ -876,9 +876,7 @@ name = "ibcx-tests"
 version = "0.0.1"
 dependencies = [
  "cosmwasm-std",
- "ibcx-core",
  "ibcx-interface",
- "ibcx-periphery",
  "osmosis-std 0.15.2",
  "osmosis-test-tube",
  "serde_json",
