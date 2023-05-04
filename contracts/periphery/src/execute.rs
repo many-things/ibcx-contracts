@@ -18,7 +18,7 @@ pub fn mint_exact_amount_out(
 ) -> Result<Response, ContractError> {
     // query to core contract
     let core = IbcCore(deps.api.addr_validate(&core_addr)?);
-    let core_config = core.get_config(&deps.querier)?;
+    let core_config = core.get_config(&deps.querier, None)?;
 
     // input & output
     let max_input_amount = cw_utils::must_pay(&info, &input_asset)?;
@@ -71,7 +71,7 @@ pub fn burn_exact_amount_in(
 ) -> Result<Response, ContractError> {
     // query to core contract
     let core = IbcCore(deps.api.addr_validate(&core_addr)?);
-    let core_config = core.get_config(&deps.querier)?;
+    let core_config = core.get_config(&deps.querier, None)?;
 
     // input & output
     let input_amount = cw_utils::must_pay(&info, &core_config.index_denom)?;

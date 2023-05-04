@@ -1,12 +1,20 @@
 use cosmwasm_std::{Coin, Deps, Env, Timestamp, Uint128};
-use ibcx_interface::core::{
-    GetConfigResponse, GetFeeResponse, GetPauseInfoResponse, GetPortfolioResponse,
-    SimulateBurnResponse, SimulateMintResponse, StreamingFeeResponse,
+use ibcx_interface::{
+    core::{
+        GetConfigResponse, GetFeeResponse, GetPortfolioResponse, GetRebalanceResponse,
+        GetTradeInfoResponse, ListTradeInfoResponse, PausedResponse, RebalancePayload,
+        SimulateBurnResponse, SimulateMintResponse, StreamingFeeResponse, TradeInfoPayload,
+    },
+    range_option,
+    types::RangeOrder,
 };
 
 use crate::{
     error::ContractError,
-    state::{Config, PauseInfo, CONFIG, FEE, INDEX_UNITS, TOTAL_SUPPLY},
+    state::{
+        Config, PauseInfo, TradeInfo, CONFIG, FEE, INDEX_UNITS, PENDING_GOV, REBALANCE,
+        TOTAL_SUPPLY, TRADE_INFOS,
+    },
     StdResult,
 };
 
@@ -18,16 +26,33 @@ pub fn get_balance(deps: Deps, _env: Env, account: String) -> StdResult<Uint128>
     Ok(resp.amount)
 }
 
-pub fn get_config(deps: Deps, _env: Env) -> StdResult<GetConfigResponse> {
+pub fn get_total_supply(deps: Deps, _env: Env) -> StdResult<Uint128> {
+    Ok(TOTAL_SUPPLY.load(deps.storage)?)
+}
+
+pub fn get_config(deps: Deps, env: Env, time: Option<u64>) -> StdResult<GetConfigResponse> {
+    let now_in_sec = env.block.time.seconds();
+    let time_in_sec = time.unwrap_or(now_in_sec);
+
     let Config {
         gov,
         index_denom,
         reserve_denom,
-        ..
+        paused,
     } = CONFIG.load(deps.storage)?;
+
+    let mut temp_env = env;
+
+    temp_env.block.time = Timestamp::from_seconds(time_in_sec);
+
+    let PauseInfo { paused, expires_at } = paused.refresh(&temp_env)?;
+
+    let pending_gov = PENDING_GOV.may_load(deps.storage)?;
 
     Ok(GetConfigResponse {
         gov,
+        pending_gov,
+        paused: PausedResponse { paused, expires_at },
         index_denom,
         reserve_denom,
     })
@@ -59,21 +84,6 @@ pub fn get_fee(deps: Deps, env: Env, time: Option<u64>) -> StdResult<GetFeeRespo
     })
 }
 
-pub fn get_pause_info(deps: Deps, env: Env, time: Option<u64>) -> StdResult<GetPauseInfoResponse> {
-    let now_in_sec = env.block.time.seconds();
-    let time_in_sec = time.unwrap_or(now_in_sec);
-
-    let Config { paused, .. } = CONFIG.load(deps.storage)?;
-
-    let mut temp_env = env;
-
-    temp_env.block.time = Timestamp::from_seconds(time_in_sec);
-
-    let PauseInfo { paused, expires_at } = paused.refresh(&temp_env)?;
-
-    Ok(GetPauseInfoResponse { paused, expires_at })
-}
-
 pub fn get_portfolio(deps: Deps, env: Env, time: Option<u64>) -> StdResult<GetPortfolioResponse> {
     let now_in_sec = env.block.time.seconds();
     let time_in_sec = time.unwrap_or(now_in_sec);
@@ -95,6 +105,63 @@ pub fn get_portfolio(deps: Deps, env: Env, time: Option<u64>) -> StdResult<GetPo
         assets: index_units.calc_require_amount(total_supply),
         units: index_units.into(),
     })
+}
+
+pub fn get_rebalance(deps: Deps, _env: Env) -> StdResult<GetRebalanceResponse> {
+    let rebalance = REBALANCE.may_load(deps.storage)?;
+
+    Ok(GetRebalanceResponse {
+        rebalance: rebalance.map(|v| RebalancePayload {
+            manager: v.manager,
+            deflation: v.deflation.to_vec(),
+            inflation: v.inflation.to_vec(),
+        }),
+    })
+}
+
+fn conv_trade_info(denom_in: String, denom_out: String, trade_info: TradeInfo) -> TradeInfoPayload {
+    TradeInfoPayload {
+        denom_in,
+        denom_out,
+        routes: trade_info.routes,
+        cooldown: trade_info.cooldown,
+        max_trade_amount: trade_info.max_trade_amount,
+        last_traded_at: trade_info.last_traded_at,
+    }
+}
+
+pub fn get_trade_info(
+    deps: Deps,
+    denom_in: String,
+    denom_out: String,
+) -> StdResult<GetTradeInfoResponse> {
+    let trade_info = TRADE_INFOS.may_load(deps.storage, (&denom_in, &denom_out))?;
+
+    Ok(GetTradeInfoResponse {
+        trade_info: trade_info.map(|v| conv_trade_info(denom_in, denom_out, v)),
+    })
+}
+
+pub fn list_trade_info(
+    deps: Deps,
+    denom_in: String,
+    start_after: Option<String>,
+    limit: Option<u32>,
+    order: Option<RangeOrder>,
+) -> StdResult<ListTradeInfoResponse> {
+    let ((min, max), limit, order) = range_option(start_after.as_deref(), limit, order)?;
+
+    Ok(ListTradeInfoResponse(
+        TRADE_INFOS
+            .prefix(&denom_in)
+            .range(deps.storage, min, max, order)
+            .take(limit)
+            .map(|v| {
+                let (o, t) = v?;
+                Ok(conv_trade_info(denom_in.clone(), o, t))
+            })
+            .collect::<StdResult<Vec<_>>>()?,
+    ))
 }
 
 pub fn simulate_mint(

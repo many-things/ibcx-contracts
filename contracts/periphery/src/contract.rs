@@ -1,4 +1,6 @@
-use cosmwasm_std::{attr, coin, entry_point, to_binary, Env, MessageInfo, QueryResponse, Reply};
+use cosmwasm_std::{
+    attr, coin, entry_point, to_binary, Env, MessageInfo, QueryResponse, Reply, Uint128,
+};
 use cosmwasm_std::{Deps, DepsMut, Response};
 use ibcx_interface::{
     helpers::IbcCore,
@@ -124,7 +126,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
         } => {
             // query to core contract
             let core = IbcCore(deps.api.addr_validate(&core_addr)?);
-            let core_config = core.get_config(&deps.querier)?;
+            let core_config = core.get_config(&deps.querier, None)?;
 
             // input & output
             let output = coin(output_amount.u128(), core_config.index_denom);
@@ -138,27 +140,24 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
                 &env.contract.address,
                 swap_info,
                 sim_amount_desired.clone(),
-                &input_asset,
+                &coin(Uint128::MAX.u128(), &input_asset),
             )?;
 
             Ok(to_binary(&SimulateMintExactAmountOutResponse {
                 mint_amount: output.amount,
                 mint_spend_amount: sim_amount_desired,
-                swap_refund_amount: coin(refund.u128(), &input_asset.denom),
+                swap_result_amount: coin(Uint128::MAX.checked_sub(refund)?.u128(), input_asset),
             })?)
         }
+
         SimulateBurnExactAmountIn {
             core_addr,
             input_amount,
             output_asset,
-            min_output_amount,
             swap_info,
         } => {
             // query to core contract
             let core = IbcCore(deps.api.addr_validate(&core_addr)?);
-
-            // input & output
-            let min_output = coin(min_output_amount.u128(), &output_asset);
 
             let sim_resp = core.simulate_burn(&deps.querier, input_amount, None)?;
             let expected = sim_resp.redeem_amount.clone();
@@ -169,7 +168,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
                 &env.contract.address,
                 swap_info,
                 expected,
-                &min_output,
+                &coin(Uint128::zero().u128(), &output_asset),
             )?;
 
             Ok(to_binary(&SimulateBurnExactAmountInResponse {

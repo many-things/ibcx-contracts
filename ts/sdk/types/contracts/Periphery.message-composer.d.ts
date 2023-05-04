@@ -3,9 +3,8 @@
 * DO NOT MODIFY IT BY HAND. Instead, modify the source JSONSchema file,
 * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
 */
-import { Coin } from "@cosmjs/amino";
 import { MsgExecuteContractEncodeObject } from "cosmwasm";
-import { Uint128, SwapInfo } from "./Periphery.types";
+import { Uint128, SwapInfo, Coin } from "./Periphery.types";
 export interface PeripheryMessage {
     contractAddress: string;
     sender: string;

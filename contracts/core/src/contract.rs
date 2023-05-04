@@ -140,11 +140,35 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<QueryResponse> {
     use QueryMsg::*;
 
     match msg {
+        // token
         GetBalance { account } => to_binary(query::get_balance(deps, env, account)),
-        GetConfig {} => to_binary(query::get_config(deps, env)),
+        GetTotalSupply {} => to_binary(query::get_total_supply(deps, env)),
+
+        // config / status
+        GetConfig { time } => to_binary(query::get_config(deps, env, time)),
         GetFee { time } => to_binary(query::get_fee(deps, env, time)),
-        GetPauseInfo { time } => to_binary(query::get_pause_info(deps, env, time)),
         GetPortfolio { time } => to_binary(query::get_portfolio(deps, env, time)),
+
+        // rebalance
+        GetRebalance {} => to_binary(query::get_rebalance(deps, env)),
+        GetTradeInfo {
+            denom_in,
+            denom_out,
+        } => to_binary(query::get_trade_info(deps, denom_in, denom_out)),
+        ListTradeInfo {
+            denom_in,
+            start_after,
+            limit,
+            order,
+        } => to_binary(query::list_trade_info(
+            deps,
+            denom_in,
+            start_after,
+            limit,
+            order,
+        )),
+
+        // simulation
         SimulateMint {
             amount,
             funds,

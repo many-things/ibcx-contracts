@@ -5,22 +5,33 @@
 */
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { StdFee } from "@cosmjs/amino";
-import { Uint128, GovMsg, RebalanceMsg, Coin, GetConfigResponse, GetFeeResponse, GetPauseInfoResponse, GetPortfolioResponse, SimulateBurnResponse, SimulateMintResponse } from "./Core.types";
+import { Uint128, GovMsg, RebalanceMsg, RangeOrder, Coin, GetConfigResponse, GetFeeResponse, GetPortfolioResponse, GetRebalanceResponse, GetTradeInfoResponse, ListTradeInfoResponse, SimulateBurnResponse, SimulateMintResponse } from "./Core.types";
 export interface CoreReadOnlyInterface {
     contractAddress: string;
     getBalance: ({ account }: {
         account: string;
     }) => Promise<Uint128>;
-    getConfig: () => Promise<GetConfigResponse>;
+    getTotalSupply: () => Promise<Uint128>;
+    getConfig: ({ time }: {
+        time?: number;
+    }) => Promise<GetConfigResponse>;
     getFee: ({ time }: {
         time?: number;
     }) => Promise<GetFeeResponse>;
-    getPauseInfo: ({ time }: {
-        time?: number;
-    }) => Promise<GetPauseInfoResponse>;
     getPortfolio: ({ time }: {
         time?: number;
     }) => Promise<GetPortfolioResponse>;
+    getRebalance: () => Promise<GetRebalanceResponse>;
+    getTradeInfo: ({ denomIn, denomOut }: {
+        denomIn: string;
+        denomOut: string;
+    }) => Promise<GetTradeInfoResponse>;
+    listTradeInfo: ({ denomIn, limit, order, startAfter }: {
+        denomIn: string;
+        limit?: number;
+        order?: RangeOrder;
+        startAfter?: string;
+    }) => Promise<ListTradeInfoResponse>;
     simulateMint: ({ amount, funds, time }: {
         amount: Uint128;
         funds: Coin[];
@@ -38,16 +49,27 @@ export declare class CoreQueryClient implements CoreReadOnlyInterface {
     getBalance: ({ account }: {
         account: string;
     }) => Promise<Uint128>;
-    getConfig: () => Promise<GetConfigResponse>;
+    getTotalSupply: () => Promise<Uint128>;
+    getConfig: ({ time }: {
+        time?: number | undefined;
+    }) => Promise<GetConfigResponse>;
     getFee: ({ time }: {
         time?: number | undefined;
     }) => Promise<GetFeeResponse>;
-    getPauseInfo: ({ time }: {
-        time?: number | undefined;
-    }) => Promise<GetPauseInfoResponse>;
     getPortfolio: ({ time }: {
         time?: number | undefined;
     }) => Promise<GetPortfolioResponse>;
+    getRebalance: () => Promise<GetRebalanceResponse>;
+    getTradeInfo: ({ denomIn, denomOut }: {
+        denomIn: string;
+        denomOut: string;
+    }) => Promise<GetTradeInfoResponse>;
+    listTradeInfo: ({ denomIn, limit, order, startAfter }: {
+        denomIn: string;
+        limit?: number | undefined;
+        order?: RangeOrder | undefined;
+        startAfter?: string | undefined;
+    }) => Promise<ListTradeInfoResponse>;
     simulateMint: ({ amount, funds, time }: {
         amount: Uint128;
         funds: Coin[];

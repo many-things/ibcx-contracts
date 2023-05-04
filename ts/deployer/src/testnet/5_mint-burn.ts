@@ -58,7 +58,7 @@ async function main() {
     c: new sdk.Core.CoreClient(base.m, wallet.address, contracts.core),
   };
 
-  const { index_denom } = await client.c.getConfig();
+  const { index_denom } = await client.c.getConfig({});
 
   const { units } = await client.c.getPortfolio({});
   const funds = units

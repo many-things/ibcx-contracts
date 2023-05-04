@@ -5,8 +5,8 @@ use cosmwasm_std::{
 };
 
 use crate::core::{
-    ExecuteMsg, GetConfigResponse, GetFeeResponse, GetPauseInfoResponse, GetPortfolioResponse,
-    QueryMsg, SimulateBurnResponse, SimulateMintResponse,
+    ExecuteMsg, GetConfigResponse, GetFeeResponse, GetPortfolioResponse, QueryMsg,
+    SimulateBurnResponse, SimulateMintResponse,
 };
 
 /// IbcCore is a wrapper around Addr that provides a lot of helpers
@@ -43,11 +43,15 @@ impl IbcCore {
         .into())
     }
 
-    pub fn get_config<CQ>(&self, querier: &QuerierWrapper<CQ>) -> StdResult<GetConfigResponse>
+    pub fn get_config<CQ>(
+        &self,
+        querier: &QuerierWrapper<CQ>,
+        time: Option<u64>,
+    ) -> StdResult<GetConfigResponse>
     where
         CQ: CustomQuery,
     {
-        let msg = QueryMsg::GetConfig {};
+        let msg = QueryMsg::GetConfig { time };
 
         querier.query(
             &WasmQuery::Smart {
@@ -67,25 +71,6 @@ impl IbcCore {
         CQ: CustomQuery,
     {
         let msg = QueryMsg::GetFee { time };
-
-        querier.query(
-            &WasmQuery::Smart {
-                contract_addr: self.addr().into(),
-                msg: to_binary(&msg)?,
-            }
-            .into(),
-        )
-    }
-
-    pub fn get_pause_info<CQ>(
-        &self,
-        querier: &QuerierWrapper<CQ>,
-        time: Option<u64>,
-    ) -> StdResult<GetPauseInfoResponse>
-    where
-        CQ: CustomQuery,
-    {
-        let msg = QueryMsg::GetPauseInfo { time };
 
         querier.query(
             &WasmQuery::Smart {

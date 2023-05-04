@@ -1,5 +1,5 @@
 /*!
- * @many-things/ibcx-contracts-sdk v0.1.7-rc2
+ * @many-things/ibcx-contracts-sdk v0.1.7-rc4
  * (c) frostornge <frostornge@gmail.com>
  * Released under the MIT OR Apache-2.0 License.
  */
@@ -6769,31 +6769,31 @@
                     });
                 });
             };
-            this.getConfig = function () { return __awaiter(_this, void 0, void 0, function () {
+            this.getTotalSupply = function () { return __awaiter(_this, void 0, void 0, function () {
                 return __generator(this, function (_a) {
                     return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
-                            get_config: {}
+                            get_total_supply: {}
                         })];
                 });
             }); };
-            this.getFee = function (_a) {
+            this.getConfig = function (_a) {
                 var time = _a.time;
                 return __awaiter(_this, void 0, void 0, function () {
                     return __generator(this, function (_b) {
                         return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
-                                get_fee: {
+                                get_config: {
                                     time: time
                                 }
                             })];
                     });
                 });
             };
-            this.getPauseInfo = function (_a) {
+            this.getFee = function (_a) {
                 var time = _a.time;
                 return __awaiter(_this, void 0, void 0, function () {
                     return __generator(this, function (_b) {
                         return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
-                                get_pause_info: {
+                                get_fee: {
                                     time: time
                                 }
                             })];
@@ -6807,6 +6807,41 @@
                         return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
                                 get_portfolio: {
                                     time: time
+                                }
+                            })];
+                    });
+                });
+            };
+            this.getRebalance = function () { return __awaiter(_this, void 0, void 0, function () {
+                return __generator(this, function (_a) {
+                    return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
+                            get_rebalance: {}
+                        })];
+                });
+            }); };
+            this.getTradeInfo = function (_a) {
+                var denomIn = _a.denomIn, denomOut = _a.denomOut;
+                return __awaiter(_this, void 0, void 0, function () {
+                    return __generator(this, function (_b) {
+                        return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
+                                get_trade_info: {
+                                    denom_in: denomIn,
+                                    denom_out: denomOut
+                                }
+                            })];
+                    });
+                });
+            };
+            this.listTradeInfo = function (_a) {
+                var denomIn = _a.denomIn, limit = _a.limit, order = _a.order, startAfter = _a.startAfter;
+                return __awaiter(_this, void 0, void 0, function () {
+                    return __generator(this, function (_b) {
+                        return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
+                                list_trade_info: {
+                                    denom_in: denomIn,
+                                    limit: limit,
+                                    order: order,
+                                    start_after: startAfter
                                 }
                             })];
                     });
@@ -6842,10 +6877,13 @@
             this.client = client;
             this.contractAddress = contractAddress;
             this.getBalance = this.getBalance.bind(this);
+            this.getTotalSupply = this.getTotalSupply.bind(this);
             this.getConfig = this.getConfig.bind(this);
             this.getFee = this.getFee.bind(this);
-            this.getPauseInfo = this.getPauseInfo.bind(this);
             this.getPortfolio = this.getPortfolio.bind(this);
+            this.getRebalance = this.getRebalance.bind(this);
+            this.getTradeInfo = this.getTradeInfo.bind(this);
+            this.listTradeInfo = this.listTradeInfo.bind(this);
             this.simulateMint = this.simulateMint.bind(this);
             this.simulateBurn = this.simulateBurn.bind(this);
         }
@@ -7064,15 +7102,29 @@
             time: args.time
         }); }, options);
     }
+    function useCoreListTradeInfoQuery(_a) {
+        var client = _a.client, args = _a.args, options = _a.options;
+        return reactQuery.useQuery(["coreListTradeInfo", client.contractAddress, JSON.stringify(args)], function () { return client.listTradeInfo({
+            denomIn: args.denomIn,
+            limit: args.limit,
+            order: args.order,
+            startAfter: args.startAfter
+        }); }, options);
+    }
+    function useCoreGetTradeInfoQuery(_a) {
+        var client = _a.client, args = _a.args, options = _a.options;
+        return reactQuery.useQuery(["coreGetTradeInfo", client.contractAddress, JSON.stringify(args)], function () { return client.getTradeInfo({
+            denomIn: args.denomIn,
+            denomOut: args.denomOut
+        }); }, options);
+    }
+    function useCoreGetRebalanceQuery(_a) {
+        var client = _a.client, options = _a.options;
+        return reactQuery.useQuery(["coreGetRebalance", client.contractAddress], function () { return client.getRebalance(); }, options);
+    }
     function useCoreGetPortfolioQuery(_a) {
         var client = _a.client, args = _a.args, options = _a.options;
         return reactQuery.useQuery(["coreGetPortfolio", client.contractAddress, JSON.stringify(args)], function () { return client.getPortfolio({
-            time: args.time
-        }); }, options);
-    }
-    function useCoreGetPauseInfoQuery(_a) {
-        var client = _a.client, args = _a.args, options = _a.options;
-        return reactQuery.useQuery(["coreGetPauseInfo", client.contractAddress, JSON.stringify(args)], function () { return client.getPauseInfo({
             time: args.time
         }); }, options);
     }
@@ -7083,8 +7135,14 @@
         }); }, options);
     }
     function useCoreGetConfigQuery(_a) {
+        var client = _a.client, args = _a.args, options = _a.options;
+        return reactQuery.useQuery(["coreGetConfig", client.contractAddress, JSON.stringify(args)], function () { return client.getConfig({
+            time: args.time
+        }); }, options);
+    }
+    function useCoreGetTotalSupplyQuery(_a) {
         var client = _a.client, options = _a.options;
-        return reactQuery.useQuery(["coreGetConfig", client.contractAddress], function () { return client.getConfig(); }, options);
+        return reactQuery.useQuery(["coreGetTotalSupply", client.contractAddress], function () { return client.getTotalSupply(); }, options);
     }
     function useCoreGetBalanceQuery(_a) {
         var client = _a.client, args = _a.args, options = _a.options;
@@ -7097,10 +7155,13 @@
         __proto__: null,
         useCoreSimulateBurnQuery: useCoreSimulateBurnQuery,
         useCoreSimulateMintQuery: useCoreSimulateMintQuery,
+        useCoreListTradeInfoQuery: useCoreListTradeInfoQuery,
+        useCoreGetTradeInfoQuery: useCoreGetTradeInfoQuery,
+        useCoreGetRebalanceQuery: useCoreGetRebalanceQuery,
         useCoreGetPortfolioQuery: useCoreGetPortfolioQuery,
-        useCoreGetPauseInfoQuery: useCoreGetPauseInfoQuery,
         useCoreGetFeeQuery: useCoreGetFeeQuery,
         useCoreGetConfigQuery: useCoreGetConfigQuery,
+        useCoreGetTotalSupplyQuery: useCoreGetTotalSupplyQuery,
         useCoreGetBalanceQuery: useCoreGetBalanceQuery
     });
 
@@ -7119,79 +7180,34 @@
     * DO NOT MODIFY IT BY HAND. Instead, modify the source JSONSchema file,
     * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
     */
-    var FaucetQueryClient = /** @class */ (function () {
-        function FaucetQueryClient(client, contractAddress) {
+    var PeripheryQueryClient = /** @class */ (function () {
+        function PeripheryQueryClient(client, contractAddress) {
             var _this = this;
-            this.listAliases = function (_a) {
-                var limit = _a.limit, order = _a.order, startAfter = _a.startAfter;
+            this.simulateMintExactAmountOut = function (_a) {
+                var coreAddr = _a.coreAddr, inputAsset = _a.inputAsset, outputAmount = _a.outputAmount, swapInfo = _a.swapInfo;
                 return __awaiter(_this, void 0, void 0, function () {
                     return __generator(this, function (_b) {
                         return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
-                                list_aliases: {
-                                    limit: limit,
-                                    order: order,
-                                    start_after: startAfter
+                                simulate_mint_exact_amount_out: {
+                                    core_addr: coreAddr,
+                                    input_asset: inputAsset,
+                                    output_amount: outputAmount,
+                                    swap_info: swapInfo
                                 }
                             })];
                     });
                 });
             };
-            this.getToken = function (_a) {
-                var denom = _a.denom;
+            this.simulateBurnExactAmountIn = function (_a) {
+                var coreAddr = _a.coreAddr, inputAmount = _a.inputAmount, outputAsset = _a.outputAsset, swapInfo = _a.swapInfo;
                 return __awaiter(_this, void 0, void 0, function () {
                     return __generator(this, function (_b) {
                         return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
-                                get_token: {
-                                    denom: denom
-                                }
-                            })];
-                    });
-                });
-            };
-            this.listTokens = function (_a) {
-                var limit = _a.limit, order = _a.order, startAfter = _a.startAfter;
-                return __awaiter(_this, void 0, void 0, function () {
-                    return __generator(this, function (_b) {
-                        return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
-                                list_tokens: {
-                                    limit: limit,
-                                    order: order,
-                                    start_after: startAfter
-                                }
-                            })];
-                    });
-                });
-            };
-            this.getLastTokenId = function () { return __awaiter(_this, void 0, void 0, function () {
-                return __generator(this, function (_a) {
-                    return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
-                            get_last_token_id: {}
-                        })];
-                });
-            }); };
-            this.getRole = function (_a) {
-                var account = _a.account, denom = _a.denom;
-                return __awaiter(_this, void 0, void 0, function () {
-                    return __generator(this, function (_b) {
-                        return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
-                                get_role: {
-                                    account: account,
-                                    denom: denom
-                                }
-                            })];
-                    });
-                });
-            };
-            this.listRoles = function (_a) {
-                var denom = _a.denom, limit = _a.limit, order = _a.order, startAfter = _a.startAfter;
-                return __awaiter(_this, void 0, void 0, function () {
-                    return __generator(this, function (_b) {
-                        return [2 /*return*/, this.client.queryContractSmart(this.contractAddress, {
-                                list_roles: {
-                                    denom: denom,
-                                    limit: limit,
-                                    order: order,
-                                    start_after: startAfter
+                                simulate_burn_exact_amount_in: {
+                                    core_addr: coreAddr,
+                                    input_amount: inputAmount,
+                                    output_asset: outputAsset,
+                                    swap_info: swapInfo
                                 }
                             })];
                     });
@@ -7199,383 +7215,16 @@
             };
             this.client = client;
             this.contractAddress = contractAddress;
-            this.listAliases = this.listAliases.bind(this);
-            this.getToken = this.getToken.bind(this);
-            this.listTokens = this.listTokens.bind(this);
-            this.getLastTokenId = this.getLastTokenId.bind(this);
-            this.getRole = this.getRole.bind(this);
-            this.listRoles = this.listRoles.bind(this);
+            this.simulateMintExactAmountOut = this.simulateMintExactAmountOut.bind(this);
+            this.simulateBurnExactAmountIn = this.simulateBurnExactAmountIn.bind(this);
         }
-        return FaucetQueryClient;
+        return PeripheryQueryClient;
     }());
-    var FaucetClient = /** @class */ (function (_super) {
-        __extends(FaucetClient, _super);
-        function FaucetClient(client, sender, contractAddress) {
-            var _this = _super.call(this, client, contractAddress) || this;
-            _this.create = function (_a, fee, memo, funds) {
-                var config = _a.config, denom = _a.denom;
-                if (fee === void 0) { fee = "auto"; }
-                return __awaiter(_this, void 0, void 0, function () {
-                    return __generator(this, function (_b) {
-                        switch (_b.label) {
-                            case 0: return [4 /*yield*/, this.client.execute(this.sender, this.contractAddress, {
-                                    create: {
-                                        config: config,
-                                        denom: denom
-                                    }
-                                }, fee, memo, funds)];
-                            case 1: return [2 /*return*/, _b.sent()];
-                        }
-                    });
-                });
-            };
-            _this.mint = function (_a, fee, memo, funds) {
-                var amount = _a.amount, denom = _a.denom;
-                if (fee === void 0) { fee = "auto"; }
-                return __awaiter(_this, void 0, void 0, function () {
-                    return __generator(this, function (_b) {
-                        switch (_b.label) {
-                            case 0: return [4 /*yield*/, this.client.execute(this.sender, this.contractAddress, {
-                                    mint: {
-                                        amount: amount,
-                                        denom: denom
-                                    }
-                                }, fee, memo, funds)];
-                            case 1: return [2 /*return*/, _b.sent()];
-                        }
-                    });
-                });
-            };
-            _this.burn = function (_a, fee, memo, funds) {
-                var denom = _a.denom;
-                if (fee === void 0) { fee = "auto"; }
-                return __awaiter(_this, void 0, void 0, function () {
-                    return __generator(this, function (_b) {
-                        switch (_b.label) {
-                            case 0: return [4 /*yield*/, this.client.execute(this.sender, this.contractAddress, {
-                                    burn: {
-                                        denom: denom
-                                    }
-                                }, fee, memo, funds)];
-                            case 1: return [2 /*return*/, _b.sent()];
-                        }
-                    });
-                });
-            };
-            _this.grant = function (_a, fee, memo, funds) {
-                var action = _a.action, denom = _a.denom, grantee = _a.grantee;
-                if (fee === void 0) { fee = "auto"; }
-                return __awaiter(_this, void 0, void 0, function () {
-                    return __generator(this, function (_b) {
-                        switch (_b.label) {
-                            case 0: return [4 /*yield*/, this.client.execute(this.sender, this.contractAddress, {
-                                    grant: {
-                                        action: action,
-                                        denom: denom,
-                                        grantee: grantee
-                                    }
-                                }, fee, memo, funds)];
-                            case 1: return [2 /*return*/, _b.sent()];
-                        }
-                    });
-                });
-            };
-            _this.revoke = function (_a, fee, memo, funds) {
-                var action = _a.action, denom = _a.denom, revokee = _a.revokee;
-                if (fee === void 0) { fee = "auto"; }
-                return __awaiter(_this, void 0, void 0, function () {
-                    return __generator(this, function (_b) {
-                        switch (_b.label) {
-                            case 0: return [4 /*yield*/, this.client.execute(this.sender, this.contractAddress, {
-                                    revoke: {
-                                        action: action,
-                                        denom: denom,
-                                        revokee: revokee
-                                    }
-                                }, fee, memo, funds)];
-                            case 1: return [2 /*return*/, _b.sent()];
-                        }
-                    });
-                });
-            };
-            _this.release = function (_a, fee, memo, funds) {
-                var action = _a.action, denom = _a.denom;
-                if (fee === void 0) { fee = "auto"; }
-                return __awaiter(_this, void 0, void 0, function () {
-                    return __generator(this, function (_b) {
-                        switch (_b.label) {
-                            case 0: return [4 /*yield*/, this.client.execute(this.sender, this.contractAddress, {
-                                    release: {
-                                        action: action,
-                                        denom: denom
-                                    }
-                                }, fee, memo, funds)];
-                            case 1: return [2 /*return*/, _b.sent()];
-                        }
-                    });
-                });
-            };
-            _this.block = function (_a, fee, memo, funds) {
-                var action = _a.action, denom = _a.denom;
-                if (fee === void 0) { fee = "auto"; }
-                return __awaiter(_this, void 0, void 0, function () {
-                    return __generator(this, function (_b) {
-                        switch (_b.label) {
-                            case 0: return [4 /*yield*/, this.client.execute(this.sender, this.contractAddress, {
-                                    block: {
-                                        action: action,
-                                        denom: denom
-                                    }
-                                }, fee, memo, funds)];
-                            case 1: return [2 /*return*/, _b.sent()];
-                        }
-                    });
-                });
-            };
-            _this.client = client;
-            _this.sender = sender;
-            _this.contractAddress = contractAddress;
-            _this.create = _this.create.bind(_this);
-            _this.mint = _this.mint.bind(_this);
-            _this.burn = _this.burn.bind(_this);
-            _this.grant = _this.grant.bind(_this);
-            _this.revoke = _this.revoke.bind(_this);
-            _this.release = _this.release.bind(_this);
-            _this.block = _this.block.bind(_this);
-            return _this;
-        }
-        return FaucetClient;
-    }(FaucetQueryClient));
-
-    var _9 = /*#__PURE__*/Object.freeze({
-        __proto__: null,
-        FaucetQueryClient: FaucetQueryClient,
-        FaucetClient: FaucetClient
-    });
-
-    /**
-    * This file was automatically generated by @cosmwasm/ts-codegen@0.27.0.
-    * DO NOT MODIFY IT BY HAND. Instead, modify the source JSONSchema file,
-    * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
-    */
-    var FaucetMessageComposer = /** @class */ (function () {
-        function FaucetMessageComposer(sender, contractAddress) {
-            var _this = this;
-            this.create = function (_a, funds) {
-                var config = _a.config, denom = _a.denom;
-                return {
-                    typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
-                    value: tx.MsgExecuteContract.fromPartial({
-                        sender: _this.sender,
-                        contract: _this.contractAddress,
-                        msg: encoding.toUtf8(JSON.stringify({
-                            create: {
-                                config: config,
-                                denom: denom
-                            }
-                        })),
-                        funds: funds
-                    })
-                };
-            };
-            this.mint = function (_a, funds) {
-                var amount = _a.amount, denom = _a.denom;
-                return {
-                    typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
-                    value: tx.MsgExecuteContract.fromPartial({
-                        sender: _this.sender,
-                        contract: _this.contractAddress,
-                        msg: encoding.toUtf8(JSON.stringify({
-                            mint: {
-                                amount: amount,
-                                denom: denom
-                            }
-                        })),
-                        funds: funds
-                    })
-                };
-            };
-            this.burn = function (_a, funds) {
-                var denom = _a.denom;
-                return {
-                    typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
-                    value: tx.MsgExecuteContract.fromPartial({
-                        sender: _this.sender,
-                        contract: _this.contractAddress,
-                        msg: encoding.toUtf8(JSON.stringify({
-                            burn: {
-                                denom: denom
-                            }
-                        })),
-                        funds: funds
-                    })
-                };
-            };
-            this.grant = function (_a, funds) {
-                var action = _a.action, denom = _a.denom, grantee = _a.grantee;
-                return {
-                    typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
-                    value: tx.MsgExecuteContract.fromPartial({
-                        sender: _this.sender,
-                        contract: _this.contractAddress,
-                        msg: encoding.toUtf8(JSON.stringify({
-                            grant: {
-                                action: action,
-                                denom: denom,
-                                grantee: grantee
-                            }
-                        })),
-                        funds: funds
-                    })
-                };
-            };
-            this.revoke = function (_a, funds) {
-                var action = _a.action, denom = _a.denom, revokee = _a.revokee;
-                return {
-                    typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
-                    value: tx.MsgExecuteContract.fromPartial({
-                        sender: _this.sender,
-                        contract: _this.contractAddress,
-                        msg: encoding.toUtf8(JSON.stringify({
-                            revoke: {
-                                action: action,
-                                denom: denom,
-                                revokee: revokee
-                            }
-                        })),
-                        funds: funds
-                    })
-                };
-            };
-            this.release = function (_a, funds) {
-                var action = _a.action, denom = _a.denom;
-                return {
-                    typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
-                    value: tx.MsgExecuteContract.fromPartial({
-                        sender: _this.sender,
-                        contract: _this.contractAddress,
-                        msg: encoding.toUtf8(JSON.stringify({
-                            release: {
-                                action: action,
-                                denom: denom
-                            }
-                        })),
-                        funds: funds
-                    })
-                };
-            };
-            this.block = function (_a, funds) {
-                var action = _a.action, denom = _a.denom;
-                return {
-                    typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
-                    value: tx.MsgExecuteContract.fromPartial({
-                        sender: _this.sender,
-                        contract: _this.contractAddress,
-                        msg: encoding.toUtf8(JSON.stringify({
-                            block: {
-                                action: action,
-                                denom: denom
-                            }
-                        })),
-                        funds: funds
-                    })
-                };
-            };
-            this.sender = sender;
-            this.contractAddress = contractAddress;
-            this.create = this.create.bind(this);
-            this.mint = this.mint.bind(this);
-            this.burn = this.burn.bind(this);
-            this.grant = this.grant.bind(this);
-            this.revoke = this.revoke.bind(this);
-            this.release = this.release.bind(this);
-            this.block = this.block.bind(this);
-        }
-        return FaucetMessageComposer;
-    }());
-
-    var _10 = /*#__PURE__*/Object.freeze({
-        __proto__: null,
-        FaucetMessageComposer: FaucetMessageComposer
-    });
-
-    /**
-    * This file was automatically generated by @cosmwasm/ts-codegen@0.27.0.
-    * DO NOT MODIFY IT BY HAND. Instead, modify the source JSONSchema file,
-    * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
-    */
-    function useFaucetListRolesQuery(_a) {
-        var client = _a.client, args = _a.args, options = _a.options;
-        return reactQuery.useQuery(["faucetListRoles", client.contractAddress, JSON.stringify(args)], function () { return client.listRoles({
-            denom: args.denom,
-            limit: args.limit,
-            order: args.order,
-            startAfter: args.startAfter
-        }); }, options);
-    }
-    function useFaucetGetRoleQuery(_a) {
-        var client = _a.client, args = _a.args, options = _a.options;
-        return reactQuery.useQuery(["faucetGetRole", client.contractAddress, JSON.stringify(args)], function () { return client.getRole({
-            account: args.account,
-            denom: args.denom
-        }); }, options);
-    }
-    function useFaucetGetLastTokenIdQuery(_a) {
-        var client = _a.client, options = _a.options;
-        return reactQuery.useQuery(["faucetGetLastTokenId", client.contractAddress], function () { return client.getLastTokenId(); }, options);
-    }
-    function useFaucetListTokensQuery(_a) {
-        var client = _a.client, args = _a.args, options = _a.options;
-        return reactQuery.useQuery(["faucetListTokens", client.contractAddress, JSON.stringify(args)], function () { return client.listTokens({
-            limit: args.limit,
-            order: args.order,
-            startAfter: args.startAfter
-        }); }, options);
-    }
-    function useFaucetGetTokenQuery(_a) {
-        var client = _a.client, args = _a.args, options = _a.options;
-        return reactQuery.useQuery(["faucetGetToken", client.contractAddress, JSON.stringify(args)], function () { return client.getToken({
-            denom: args.denom
-        }); }, options);
-    }
-    function useFaucetListAliasesQuery(_a) {
-        var client = _a.client, args = _a.args, options = _a.options;
-        return reactQuery.useQuery(["faucetListAliases", client.contractAddress, JSON.stringify(args)], function () { return client.listAliases({
-            limit: args.limit,
-            order: args.order,
-            startAfter: args.startAfter
-        }); }, options);
-    }
-
-    var _11 = /*#__PURE__*/Object.freeze({
-        __proto__: null,
-        useFaucetListRolesQuery: useFaucetListRolesQuery,
-        useFaucetGetRoleQuery: useFaucetGetRoleQuery,
-        useFaucetGetLastTokenIdQuery: useFaucetGetLastTokenIdQuery,
-        useFaucetListTokensQuery: useFaucetListTokensQuery,
-        useFaucetGetTokenQuery: useFaucetGetTokenQuery,
-        useFaucetListAliasesQuery: useFaucetListAliasesQuery
-    });
-
-    /**
-    * This file was automatically generated by @cosmwasm/ts-codegen@0.27.0.
-    * DO NOT MODIFY IT BY HAND. Instead, modify the source JSONSchema file,
-    * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
-    */
-
-    var _12 = /*#__PURE__*/Object.freeze({
-        __proto__: null
-    });
-
-    /**
-    * This file was automatically generated by @cosmwasm/ts-codegen@0.27.0.
-    * DO NOT MODIFY IT BY HAND. Instead, modify the source JSONSchema file,
-    * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
-    */
-    var PeripheryClient = /** @class */ (function () {
+    var PeripheryClient = /** @class */ (function (_super) {
+        __extends(PeripheryClient, _super);
         function PeripheryClient(client, sender, contractAddress) {
-            var _this = this;
-            this.mintExactAmountOut = function (_a, fee, memo, funds) {
+            var _this = _super.call(this, client, contractAddress) || this;
+            _this.mintExactAmountOut = function (_a, fee, memo, funds) {
                 var coreAddr = _a.coreAddr, inputAsset = _a.inputAsset, outputAmount = _a.outputAmount, swapInfo = _a.swapInfo;
                 if (fee === void 0) { fee = "auto"; }
                 return __awaiter(_this, void 0, void 0, function () {
@@ -7594,7 +7243,7 @@
                     });
                 });
             };
-            this.burnExactAmountIn = function (_a, fee, memo, funds) {
+            _this.burnExactAmountIn = function (_a, fee, memo, funds) {
                 var coreAddr = _a.coreAddr, minOutputAmount = _a.minOutputAmount, outputAsset = _a.outputAsset, swapInfo = _a.swapInfo;
                 if (fee === void 0) { fee = "auto"; }
                 return __awaiter(_this, void 0, void 0, function () {
@@ -7613,17 +7262,19 @@
                     });
                 });
             };
-            this.client = client;
-            this.sender = sender;
-            this.contractAddress = contractAddress;
-            this.mintExactAmountOut = this.mintExactAmountOut.bind(this);
-            this.burnExactAmountIn = this.burnExactAmountIn.bind(this);
+            _this.client = client;
+            _this.sender = sender;
+            _this.contractAddress = contractAddress;
+            _this.mintExactAmountOut = _this.mintExactAmountOut.bind(_this);
+            _this.burnExactAmountIn = _this.burnExactAmountIn.bind(_this);
+            return _this;
         }
         return PeripheryClient;
-    }());
+    }(PeripheryQueryClient));
 
-    var _13 = /*#__PURE__*/Object.freeze({
+    var _9 = /*#__PURE__*/Object.freeze({
         __proto__: null,
+        PeripheryQueryClient: PeripheryQueryClient,
         PeripheryClient: PeripheryClient
     });
 
@@ -7681,7 +7332,7 @@
         return PeripheryMessageComposer;
     }());
 
-    var _14 = /*#__PURE__*/Object.freeze({
+    var _10 = /*#__PURE__*/Object.freeze({
         __proto__: null,
         PeripheryMessageComposer: PeripheryMessageComposer
     });
@@ -7691,9 +7342,29 @@
     * DO NOT MODIFY IT BY HAND. Instead, modify the source JSONSchema file,
     * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
     */
+    function usePeripherySimulateBurnExactAmountInQuery(_a) {
+        var client = _a.client, args = _a.args, options = _a.options;
+        return reactQuery.useQuery(["peripherySimulateBurnExactAmountIn", client.contractAddress, JSON.stringify(args)], function () { return client.simulateBurnExactAmountIn({
+            coreAddr: args.coreAddr,
+            inputAmount: args.inputAmount,
+            outputAsset: args.outputAsset,
+            swapInfo: args.swapInfo
+        }); }, options);
+    }
+    function usePeripherySimulateMintExactAmountOutQuery(_a) {
+        var client = _a.client, args = _a.args, options = _a.options;
+        return reactQuery.useQuery(["peripherySimulateMintExactAmountOut", client.contractAddress, JSON.stringify(args)], function () { return client.simulateMintExactAmountOut({
+            coreAddr: args.coreAddr,
+            inputAsset: args.inputAsset,
+            outputAmount: args.outputAmount,
+            swapInfo: args.swapInfo
+        }); }, options);
+    }
 
-    var _15 = /*#__PURE__*/Object.freeze({
-        __proto__: null
+    var _11 = /*#__PURE__*/Object.freeze({
+        __proto__: null,
+        usePeripherySimulateBurnExactAmountInQuery: usePeripherySimulateBurnExactAmountInQuery,
+        usePeripherySimulateMintExactAmountOutQuery: usePeripherySimulateMintExactAmountOutQuery
     });
 
     /**
@@ -7705,8 +7376,7 @@
     (function (contracts) {
         contracts.Airdrop = __assign(__assign(__assign(__assign({}, _0), _1), _2), _3);
         contracts.Core = __assign(__assign(__assign(__assign({}, _4), _5), _6), _7);
-        contracts.Faucet = __assign(__assign(__assign(__assign({}, _8), _9), _10), _11);
-        contracts.Periphery = __assign(__assign(__assign(__assign({}, _12), _13), _14), _15);
+        contracts.Periphery = __assign(__assign(__assign(__assign({}, _8), _9), _10), _11);
     })(contracts$1 || (contracts$1 = {}));
 
     var contracts = contracts$1;

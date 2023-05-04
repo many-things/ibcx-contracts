@@ -100,18 +100,32 @@ export type QueryMsg = {
     account: string;
   };
 } | {
-  get_config: {};
+  get_total_supply: {};
+} | {
+  get_config: {
+    time?: number | null;
+  };
 } | {
   get_fee: {
     time?: number | null;
   };
 } | {
-  get_pause_info: {
+  get_portfolio: {
     time?: number | null;
   };
 } | {
-  get_portfolio: {
-    time?: number | null;
+  get_rebalance: {};
+} | {
+  get_trade_info: {
+    denom_in: string;
+    denom_out: string;
+  };
+} | {
+  list_trade_info: {
+    denom_in: string;
+    limit?: number | null;
+    order?: RangeOrder | null;
+    start_after?: string | null;
   };
 } | {
   simulate_mint: {
@@ -125,16 +139,26 @@ export type QueryMsg = {
     time?: number | null;
   };
 };
+export type RangeOrder = "asc" | "desc";
 export interface Coin {
   amount: Uint128;
   denom: string;
   [k: string]: unknown;
 }
+export interface MigrateMsg {
+  force?: boolean | null;
+}
 export type Addr = string;
 export interface GetConfigResponse {
   gov: Addr;
   index_denom: string;
+  paused: PausedResponse;
+  pending_gov?: Addr | null;
   reserve_denom: string;
+}
+export interface PausedResponse {
+  expires_at?: number | null;
+  paused: boolean;
 }
 export interface GetFeeResponse {
   burn_fee?: Decimal | null;
@@ -148,15 +172,31 @@ export interface StreamingFeeResponse {
   last_collected_at: number;
   rate: Decimal;
 }
-export interface GetPauseInfoResponse {
-  expires_at?: number | null;
-  paused: boolean;
-}
 export interface GetPortfolioResponse {
   assets: Coin[];
   total_supply: Uint128;
   units: [string, Decimal][];
 }
+export interface GetRebalanceResponse {
+  rebalance?: RebalancePayload | null;
+}
+export interface RebalancePayload {
+  deflation: [string, Decimal][];
+  inflation: [string, Decimal][];
+  manager?: Addr | null;
+}
+export interface GetTradeInfoResponse {
+  trade_info?: TradeInfoPayload | null;
+}
+export interface TradeInfoPayload {
+  cooldown: number;
+  denom_in: string;
+  denom_out: string;
+  last_traded_at?: number | null;
+  max_trade_amount: Uint128;
+  routes: SwapRoutes;
+}
+export type ListTradeInfoResponse = TradeInfoPayload[];
 export interface SimulateBurnResponse {
   burn_amount: Uint128;
   redeem_amount: Coin[];
