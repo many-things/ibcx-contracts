@@ -30,7 +30,7 @@ type CreateDenomReport = {
 
 async function main() {
   const signer = await config.getSigner();
-  const [wallet] = await signer.getAccounts();
+  const [{ address: sender }] = await signer.getAccounts();
 
   const base = {
     m: await SigningCosmWasmClient.connectWithSigner(
@@ -51,8 +51,8 @@ async function main() {
   const client = {
     b: base.m,
     q: base.q,
-    cc: new sdk.Core.CoreClient(base.m, wallet.address, core),
-    qc: new sdk.Periphery.PeripheryClient(base.m, wallet.address, periphery),
+    cc: new sdk.Core.CoreClient(base.m, sender, core),
+    qc: new sdk.Periphery.PeripheryClient(base.m, sender, periphery),
   };
 
   const { index_denom } = await client.cc.getConfig({});

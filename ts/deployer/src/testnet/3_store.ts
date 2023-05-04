@@ -27,7 +27,7 @@ const artifacts = readdirSync(artifactsPath)
 
 async function main() {
   const signer = await config.getSigner();
-  const [wallet] = await signer.getAccounts();
+  const [{ address: sender }] = await signer.getAccounts();
 
   const client = {
     m: await SigningCosmWasmClient.connectWithSigner(
@@ -44,7 +44,7 @@ async function main() {
   const codes: { [contract: string]: number } = {};
   for (const [fileName, filePath] of artifacts) {
     const uploadRes = await client.m.upload(
-      wallet.address,
+      sender,
       readFileSync(filePath),
       "auto"
     );

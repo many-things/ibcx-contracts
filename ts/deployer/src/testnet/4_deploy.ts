@@ -28,7 +28,7 @@ type CreateDenomReport = {
 
 async function main() {
   const signer = await config.getSigner();
-  const [wallet] = await signer.getAccounts();
+  const [{ address: sender }] = await signer.getAccounts();
 
   const client = {
     m: await SigningCosmWasmClient.connectWithSigner(
@@ -55,14 +55,16 @@ async function main() {
     },
     gov: config.args.addresses.dao,
     index_denom: "uibcx",
-    index_units: denoms.map(({ origin, created }) => [
-      created,
-      `${config.args.assets[origin].unit}`,
-    ]),
+    index_units: Object.entries(config.args.assets).map(
+      ([origin, { unit }]) => [
+        denoms.find((d) => d.origin === origin)?.created || origin,
+        `${unit}`,
+      ]
+    ),
     reserve_denom: "uosmo",
   };
   const initCoreRes = await client.m.instantiate(
-    wallet.address,
+    sender,
     codes.core,
     initCoreMsg,
     "ibcx-core",
@@ -81,7 +83,7 @@ async function main() {
   // deploy periphery
   const initPeripheryMsg: PeripheryTypes.InstantiateMsg = {};
   const initPeripheryRes = await client.m.instantiate(
-    wallet.address,
+    sender,
     codes.periphery,
     initPeripheryMsg,
     "ibcx-periphery",

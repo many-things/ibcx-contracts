@@ -37,7 +37,7 @@ async function checkBalance(
 
 async function main() {
   const signer = await config.getSigner();
-  const [wallet] = await signer.getAccounts();
+  const [{ address: sender }] = await signer.getAccounts();
 
   const base = {
     m: await SigningCosmWasmClient.connectWithSigner(
@@ -50,17 +50,17 @@ async function main() {
     }),
   };
 
-  const { contracts } = LoadReport<DeployContractReport>("4_deploy")!;
+  const { contracts: addrs } = LoadReport<DeployContractReport>("4_deploy")!;
 
   const client = {
-    b: base.m,
-    q: base.q,
-    c: new sdk.Core.CoreClient(base.m, wallet.address, contracts.core),
+    core: new sdk.Core.CoreClient(base.m, sender, addrs.core),
+    perp: new sdk.Periphery.PeripheryClient(base.m, sender, addrs.periphery),
+    ...base,
   };
 
-  const { index_denom } = await client.c.getConfig({});
+  const { index_denom } = await client.core.getConfig({});
 
-  const { units } = await client.c.getPortfolio({});
+  const { units } = await client.core.getPortfolio({});
   const funds = units
     .map(([denom, unit]) => ({
       denom,
@@ -68,7 +68,7 @@ async function main() {
     }))
     .sort((a, b) => (a.denom < b.denom ? -1 : 1));
 
-  const mintResp = await client.c.mint(
+  const mintResp = await client.core.mint(
     { amount: `${1e6}` },
     "auto",
     undefined,
@@ -76,13 +76,13 @@ async function main() {
   );
   console.log({ action: "mint", txHash: mintResp.transactionHash });
 
-  await checkBalance(client.q, wallet.address, index_denom, `${1e6}`, "mint");
+  await checkBalance(client.q, sender, index_denom, `${1e6}`, "mint");
 
   const burnAmount = [{ denom: index_denom, amount: `${1e6}` }];
-  const burnResp = await client.c.burn({}, "auto", undefined, burnAmount);
+  const burnResp = await client.core.burn({}, "auto", undefined, burnAmount);
   console.log({ action: "burn", txHash: burnResp.transactionHash });
 
-  await checkBalance(client.q, wallet.address, index_denom, `${0}`, "burn");
+  await checkBalance(client.q, sender, index_denom, `${0}`, "burn");
 }
 
 main().catch(console.error);

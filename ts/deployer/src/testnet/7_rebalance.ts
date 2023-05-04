@@ -5,16 +5,16 @@ import { SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
 import { GasPrice } from "@cosmjs/stargate";
 import sdk from "@many-things/ibcx-contracts-sdk";
 
-import { registry, aminoTypes } from "../codec";
 import config from "../config";
+import { aminoTypes, registry } from "../codec";
 import { LoadReport } from "../util";
 
-type StoreContractReport = {
-  codes: {
-    airdrop: number;
-    core: number;
-    periphery: number;
-  };
+type CreateDenomReport = {
+  denoms: {
+    created: string;
+    alias: string;
+    origin: string;
+  }[];
 };
 
 type DeployContractReport = {
@@ -26,7 +26,7 @@ type DeployContractReport = {
 
 async function main() {
   const signer = await config.getSigner();
-  const [wallet] = await signer.getAccounts();
+  const [{ address: sender }] = await signer.getAccounts();
 
   const base = {
     m: await SigningCosmWasmClient.connectWithSigner(
@@ -39,32 +39,27 @@ async function main() {
     }),
   };
 
-  const { codes } = LoadReport<StoreContractReport>("3_store")!;
-  const { contracts } = LoadReport<DeployContractReport>("4_deploy")!;
+  const { denoms } = LoadReport<CreateDenomReport>("1_setup")!;
+  const { contracts: addrs } = LoadReport<DeployContractReport>("4_deploy")!;
 
-  const migrateCoreResp = await base.m.migrate(
-    wallet.address,
-    contracts.core,
-    codes.core,
-    { force: true },
+  const client = {
+    core: new sdk.Core.CoreClient(base.m, sender, addrs.core),
+    perp: new sdk.Periphery.PeripheryClient(base.m, sender, addrs.periphery),
+    ...base,
+  };
+
+  await client.core.rebalance(
+    {
+      init: {
+        deflation: [
+          [denoms.find(({ origin }) => origin === "ujuno")!.created, "1.0"],
+        ],
+        inflation: [["", ""]],
+        manager: sender,
+      },
+    },
     "auto"
   );
-  console.log({
-    action: "migrate core",
-    txHash: migrateCoreResp.transactionHash,
-  });
-
-  const migratePeripheryResp = await base.m.migrate(
-    wallet.address,
-    contracts.periphery,
-    codes.periphery,
-    { force: true },
-    "auto"
-  );
-  console.log({
-    action: "migrate periphery",
-    txHash: migratePeripheryResp.transactionHash,
-  });
 }
 
 main().catch(console.error);
