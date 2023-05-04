@@ -1,7 +1,10 @@
-import { osmosis } from "osmojs";
+import { osmosis, cosmwasm } from "osmojs";
 const { createRPCQueryClient } = osmosis.ClientFactory;
 
-import { SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
+import {
+  ExecuteResult,
+  SigningCosmWasmClient,
+} from "@cosmjs/cosmwasm-stargate";
 import { GasPrice } from "@cosmjs/stargate";
 import sdk from "@many-things/ibcx-contracts-sdk";
 
@@ -15,6 +18,10 @@ type CreateDenomReport = {
     alias: string;
     origin: string;
   }[];
+};
+
+type CreatePoolReport = {
+  poolIds: string[];
 };
 
 type DeployContractReport = {
@@ -40,6 +47,7 @@ async function main() {
   };
 
   const { denoms } = LoadReport<CreateDenomReport>("1_setup")!;
+  const { poolIds } = LoadReport<CreatePoolReport>("2_lping")!;
   const { contracts: addrs } = LoadReport<DeployContractReport>("4_deploy")!;
 
   const client = {
@@ -48,15 +56,81 @@ async function main() {
     ...base,
   };
 
-  await client.core.rebalance(
+  const resolveDenom = (denom: string): [string, number] => {
+    const i = denoms.findIndex(({ origin }) => origin === denom)!;
+    return [denoms[i].created, i];
+  };
+  const resolvePool = (denom: string): number => {
+    const [, i] = resolveDenom(denom);
+    return Number(poolIds[i]);
+  };
+
+  const cfg = await client.core.getConfig({});
+  const portfolio = await client.core.getPortfolio({});
+  console.table(Object.fromEntries(portfolio.units));
+
+  const tradeInfoResps: ExecuteResult[] = [];
+  for (const denom of ["ujuno", "ustrd"]) {
+    const updateTradeInfoResp = await client.core.gov(
+      {
+        update_trade_info: {
+          cooldown: 1,
+          denom: resolveDenom(denom)[0],
+          max_trade_amount: `${100_000_000_000_000}`,
+          routes: [
+            { pool_id: resolvePool(denom), token_denom: cfg.reserve_denom },
+          ],
+        },
+      },
+      "auto"
+    );
+    console.log({
+      action: "update_trade_info",
+      txHash: updateTradeInfoResp.transactionHash,
+    });
+    tradeInfoResps.push(updateTradeInfoResp);
+  }
+
+  const initRebalanceResp = await client.core.rebalance(
     {
       init: {
-        deflation: [
-          [denoms.find(({ origin }) => origin === "ujuno")!.created, "1.0"],
-        ],
-        inflation: [["", ""]],
+        deflation: [[resolveDenom("ujuno")[0], "1.0"]], // make ujuno's unit to 1.0
+        inflation: [[resolveDenom("ustrd")[0], "1.0"]], // distribute liquidated ujuno to ustrd
         manager: sender,
       },
+    },
+    "auto"
+  );
+
+  const deflateResp = await client.core.rebalance(
+    {
+      trade: {
+        deflate: {
+          amount_out: `${1e6}`,
+          max_amount_in: `${100_000 * 1e6}`,
+          target_denom: resolveDenom("ujuno")[0],
+        },
+      },
+    },
+    "auto"
+  );
+
+  const inflateResp = await client.core.rebalance(
+    {
+      trade: {
+        inflate: {
+          amount_in: `${1e6}`,
+          min_amount_out: "0",
+          target_denom: resolveDenom("ustrd")[0],
+        },
+      },
+    },
+    "auto"
+  );
+
+  const finishRebalanceResp = await client.core.rebalance(
+    {
+      finalize: {},
     },
     "auto"
   );
