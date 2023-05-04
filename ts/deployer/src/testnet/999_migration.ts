@@ -64,7 +64,7 @@ async function main() {
   const migratePeripheryResp = await base.m.migrate(
     wallet.address,
     contracts.periphery,
-    codes.core,
+    codes.periphery,
     { force: true },
     "auto"
   );
