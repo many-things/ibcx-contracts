@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { join } from "path";
 import { NETWORK } from "./config";
 
-export function ExportReport(subject: string, output: any) {
+export function ExportReport<T>(subject: string, output: T) {
   const base = join(process.cwd(), "out", subject, NETWORK);
   mkdirSync(base, { recursive: true });
 
@@ -16,8 +16,12 @@ export function ExportReport(subject: string, output: any) {
   writeFileSync(join(base, fileTime), fileData);
 }
 
-export function LoadReport<T>(subject: string): T {
+export function LoadReport<T>(subject: string): T | undefined {
   const base = join(process.cwd(), "out", subject, NETWORK);
 
-  return JSON.parse(readFileSync(join(base, "run-latest.json"), "utf-8"));
+  try {
+    return JSON.parse(readFileSync(join(base, "run-latest.json"), "utf-8"));
+  } catch {
+    return undefined;
+  }
 }

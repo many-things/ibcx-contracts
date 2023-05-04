@@ -50,7 +50,7 @@ async function main() {
     }),
   };
 
-  const { contracts } = LoadReport<DeployContractReport>("4_deploy");
+  const { contracts } = LoadReport<DeployContractReport>("4_deploy")!;
 
   const client = {
     b: base.m,

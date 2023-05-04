@@ -43,10 +43,10 @@ async function main() {
     }),
   };
 
-  const { denoms } = LoadReport<CreateDenomReport>("1_setup");
-  const { poolIds } = LoadReport<CreatePoolReport>("2_lping");
+  const { denoms } = LoadReport<CreateDenomReport>("1_setup")!;
+  const { poolIds } = LoadReport<CreatePoolReport>("2_lping")!;
   const { core, periphery } =
-    LoadReport<DeployContractReport>("4_deploy").contracts;
+    LoadReport<DeployContractReport>("4_deploy")!.contracts;
 
   const client = {
     b: base.m,

@@ -39,15 +39,8 @@ async function main() {
     }),
   };
 
-  const { codes } = LoadReport<StoreContractReport>("3_store");
-  const { contracts } = LoadReport<DeployContractReport>("4_deploy");
-
-  const cc = new sdk.Core.CoreClient(base.m, wallet.address, contracts.core);
-  const qc = new sdk.Periphery.PeripheryClient(
-    base.m,
-    wallet.address,
-    contracts.periphery
-  );
+  const { codes } = LoadReport<StoreContractReport>("3_store")!;
+  const { contracts } = LoadReport<DeployContractReport>("4_deploy")!;
 
   const migrateCoreResp = await base.m.migrate(
     wallet.address,

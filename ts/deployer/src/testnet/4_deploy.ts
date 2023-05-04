@@ -41,8 +41,8 @@ async function main() {
     }),
   };
 
-  const { denoms } = LoadReport<CreateDenomReport>("1_setup");
-  const { codes } = LoadReport<StoreContractReport>("3_store");
+  const { denoms } = LoadReport<CreateDenomReport>("1_setup")!;
+  const { codes } = LoadReport<StoreContractReport>("3_store")!;
 
   const { params } = await client.q.osmosis.tokenfactory.v1beta1.params();
 

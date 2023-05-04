@@ -1,11 +1,17 @@
-import { GasPrice, SigningStargateClient } from "@cosmjs/stargate";
+import {
+  DeliverTxResponse,
+  GasPrice,
+  SigningStargateClient,
+} from "@cosmjs/stargate";
 import { osmosis } from "osmojs";
 
 import config from "../config";
 import { registry, aminoTypes } from "../codec";
 import { ExportReport, LoadReport } from "../util";
+import Long from "long";
 
 const { createRPCQueryClient } = osmosis.ClientFactory;
+const { joinPool } = osmosis.gamm.v1beta1.MessageComposer.withTypeUrl;
 const { createBalancerPool } =
   osmosis.gamm.poolmodels.balancer.v1beta1.MessageComposer.withTypeUrl;
 
@@ -16,6 +22,102 @@ type CreateDenomReport = {
     origin: string;
   }[];
 };
+
+type CreatePoolReport = {
+  txs: {
+    create: DeliverTxResponse;
+    join: DeliverTxResponse[];
+  };
+  poolIds: string[];
+};
+
+async function addPool(
+  client: SigningStargateClient,
+  sender: string,
+  denoms: CreateDenomReport["denoms"],
+  poolIds: string[]
+): Promise<[DeliverTxResponse, string[]]> {
+  const joinPoolMsgs = denoms
+    .filter(({ origin }) => origin !== "uosmo")
+    .map((_, i) =>
+      joinPool({
+        sender,
+        poolId: Long.fromString(poolIds[i]),
+        shareOutAmount: "100000000000000000000",
+        tokenInMaxs: [],
+      })
+    );
+
+  const joinPoolResp = await client.signAndBroadcast(
+    sender,
+    joinPoolMsgs,
+    "auto"
+  );
+  console.log({
+    action: "create-pool",
+    txHash: joinPoolResp.transactionHash,
+  });
+
+  return [joinPoolResp, poolIds];
+}
+
+async function createPool(
+  client: SigningStargateClient,
+  sender: string,
+  denoms: CreateDenomReport["denoms"],
+  amount: number
+): Promise<[DeliverTxResponse, string[]]> {
+  const createPoolMsgs = denoms
+    .filter(({ origin }) => origin !== "uosmo")
+    .map((v) =>
+      createBalancerPool({
+        sender,
+        poolParams: {
+          swapFee: "10000000000000000",
+          exitFee: "0",
+        },
+        poolAssets: [
+          {
+            token: {
+              denom: "uosmo",
+              amount: `${Math.floor(amount * 1e6)}`,
+            },
+            weight: "1000000",
+          },
+          {
+            token: {
+              denom: v.created,
+              amount: `${Math.floor(
+                amount * config.args.assets[v.origin].price * 1e6
+              )}`,
+            },
+            weight: "1000000",
+          },
+        ],
+        futurePoolGovernor: config.args.addresses.dao,
+      })
+    );
+
+  const createPoolResp = await client.signAndBroadcast(
+    sender,
+    createPoolMsgs,
+    "auto"
+  );
+  console.log({
+    action: "create-pool",
+    txHash: createPoolResp.transactionHash,
+  });
+
+  const poolIds = [
+    ...new Set(
+      createPoolResp.events
+        .filter((v) => v.type === "pool_created")
+        .map((v) => v.attributes[0].value)
+    ),
+  ];
+
+  return [createPoolResp, poolIds];
+}
 
 async function main() {
   const signer = await config.getSigner();
@@ -34,63 +136,36 @@ async function main() {
 
   const OSMO_AMOUNT = 2_000;
 
-  const { denoms } = LoadReport<CreateDenomReport>("1_setup");
+  const { denoms } = LoadReport<CreateDenomReport>("1_setup")!;
+  const report = LoadReport<CreatePoolReport>("2_lping");
 
-  const createPoolMsgs = denoms
-    .filter(({ origin }) => origin !== "uosmo")
-    .map((v) =>
-      createBalancerPool({
-        sender: wallet.address,
-        poolParams: {
-          swapFee: "10000000000000000",
-          exitFee: "0",
-        },
-        poolAssets: [
-          {
-            token: {
-              denom: "uosmo",
-              amount: `${Math.floor(OSMO_AMOUNT * 1e6)}`,
-            },
-            weight: "1000000",
-          },
-          {
-            token: {
-              denom: v.created,
-              amount: `${Math.floor(
-                OSMO_AMOUNT * config.args.assets[v.origin].price * 1e6
-              )}`,
-            },
-            weight: "1000000",
-          },
-        ],
-        futurePoolGovernor: config.args.addresses.dao,
-      })
+  if (report) {
+    const [tx] = await addPool(
+      client.m,
+      wallet.address,
+      denoms,
+      report.poolIds
     );
 
-  const createPoolResp = await client.m.signAndBroadcast(
-    wallet.address,
-    createPoolMsgs,
-    "auto"
-  );
-  console.log({
-    action: "create-pool",
-    txHash: createPoolResp.transactionHash,
-  });
+    report.txs.join.push(tx);
 
-  const poolIds = [
-    ...new Set(
-      createPoolResp.events
-        .filter((v) => v.type === "pool_created")
-        .map((v) => v.attributes[0].value)
-    ),
-  ];
+    ExportReport<CreatePoolReport>("2_lping", report);
+  } else {
+    const [tx, poolIds] = await createPool(
+      client.m,
+      wallet.address,
+      denoms,
+      OSMO_AMOUNT
+    );
 
-  ExportReport("2_lping", {
-    txs: {
-      create: createPoolResp,
-    },
-    poolIds,
-  });
+    ExportReport<CreatePoolReport>("2_lping", {
+      txs: {
+        create: tx,
+        join: [],
+      },
+      poolIds,
+    });
+  }
 }
 
 main().catch(console.error);

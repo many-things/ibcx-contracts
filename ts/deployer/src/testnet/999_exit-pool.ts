@@ -29,7 +29,7 @@ async function main() {
     }),
   };
 
-  const { poolIds } = LoadReport<CreatePoolReport>("2_lping");
+  const { poolIds } = LoadReport<CreatePoolReport>("2_lping")!;
   const { balances } = await base.q.cosmos.bank.v1beta1.allBalances({
     address: wallet.address,
   });
