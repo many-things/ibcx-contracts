@@ -121,7 +121,7 @@ async function createPool(
 
 async function main() {
   const signer = await config.getSigner();
-  const [wallet] = await signer.getAccounts();
+  const [{ address: sender }] = await signer.getAccounts();
 
   const client = {
     m: await SigningStargateClient.connectWithSigner(
@@ -140,12 +140,7 @@ async function main() {
   const report = LoadReport<CreatePoolReport>("2_lping");
 
   if (report) {
-    const [tx] = await addPool(
-      client.m,
-      wallet.address,
-      denoms,
-      report.poolIds
-    );
+    const [tx] = await addPool(client.m, sender, denoms, report.poolIds);
 
     report.txs.join.push(tx);
 
@@ -153,7 +148,7 @@ async function main() {
   } else {
     const [tx, poolIds] = await createPool(
       client.m,
-      wallet.address,
+      sender,
       denoms,
       OSMO_AMOUNT
     );
