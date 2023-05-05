@@ -4,7 +4,7 @@
 * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
 */
 import { UseQueryOptions } from "@tanstack/react-query";
-import { Uint128, SwapInfo, SimulateBurnExactAmountInResponse, SimulateMintExactAmountOutResponse } from "./Periphery.types";
+import { Uint128, SwapInfosCompact, SimulateBurnExactAmountInResponse, SimulateMintExactAmountOutResponse } from "./Periphery.types";
 import { PeripheryQueryClient } from "./Periphery.client";
 export interface PeripheryReactQuery<TResponse, TData = TResponse> {
     client: PeripheryQueryClient;
@@ -17,7 +17,7 @@ export interface PeripherySimulateBurnExactAmountInQuery<TData> extends Peripher
         coreAddr: string;
         inputAmount: Uint128;
         outputAsset: string;
-        swapInfo: SwapInfo[];
+        swapInfo: SwapInfosCompact;
     };
 }
 export declare function usePeripherySimulateBurnExactAmountInQuery<TData = SimulateBurnExactAmountInResponse>({ client, args, options }: PeripherySimulateBurnExactAmountInQuery<TData>): import("@tanstack/react-query").UseQueryResult<TData, Error>;
@@ -26,7 +26,7 @@ export interface PeripherySimulateMintExactAmountOutQuery<TData> extends Periphe
         coreAddr: string;
         inputAsset: string;
         outputAmount: Uint128;
-        swapInfo: SwapInfo[];
+        swapInfo: SwapInfosCompact;
     };
 }
 export declare function usePeripherySimulateMintExactAmountOutQuery<TData = SimulateMintExactAmountOutResponse>({ client, args, options }: PeripherySimulateMintExactAmountOutQuery<TData>): import("@tanstack/react-query").UseQueryResult<TData, Error>;

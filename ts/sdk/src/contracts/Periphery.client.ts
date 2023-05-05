@@ -6,7 +6,7 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { StdFee } from "@cosmjs/amino";
-import { InstantiateMsg, ExecuteMsg, Uint128, SwapInfosCompact, SwapInfoCompact, QueryMsg, SwapInfo, RouteKey, SwapRoutes, SwapRoute, MigrateMsg, SimulateBurnExactAmountInResponse, Coin, SimulateMintExactAmountOutResponse } from "./Periphery.types";
+import { InstantiateMsg, ExecuteMsg, Uint128, SwapInfosCompact, SwapInfoCompact, QueryMsg, MigrateMsg, SimulateBurnExactAmountInResponse, Coin, SimulateMintExactAmountOutResponse } from "./Periphery.types";
 export interface PeripheryReadOnlyInterface {
   contractAddress: string;
   simulateMintExactAmountOut: ({
@@ -18,7 +18,7 @@ export interface PeripheryReadOnlyInterface {
     coreAddr: string;
     inputAsset: string;
     outputAmount: Uint128;
-    swapInfo: SwapInfo[];
+    swapInfo: SwapInfosCompact;
   }) => Promise<SimulateMintExactAmountOutResponse>;
   simulateBurnExactAmountIn: ({
     coreAddr,
@@ -29,7 +29,7 @@ export interface PeripheryReadOnlyInterface {
     coreAddr: string;
     inputAmount: Uint128;
     outputAsset: string;
-    swapInfo: SwapInfo[];
+    swapInfo: SwapInfosCompact;
   }) => Promise<SimulateBurnExactAmountInResponse>;
 }
 export class PeripheryQueryClient implements PeripheryReadOnlyInterface {
@@ -52,7 +52,7 @@ export class PeripheryQueryClient implements PeripheryReadOnlyInterface {
     coreAddr: string;
     inputAsset: string;
     outputAmount: Uint128;
-    swapInfo: SwapInfo[];
+    swapInfo: SwapInfosCompact;
   }): Promise<SimulateMintExactAmountOutResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
       simulate_mint_exact_amount_out: {
@@ -72,7 +72,7 @@ export class PeripheryQueryClient implements PeripheryReadOnlyInterface {
     coreAddr: string;
     inputAmount: Uint128;
     outputAsset: string;
-    swapInfo: SwapInfo[];
+    swapInfo: SwapInfosCompact;
   }): Promise<SimulateBurnExactAmountInResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
       simulate_burn_exact_amount_in: {

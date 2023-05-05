@@ -5,7 +5,7 @@
 */
 
 import { UseQueryOptions, useQuery } from "@tanstack/react-query";
-import { InstantiateMsg, ExecuteMsg, Uint128, SwapInfosCompact, SwapInfoCompact, QueryMsg, SwapInfo, RouteKey, SwapRoutes, SwapRoute, MigrateMsg, SimulateBurnExactAmountInResponse, Coin, SimulateMintExactAmountOutResponse } from "./Periphery.types";
+import { InstantiateMsg, ExecuteMsg, Uint128, SwapInfosCompact, SwapInfoCompact, QueryMsg, MigrateMsg, SimulateBurnExactAmountInResponse, Coin, SimulateMintExactAmountOutResponse } from "./Periphery.types";
 import { PeripheryQueryClient } from "./Periphery.client";
 export interface PeripheryReactQuery<TResponse, TData = TResponse> {
   client: PeripheryQueryClient;
@@ -18,7 +18,7 @@ export interface PeripherySimulateBurnExactAmountInQuery<TData> extends Peripher
     coreAddr: string;
     inputAmount: Uint128;
     outputAsset: string;
-    swapInfo: SwapInfo[];
+    swapInfo: SwapInfosCompact;
   };
 }
 export function usePeripherySimulateBurnExactAmountInQuery<TData = SimulateBurnExactAmountInResponse>({
@@ -38,7 +38,7 @@ export interface PeripherySimulateMintExactAmountOutQuery<TData> extends Periphe
     coreAddr: string;
     inputAsset: string;
     outputAmount: Uint128;
-    swapInfo: SwapInfo[];
+    swapInfo: SwapInfosCompact;
   };
 }
 export function usePeripherySimulateMintExactAmountOutQuery<TData = SimulateMintExactAmountOutResponse>({

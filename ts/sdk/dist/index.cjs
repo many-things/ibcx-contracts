@@ -500,81 +500,89 @@ var base64$1 = {};
 	}; 
 } (base64$1));
 
-var eventemitter = EventEmitter;
+var eventemitter;
+var hasRequiredEventemitter;
 
-/**
- * Constructs a new event emitter instance.
- * @classdesc A minimal event emitter.
- * @memberof util
- * @constructor
- */
-function EventEmitter() {
+function requireEventemitter () {
+	if (hasRequiredEventemitter) return eventemitter;
+	hasRequiredEventemitter = 1;
+	eventemitter = EventEmitter;
 
-    /**
-     * Registered listeners.
-     * @type {Object.<string,*>}
-     * @private
-     */
-    this._listeners = {};
+	/**
+	 * Constructs a new event emitter instance.
+	 * @classdesc A minimal event emitter.
+	 * @memberof util
+	 * @constructor
+	 */
+	function EventEmitter() {
+
+	    /**
+	     * Registered listeners.
+	     * @type {Object.<string,*>}
+	     * @private
+	     */
+	    this._listeners = {};
+	}
+
+	/**
+	 * Registers an event listener.
+	 * @param {string} evt Event name
+	 * @param {function} fn Listener
+	 * @param {*} [ctx] Listener context
+	 * @returns {util.EventEmitter} `this`
+	 */
+	EventEmitter.prototype.on = function on(evt, fn, ctx) {
+	    (this._listeners[evt] || (this._listeners[evt] = [])).push({
+	        fn  : fn,
+	        ctx : ctx || this
+	    });
+	    return this;
+	};
+
+	/**
+	 * Removes an event listener or any matching listeners if arguments are omitted.
+	 * @param {string} [evt] Event name. Removes all listeners if omitted.
+	 * @param {function} [fn] Listener to remove. Removes all listeners of `evt` if omitted.
+	 * @returns {util.EventEmitter} `this`
+	 */
+	EventEmitter.prototype.off = function off(evt, fn) {
+	    if (evt === undefined)
+	        this._listeners = {};
+	    else {
+	        if (fn === undefined)
+	            this._listeners[evt] = [];
+	        else {
+	            var listeners = this._listeners[evt];
+	            for (var i = 0; i < listeners.length;)
+	                if (listeners[i].fn === fn)
+	                    listeners.splice(i, 1);
+	                else
+	                    ++i;
+	        }
+	    }
+	    return this;
+	};
+
+	/**
+	 * Emits an event by calling its listeners with the specified arguments.
+	 * @param {string} evt Event name
+	 * @param {...*} args Arguments
+	 * @returns {util.EventEmitter} `this`
+	 */
+	EventEmitter.prototype.emit = function emit(evt) {
+	    var listeners = this._listeners[evt];
+	    if (listeners) {
+	        var args = [],
+	            i = 1;
+	        for (; i < arguments.length;)
+	            args.push(arguments[i++]);
+	        for (i = 0; i < listeners.length;)
+	            listeners[i].fn.apply(listeners[i++].ctx, args);
+	    }
+	    return this;
+	};
+	return eventemitter;
 }
-
-/**
- * Registers an event listener.
- * @param {string} evt Event name
- * @param {function} fn Listener
- * @param {*} [ctx] Listener context
- * @returns {util.EventEmitter} `this`
- */
-EventEmitter.prototype.on = function on(evt, fn, ctx) {
-    (this._listeners[evt] || (this._listeners[evt] = [])).push({
-        fn  : fn,
-        ctx : ctx || this
-    });
-    return this;
-};
-
-/**
- * Removes an event listener or any matching listeners if arguments are omitted.
- * @param {string} [evt] Event name. Removes all listeners if omitted.
- * @param {function} [fn] Listener to remove. Removes all listeners of `evt` if omitted.
- * @returns {util.EventEmitter} `this`
- */
-EventEmitter.prototype.off = function off(evt, fn) {
-    if (evt === undefined)
-        this._listeners = {};
-    else {
-        if (fn === undefined)
-            this._listeners[evt] = [];
-        else {
-            var listeners = this._listeners[evt];
-            for (var i = 0; i < listeners.length;)
-                if (listeners[i].fn === fn)
-                    listeners.splice(i, 1);
-                else
-                    ++i;
-        }
-    }
-    return this;
-};
-
-/**
- * Emits an event by calling its listeners with the specified arguments.
- * @param {string} evt Event name
- * @param {...*} args Arguments
- * @returns {util.EventEmitter} `this`
- */
-EventEmitter.prototype.emit = function emit(evt) {
-    var listeners = this._listeners[evt];
-    if (listeners) {
-        var args = [],
-            i = 1;
-        for (; i < arguments.length;)
-            args.push(arguments[i++]);
-        for (i = 0; i < listeners.length;)
-            listeners[i].fn.apply(listeners[i++].ctx, args);
-    }
-    return this;
-};
 
 var float = factory(factory);
 
@@ -929,112 +937,119 @@ function inquire(moduleName) {
 
 var utf8$2 = {};
 
-(function (exports) {
+var hasRequiredUtf8;
 
-	/**
-	 * A minimal UTF8 implementation for number arrays.
-	 * @memberof util
-	 * @namespace
-	 */
-	var utf8 = exports;
+function requireUtf8 () {
+	if (hasRequiredUtf8) return utf8$2;
+	hasRequiredUtf8 = 1;
+	(function (exports) {
 
-	/**
-	 * Calculates the UTF8 byte length of a string.
-	 * @param {string} string String
-	 * @returns {number} Byte length
-	 */
-	utf8.length = function utf8_length(string) {
-	    var len = 0,
-	        c = 0;
-	    for (var i = 0; i < string.length; ++i) {
-	        c = string.charCodeAt(i);
-	        if (c < 128)
-	            len += 1;
-	        else if (c < 2048)
-	            len += 2;
-	        else if ((c & 0xFC00) === 0xD800 && (string.charCodeAt(i + 1) & 0xFC00) === 0xDC00) {
-	            ++i;
-	            len += 4;
-	        } else
-	            len += 3;
-	    }
-	    return len;
-	};
+		/**
+		 * A minimal UTF8 implementation for number arrays.
+		 * @memberof util
+		 * @namespace
+		 */
+		var utf8 = exports;
 
-	/**
-	 * Reads UTF8 bytes as a string.
-	 * @param {Uint8Array} buffer Source buffer
-	 * @param {number} start Source start
-	 * @param {number} end Source end
-	 * @returns {string} String read
-	 */
-	utf8.read = function utf8_read(buffer, start, end) {
-	    var len = end - start;
-	    if (len < 1)
-	        return "";
-	    var parts = null,
-	        chunk = [],
-	        i = 0, // char offset
-	        t;     // temporary
-	    while (start < end) {
-	        t = buffer[start++];
-	        if (t < 128)
-	            chunk[i++] = t;
-	        else if (t > 191 && t < 224)
-	            chunk[i++] = (t & 31) << 6 | buffer[start++] & 63;
-	        else if (t > 239 && t < 365) {
-	            t = ((t & 7) << 18 | (buffer[start++] & 63) << 12 | (buffer[start++] & 63) << 6 | buffer[start++] & 63) - 0x10000;
-	            chunk[i++] = 0xD800 + (t >> 10);
-	            chunk[i++] = 0xDC00 + (t & 1023);
-	        } else
-	            chunk[i++] = (t & 15) << 12 | (buffer[start++] & 63) << 6 | buffer[start++] & 63;
-	        if (i > 8191) {
-	            (parts || (parts = [])).push(String.fromCharCode.apply(String, chunk));
-	            i = 0;
-	        }
-	    }
-	    if (parts) {
-	        if (i)
-	            parts.push(String.fromCharCode.apply(String, chunk.slice(0, i)));
-	        return parts.join("");
-	    }
-	    return String.fromCharCode.apply(String, chunk.slice(0, i));
-	};
+		/**
+		 * Calculates the UTF8 byte length of a string.
+		 * @param {string} string String
+		 * @returns {number} Byte length
+		 */
+		utf8.length = function utf8_length(string) {
+		    var len = 0,
+		        c = 0;
+		    for (var i = 0; i < string.length; ++i) {
+		        c = string.charCodeAt(i);
+		        if (c < 128)
+		            len += 1;
+		        else if (c < 2048)
+		            len += 2;
+		        else if ((c & 0xFC00) === 0xD800 && (string.charCodeAt(i + 1) & 0xFC00) === 0xDC00) {
+		            ++i;
+		            len += 4;
+		        } else
+		            len += 3;
+		    }
+		    return len;
+		};
 
-	/**
-	 * Writes a string as UTF8 bytes.
-	 * @param {string} string Source string
-	 * @param {Uint8Array} buffer Destination buffer
-	 * @param {number} offset Destination offset
-	 * @returns {number} Bytes written
-	 */
-	utf8.write = function utf8_write(string, buffer, offset) {
-	    var start = offset,
-	        c1, // character 1
-	        c2; // character 2
-	    for (var i = 0; i < string.length; ++i) {
-	        c1 = string.charCodeAt(i);
-	        if (c1 < 128) {
-	            buffer[offset++] = c1;
-	        } else if (c1 < 2048) {
-	            buffer[offset++] = c1 >> 6       | 192;
-	            buffer[offset++] = c1       & 63 | 128;
-	        } else if ((c1 & 0xFC00) === 0xD800 && ((c2 = string.charCodeAt(i + 1)) & 0xFC00) === 0xDC00) {
-	            c1 = 0x10000 + ((c1 & 0x03FF) << 10) + (c2 & 0x03FF);
-	            ++i;
-	            buffer[offset++] = c1 >> 18      | 240;
-	            buffer[offset++] = c1 >> 12 & 63 | 128;
-	            buffer[offset++] = c1 >> 6  & 63 | 128;
-	            buffer[offset++] = c1       & 63 | 128;
-	        } else {
-	            buffer[offset++] = c1 >> 12      | 224;
-	            buffer[offset++] = c1 >> 6  & 63 | 128;
-	            buffer[offset++] = c1       & 63 | 128;
-	        }
-	    }
-	    return offset - start;
-	}; 
-} (utf8$2));
+		/**
+		 * Reads UTF8 bytes as a string.
+		 * @param {Uint8Array} buffer Source buffer
+		 * @param {number} start Source start
+		 * @param {number} end Source end
+		 * @returns {string} String read
+		 */
+		utf8.read = function utf8_read(buffer, start, end) {
+		    var len = end - start;
+		    if (len < 1)
+		        return "";
+		    var parts = null,
+		        chunk = [],
+		        i = 0, // char offset
+		        t;     // temporary
+		    while (start < end) {
+		        t = buffer[start++];
+		        if (t < 128)
+		            chunk[i++] = t;
+		        else if (t > 191 && t < 224)
+		            chunk[i++] = (t & 31) << 6 | buffer[start++] & 63;
+		        else if (t > 239 && t < 365) {
+		            t = ((t & 7) << 18 | (buffer[start++] & 63) << 12 | (buffer[start++] & 63) << 6 | buffer[start++] & 63) - 0x10000;
+		            chunk[i++] = 0xD800 + (t >> 10);
+		            chunk[i++] = 0xDC00 + (t & 1023);
+		        } else
+		            chunk[i++] = (t & 15) << 12 | (buffer[start++] & 63) << 6 | buffer[start++] & 63;
+		        if (i > 8191) {
+		            (parts || (parts = [])).push(String.fromCharCode.apply(String, chunk));
+		            i = 0;
+		        }
+		    }
+		    if (parts) {
+		        if (i)
+		            parts.push(String.fromCharCode.apply(String, chunk.slice(0, i)));
+		        return parts.join("");
+		    }
+		    return String.fromCharCode.apply(String, chunk.slice(0, i));
+		};
+
+		/**
+		 * Writes a string as UTF8 bytes.
+		 * @param {string} string Source string
+		 * @param {Uint8Array} buffer Destination buffer
+		 * @param {number} offset Destination offset
+		 * @returns {number} Bytes written
+		 */
+		utf8.write = function utf8_write(string, buffer, offset) {
+		    var start = offset,
+		        c1, // character 1
+		        c2; // character 2
+		    for (var i = 0; i < string.length; ++i) {
+		        c1 = string.charCodeAt(i);
+		        if (c1 < 128) {
+		            buffer[offset++] = c1;
+		        } else if (c1 < 2048) {
+		            buffer[offset++] = c1 >> 6       | 192;
+		            buffer[offset++] = c1       & 63 | 128;
+		        } else if ((c1 & 0xFC00) === 0xD800 && ((c2 = string.charCodeAt(i + 1)) & 0xFC00) === 0xDC00) {
+		            c1 = 0x10000 + ((c1 & 0x03FF) << 10) + (c2 & 0x03FF);
+		            ++i;
+		            buffer[offset++] = c1 >> 18      | 240;
+		            buffer[offset++] = c1 >> 12 & 63 | 128;
+		            buffer[offset++] = c1 >> 6  & 63 | 128;
+		            buffer[offset++] = c1       & 63 | 128;
+		        } else {
+		            buffer[offset++] = c1 >> 12      | 224;
+		            buffer[offset++] = c1 >> 6  & 63 | 128;
+		            buffer[offset++] = c1       & 63 | 128;
+		        }
+		    }
+		    return offset - start;
+		}; 
+	} (utf8$2));
+	return utf8$2;
+}
 
 var pool_1 = pool;
 
@@ -1307,7 +1322,7 @@ function requireMinimal () {
 		util.base64 = base64$1;
 
 		// base class of rpc.Service
-		util.EventEmitter = eventemitter;
+		util.EventEmitter = requireEventemitter();
 
 		// float handling accross browsers
 		util.float = float;
@@ -1316,7 +1331,7 @@ function requireMinimal () {
 		util.inquire = inquire_1;
 
 		// converts to / from utf8 encoded strings
-		util.utf8 = utf8$2;
+		util.utf8 = requireUtf8();
 
 		// provides a node-like buffer pool in the browser
 		util.pool = pool_1;

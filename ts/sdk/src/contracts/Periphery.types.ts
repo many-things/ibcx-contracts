@@ -31,23 +31,16 @@ export type QueryMsg = {
     core_addr: string;
     input_asset: string;
     output_amount: Uint128;
-    swap_info: SwapInfo[];
+    swap_info: SwapInfosCompact;
   };
 } | {
   simulate_burn_exact_amount_in: {
     core_addr: string;
     input_amount: Uint128;
     output_asset: string;
-    swap_info: SwapInfo[];
+    swap_info: SwapInfosCompact;
   };
 };
-export type SwapInfo = [RouteKey, SwapRoutes];
-export type RouteKey = [string, string];
-export type SwapRoutes = SwapRoute[];
-export interface SwapRoute {
-  pool_id: number;
-  token_denom: string;
-}
 export interface MigrateMsg {
   force?: boolean | null;
 }
