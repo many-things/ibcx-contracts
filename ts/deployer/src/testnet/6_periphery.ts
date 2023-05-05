@@ -42,16 +42,25 @@ async function main() {
 
   const { index_denom } = await client.cc.getConfig({});
 
+  const mintRoutes = denoms
+    .filter(({ origin }) => origin !== "uosmo")
+    .map(({ created }, i) => ({
+      key: `uosmo,${created}`,
+      routes: [`${poolIds[i] || 0},uosmo`],
+    }));
+
+  const burnRoutes = denoms
+    .filter(({ origin }) => origin !== "uosmo")
+    .map(({ created }, i) => ({
+      key: `${created},uosmo`,
+      routes: [`${poolIds[i] || 0},uosmo`],
+    }));
+
   const simMintResp = await client.qc.simulateMintExactAmountOut({
     coreAddr: core,
     inputAsset: "uosmo",
     outputAmount: `${1e6}`,
-    swapInfo: denoms
-      .filter(({ origin }) => origin !== "uosmo")
-      .map(({ created }, i) => [
-        ["uosmo", created],
-        [{ pool_id: Number(poolIds[i]) || 0, token_denom: "uosmo" }],
-      ]),
+    swapInfo: mintRoutes,
   });
   console.log(simMintResp);
 
@@ -59,12 +68,7 @@ async function main() {
     coreAddr: core,
     inputAmount: `${1e6}`,
     outputAsset: "uosmo",
-    swapInfo: denoms
-      .filter(({ origin }) => origin !== "uosmo")
-      .map(({ created }, i) => [
-        [created, "uosmo"],
-        [{ pool_id: Number(poolIds[i]) || 0, token_denom: "uosmo" }],
-      ]),
+    swapInfo: burnRoutes,
   });
   console.log(simBurnResp);
 
@@ -73,12 +77,7 @@ async function main() {
       coreAddr: core,
       inputAsset: "uosmo",
       outputAmount: `${1e6}`,
-      swapInfo: denoms
-        .filter(({ origin }) => origin !== "uosmo")
-        .map(({ created }, i) => [
-          ["uosmo", created],
-          [{ pool_id: Number(poolIds[i]) || 0, token_denom: "uosmo" }],
-        ]),
+      swapInfo: mintRoutes,
     },
     "auto",
     undefined,
@@ -94,12 +93,7 @@ async function main() {
       coreAddr: core,
       outputAsset: "uosmo",
       minOutputAmount: `${1e6}`,
-      swapInfo: denoms
-        .filter(({ origin }) => origin !== "uosmo")
-        .map(({ created }, i) => [
-          [created, "uosmo"],
-          [{ pool_id: Number(poolIds[i]) || 0, token_denom: "uosmo" }],
-        ]),
+      swapInfo: burnRoutes,
     },
     "auto",
     undefined,
