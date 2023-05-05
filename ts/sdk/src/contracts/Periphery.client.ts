@@ -6,7 +6,7 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { StdFee } from "@cosmjs/amino";
-import { InstantiateMsg, ExecuteMsg, Uint128, SwapInfo, RouteKey, SwapRoutes, SwapRoute, QueryMsg, MigrateMsg, SimulateBurnExactAmountInResponse, Coin, SimulateMintExactAmountOutResponse } from "./Periphery.types";
+import { InstantiateMsg, ExecuteMsg, Uint128, SwapInfosCompact, SwapInfoCompact, QueryMsg, SwapInfo, RouteKey, SwapRoutes, SwapRoute, MigrateMsg, SimulateBurnExactAmountInResponse, Coin, SimulateMintExactAmountOutResponse } from "./Periphery.types";
 export interface PeripheryReadOnlyInterface {
   contractAddress: string;
   simulateMintExactAmountOut: ({
@@ -96,7 +96,7 @@ export interface PeripheryInterface extends PeripheryReadOnlyInterface {
     coreAddr: string;
     inputAsset: string;
     outputAmount: Uint128;
-    swapInfo: SwapInfo[];
+    swapInfo: SwapInfosCompact;
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
   burnExactAmountIn: ({
     coreAddr,
@@ -107,7 +107,7 @@ export interface PeripheryInterface extends PeripheryReadOnlyInterface {
     coreAddr: string;
     minOutputAmount: Uint128;
     outputAsset: string;
-    swapInfo: SwapInfo[];
+    swapInfo: SwapInfosCompact;
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
 export class PeripheryClient extends PeripheryQueryClient implements PeripheryInterface {
@@ -133,7 +133,7 @@ export class PeripheryClient extends PeripheryQueryClient implements PeripheryIn
     coreAddr: string;
     inputAsset: string;
     outputAmount: Uint128;
-    swapInfo: SwapInfo[];
+    swapInfo: SwapInfosCompact;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       mint_exact_amount_out: {
@@ -153,7 +153,7 @@ export class PeripheryClient extends PeripheryQueryClient implements PeripheryIn
     coreAddr: string;
     minOutputAmount: Uint128;
     outputAsset: string;
-    swapInfo: SwapInfo[];
+    swapInfo: SwapInfosCompact;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       burn_exact_amount_in: {

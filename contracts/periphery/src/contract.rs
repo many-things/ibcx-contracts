@@ -55,7 +55,7 @@ pub fn execute(
             core_addr,
             output_amount,
             input_asset,
-            swap_info,
+            swap_info.into(),
         ),
         BurnExactAmountIn {
             core_addr,
@@ -69,7 +69,7 @@ pub fn execute(
             core_addr,
             output_asset,
             min_output_amount,
-            swap_info,
+            swap_info.into(),
         ),
     }
 }
