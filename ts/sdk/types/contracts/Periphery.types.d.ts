@@ -10,23 +10,21 @@ export type ExecuteMsg = {
         core_addr: string;
         input_asset: string;
         output_amount: Uint128;
-        swap_info: SwapInfo[];
+        swap_info: SwapInfosCompact;
     };
 } | {
     burn_exact_amount_in: {
         core_addr: string;
         min_output_amount: Uint128;
         output_asset: string;
-        swap_info: SwapInfo[];
+        swap_info: SwapInfosCompact;
     };
 };
 export type Uint128 = string;
-export type SwapInfo = [RouteKey, SwapRoutes];
-export type RouteKey = [string, string];
-export type SwapRoutes = SwapRoute[];
-export interface SwapRoute {
-    pool_id: number;
-    token_denom: string;
+export type SwapInfosCompact = SwapInfoCompact[];
+export interface SwapInfoCompact {
+    key: string;
+    routes: string[];
 }
 export type QueryMsg = {
     simulate_mint_exact_amount_out: {
@@ -43,6 +41,13 @@ export type QueryMsg = {
         swap_info: SwapInfo[];
     };
 };
+export type SwapInfo = [RouteKey, SwapRoutes];
+export type RouteKey = [string, string];
+export type SwapRoutes = SwapRoute[];
+export interface SwapRoute {
+    pool_id: number;
+    token_denom: string;
+}
 export interface MigrateMsg {
     force?: boolean | null;
 }

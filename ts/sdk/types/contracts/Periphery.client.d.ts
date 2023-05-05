@@ -5,7 +5,7 @@
 */
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { StdFee } from "@cosmjs/amino";
-import { Uint128, SwapInfo, SimulateBurnExactAmountInResponse, Coin, SimulateMintExactAmountOutResponse } from "./Periphery.types";
+import { Uint128, SwapInfosCompact, SwapInfo, SimulateBurnExactAmountInResponse, Coin, SimulateMintExactAmountOutResponse } from "./Periphery.types";
 export interface PeripheryReadOnlyInterface {
     contractAddress: string;
     simulateMintExactAmountOut: ({ coreAddr, inputAsset, outputAmount, swapInfo }: {
@@ -45,13 +45,13 @@ export interface PeripheryInterface extends PeripheryReadOnlyInterface {
         coreAddr: string;
         inputAsset: string;
         outputAmount: Uint128;
-        swapInfo: SwapInfo[];
+        swapInfo: SwapInfosCompact;
     }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
     burnExactAmountIn: ({ coreAddr, minOutputAmount, outputAsset, swapInfo }: {
         coreAddr: string;
         minOutputAmount: Uint128;
         outputAsset: string;
-        swapInfo: SwapInfo[];
+        swapInfo: SwapInfosCompact;
     }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
 export declare class PeripheryClient extends PeripheryQueryClient implements PeripheryInterface {
@@ -63,13 +63,13 @@ export declare class PeripheryClient extends PeripheryQueryClient implements Per
         coreAddr: string;
         inputAsset: string;
         outputAmount: Uint128;
-        swapInfo: SwapInfo[];
+        swapInfo: SwapInfosCompact;
     }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
     burnExactAmountIn: ({ coreAddr, minOutputAmount, outputAsset, swapInfo }: {
         coreAddr: string;
         minOutputAmount: Uint128;
         outputAsset: string;
-        swapInfo: SwapInfo[];
+        swapInfo: SwapInfosCompact;
     }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
 //# sourceMappingURL=Periphery.client.d.ts.map

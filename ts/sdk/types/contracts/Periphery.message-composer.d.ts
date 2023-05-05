@@ -4,7 +4,7 @@
 * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
 */
 import { MsgExecuteContractEncodeObject } from "cosmwasm";
-import { Uint128, SwapInfo, Coin } from "./Periphery.types";
+import { Uint128, SwapInfosCompact, Coin } from "./Periphery.types";
 export interface PeripheryMessage {
     contractAddress: string;
     sender: string;
@@ -12,13 +12,13 @@ export interface PeripheryMessage {
         coreAddr: string;
         inputAsset: string;
         outputAmount: Uint128;
-        swapInfo: SwapInfo[];
+        swapInfo: SwapInfosCompact;
     }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
     burnExactAmountIn: ({ coreAddr, minOutputAmount, outputAsset, swapInfo }: {
         coreAddr: string;
         minOutputAmount: Uint128;
         outputAsset: string;
-        swapInfo: SwapInfo[];
+        swapInfo: SwapInfosCompact;
     }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
 }
 export declare class PeripheryMessageComposer implements PeripheryMessage {
@@ -29,13 +29,13 @@ export declare class PeripheryMessageComposer implements PeripheryMessage {
         coreAddr: string;
         inputAsset: string;
         outputAmount: Uint128;
-        swapInfo: SwapInfo[];
+        swapInfo: SwapInfosCompact;
     }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
     burnExactAmountIn: ({ coreAddr, minOutputAmount, outputAsset, swapInfo }: {
         coreAddr: string;
         minOutputAmount: Uint128;
         outputAsset: string;
-        swapInfo: SwapInfo[];
+        swapInfo: SwapInfosCompact;
     }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
 }
 //# sourceMappingURL=Periphery.message-composer.d.ts.map
