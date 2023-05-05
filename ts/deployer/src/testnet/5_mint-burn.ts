@@ -48,25 +48,27 @@ async function main() {
 
   const { index_denom } = await client.core.getConfig({});
 
+  const amount = 100 * 1e6;
+
   const { units } = await client.core.getPortfolio({});
   const funds = units
     .map(([denom, unit]) => ({
       denom,
-      amount: `${Math.ceil(Number(unit) * 1e6)}`,
+      amount: `${Math.ceil(Number(unit) * amount)}`,
     }))
     .sort((a, b) => (a.denom < b.denom ? -1 : 1));
 
   const mintResp = await client.core.mint(
-    { amount: `${1e6}` },
+    { amount: `${amount}` },
     "auto",
     undefined,
     funds
   );
   console.log({ action: "mint", txHash: mintResp.transactionHash });
 
-  await checkBalance(client.q, sender, index_denom, `${1e6}`, "mint");
+  await checkBalance(client.q, sender, index_denom, `${amount}`, "mint");
 
-  const burnAmount = [{ denom: index_denom, amount: `${1e6}` }];
+  const burnAmount = [{ denom: index_denom, amount: `${amount}` }];
   const burnResp = await client.core.burn({}, "auto", undefined, burnAmount);
   console.log({ action: "burn", txHash: burnResp.transactionHash });
 
