@@ -138,7 +138,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
                 &deps.querier,
                 &env.contract.address,
                 &env.contract.address,
-                swap_info,
+                swap_info.into(),
                 sim_amount_desired.clone(),
                 &coin(Uint128::MAX.u128(), &input_asset),
             )?;
@@ -166,7 +166,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
                 &deps.querier,
                 &env.contract.address,
                 &env.contract.address,
-                swap_info,
+                swap_info.into(),
                 expected,
                 &coin(Uint128::zero().u128(), &output_asset),
             )?;

@@ -78,7 +78,7 @@ pub enum QueryMsg {
         core_addr: String,
         output_amount: Uint128,
         input_asset: String,
-        swap_info: Vec<SwapInfo>,
+        swap_info: SwapInfosCompact,
     },
 
     #[returns(SimulateBurnExactAmountInResponse)]
@@ -86,7 +86,7 @@ pub enum QueryMsg {
         core_addr: String,
         input_amount: Uint128,
         output_asset: String,
-        swap_info: Vec<SwapInfo>,
+        swap_info: SwapInfosCompact,
     },
 }
 
