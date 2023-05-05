@@ -1,16 +1,9 @@
-import {
-  DeliverTxResponse,
-  GasPrice,
-  SigningStargateClient,
-} from "@cosmjs/stargate";
 import { execSync } from "child_process";
 import { osmosis } from "osmojs";
 
 import config, { NETWORK } from "../config";
-import { registry, aminoTypes } from "../codec";
-import { ExportReport } from "../util";
+import { ExportReport, makeClient } from "../util";
 
-const { createRPCQueryClient } = osmosis.ClientFactory;
 const { createDenom } =
   osmosis.tokenfactory.v1beta1.MessageComposer.withTypeUrl;
 
@@ -24,16 +17,7 @@ async function main() {
 
   console.log(wallet.address);
 
-  const client = {
-    m: await SigningStargateClient.connectWithSigner(
-      config.args.endpoint,
-      signer,
-      { registry, aminoTypes, gasPrice: GasPrice.fromString("0.025uosmo") }
-    ),
-    q: await createRPCQueryClient({
-      rpcEndpoint: config.args.endpoint,
-    }),
-  };
+  const client = await makeClient(signer);
 
   const { balances } = await client.q.cosmos.bank.v1beta1.allBalances({
     address: wallet.address,

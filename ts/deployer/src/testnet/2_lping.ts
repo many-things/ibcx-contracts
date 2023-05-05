@@ -1,16 +1,11 @@
-import {
-  DeliverTxResponse,
-  GasPrice,
-  SigningStargateClient,
-} from "@cosmjs/stargate";
+import { DeliverTxResponse } from "@cosmjs/stargate";
 import { osmosis } from "osmojs";
+import Long from "long";
+import { SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
 
 import config from "../config";
-import { registry, aminoTypes } from "../codec";
-import { ExportReport, LoadReport } from "../util";
-import Long from "long";
+import { ExportReport, LoadReport, makeClient } from "../util";
 
-const { createRPCQueryClient } = osmosis.ClientFactory;
 const { joinPool } = osmosis.gamm.v1beta1.MessageComposer.withTypeUrl;
 const { createBalancerPool } =
   osmosis.gamm.poolmodels.balancer.v1beta1.MessageComposer.withTypeUrl;
@@ -32,7 +27,7 @@ type CreatePoolReport = {
 };
 
 async function addPool(
-  client: SigningStargateClient,
+  client: SigningCosmWasmClient,
   sender: string,
   denoms: CreateDenomReport["denoms"],
   poolIds: string[]
@@ -62,7 +57,7 @@ async function addPool(
 }
 
 async function createPool(
-  client: SigningStargateClient,
+  client: SigningCosmWasmClient,
   sender: string,
   denoms: CreateDenomReport["denoms"],
   amount: number
@@ -123,16 +118,7 @@ async function main() {
   const signer = await config.getSigner();
   const [{ address: sender }] = await signer.getAccounts();
 
-  const client = {
-    m: await SigningStargateClient.connectWithSigner(
-      config.args.endpoint,
-      signer,
-      { registry, aminoTypes, gasPrice: GasPrice.fromString("0.025uosmo") }
-    ),
-    q: await createRPCQueryClient({
-      rpcEndpoint: config.args.endpoint,
-    }),
-  };
+  const client = await makeClient(signer);
 
   const OSMO_AMOUNT = 2_000;
 

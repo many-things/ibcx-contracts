@@ -1,14 +1,10 @@
 import { osmosis } from "osmojs";
-const { createRPCQueryClient } = osmosis.ClientFactory;
 
-import { GasPrice } from "@cosmjs/stargate";
-import { SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
 import CoreTypes from "@many-things/ibcx-contracts-sdk/types/contracts/Core.types";
 import PeripheryTypes from "@many-things/ibcx-contracts-sdk/types/contracts/Periphery.types";
 
 import config from "../config";
-import { registry, aminoTypes } from "../codec";
-import { ExportReport, LoadReport } from "../util";
+import { ExportReport, LoadReport, makeClient } from "../util";
 
 type StoreContractReport = {
   codes: {
@@ -30,16 +26,7 @@ async function main() {
   const signer = await config.getSigner();
   const [{ address: sender }] = await signer.getAccounts();
 
-  const client = {
-    m: await SigningCosmWasmClient.connectWithSigner(
-      config.args.endpoint,
-      signer,
-      { registry, aminoTypes, gasPrice: GasPrice.fromString("0.025uosmo") }
-    ),
-    q: await createRPCQueryClient({
-      rpcEndpoint: config.args.endpoint,
-    }),
-  };
+  const client = await makeClient(signer);
 
   const { denoms } = LoadReport<CreateDenomReport>("1_setup")!;
   const { codes } = LoadReport<StoreContractReport>("3_store")!;
