@@ -60,13 +60,13 @@ pub enum ExecuteMsg {
         core_addr: String,
         output_amount: Uint128,
         input_asset: String,
-        swap_info: Vec<SwapInfoCompact>,
+        swap_info: SwapInfosCompact,
     },
     BurnExactAmountIn {
         core_addr: String,
         output_asset: String,
         min_output_amount: Uint128,
-        swap_info: Vec<SwapInfoCompact>,
+        swap_info: SwapInfosCompact,
     },
 }
 
