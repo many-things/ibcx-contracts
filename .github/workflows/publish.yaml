@@ -39,6 +39,5 @@ jobs:
             artifacts/checksums.txt
             artifacts/ibcx_airdrop.wasm
             artifacts/ibcx_core.wasm
-            artifacts/ibcx_faucet.wasm
             artifacts/ibcx_periphery.wasm
           body_path: CHANGELOG.md
