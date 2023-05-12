@@ -1,11 +1,18 @@
 use std::{fs, path::Path, str::FromStr};
 
-use cosmwasm_std::{coin, Decimal, Uint128};
+use cosmwasm_std::{coin, CosmosMsg, Decimal, Uint128};
 
-use osmosis_std::types::osmosis::poolmanager::v1beta1::{
-    EstimateSwapExactAmountInRequest, EstimateSwapExactAmountInResponse,
-    EstimateSwapExactAmountOutRequest, EstimateSwapExactAmountOutResponse, SwapAmountInRoute,
-    SwapAmountOutRoute,
+use osmosis_std::{
+    shim::{Duration, Timestamp},
+    types::osmosis::{
+        incentives::MsgCreateGauge,
+        lockup::{LockQueryType, QueryCondition},
+        poolmanager::v1beta1::{
+            EstimateSwapExactAmountInRequest, EstimateSwapExactAmountInResponse,
+            EstimateSwapExactAmountOutRequest, EstimateSwapExactAmountOutResponse,
+            SwapAmountInRoute, SwapAmountOutRoute,
+        },
+    },
 };
 use osmosis_test_tube::{
     cosmrs::proto::cosmos::bank::v1beta1::QueryBalanceRequest,
@@ -16,7 +23,7 @@ use osmosis_test_tube::{
     Account, Bank, Gamm, Module, OsmosisTestApp, Runner, SigningAccount, TokenFactory, Wasm,
 };
 
-use ibcx_interface::{core, periphery, types};
+use ibcx_interface::{core, periphery};
 
 const NORM: u128 = 1_000_000_000_000_000;
 
@@ -88,8 +95,70 @@ fn create_pool(
     .pool_id
 }
 
+/**
+{
+  "body": {
+    "messages": [
+      {
+        "@type": "/osmosis.incentives.MsgCreateGauge",
+        "is_perpetual": false,
+        "owner": "osmo14n3a65fnqz9jve85l23al6m3pjugf0atvrfqh5",
+        "distribute_to": {
+          "lock_query_type": "ByDuration",
+          "denom": "gamm/pool/1013",
+          "duration": "1209600s",
+          "timestamp": "1970-01-01T00:00:00Z"
+        },
+        "coins": [{ "denom": "uion", "amount": "10000" }],
+        "start_time": "2023-04-13T19:00:00Z",
+        "num_epochs_paid_over": "120"
+      }
+    ],
+    "memo": "",
+    "timeout_height": "0",
+    "extension_options": [],
+    "non_critical_extension_options": []
+  },
+  "auth_info": {
+    "signer_infos": [],
+    "fee": {
+      "amount": [{ "denom": "uosmo", "amount": "450" }],
+      "gas_limit": "179795",
+      "payer": "",
+      "granter": ""
+    }
+  },
+  "signatures": []
+}
+ */
 #[test]
-fn test() {
+fn test_cosmos_msg_to_json() {
+    let msgs: Vec<CosmosMsg> = vec![MsgCreateGauge {
+        is_perpetual: false,
+        owner: "osmo1k8re7jwz6rnnwrktnejdwkwnncte7ek7gt29gvnl3sdrg9mtnqkse6nmqm".to_string(),
+        distribute_to: Some(QueryCondition {
+            lock_query_type: LockQueryType::ByDuration.into(),
+            denom: "gamm/pool/1013".to_string(),
+            duration: Some(Duration {
+                seconds: 1209600,
+                nanos: 0,
+            }),
+            timestamp: None,
+        }),
+        coins: vec![coin(70980000, "uion").into()],
+        start_time: Some(Timestamp {
+            seconds: 1684497600,
+            nanos: 0,
+        }),
+        num_epochs_paid_over: 120,
+    }
+    .into()];
+
+    println!("{}", serde_json::to_string_pretty(&msgs).unwrap());
+}
+
+#[test]
+fn test_integration() {
     let app = OsmosisTestApp::new();
 
     let acc = app.init_account(&[coin(10 * NORM, "uosmo")]).unwrap();
@@ -268,18 +337,15 @@ fn test() {
 
     let pairs = [(uusd, uusd_pool), (ujpy, ujpy_pool), (ukrw, ukrw_pool)];
 
-    let swap_info = pairs
-        .iter()
-        .map(|(denom, pool_id)| {
-            periphery::SwapInfo((
-                periphery::RouteKey(("uosmo".to_string(), denom.clone())),
-                types::SwapRoutes(vec![types::SwapRoute {
-                    pool_id: *pool_id,
-                    token_denom: "uosmo".to_string(),
-                }]),
-            ))
-        })
-        .collect::<Vec<_>>();
+    let swap_info = periphery::SwapInfosCompact(
+        pairs
+            .iter()
+            .map(|(denom, pool_id)| periphery::SwapInfoCompact {
+                key: format!("uosmo,{}", denom),
+                routes: vec![format!("{},uosmo", pool_id)],
+            })
+            .collect::<Vec<_>>(),
+    );
 
     let sim_mint_resp: periphery::SimulateMintExactAmountOutResponse = wasm
         .query(
@@ -306,18 +372,15 @@ fn test() {
     )
     .unwrap();
 
-    let swap_info = pairs
-        .iter()
-        .map(|(denom, pool_id)| {
-            periphery::SwapInfo((
-                periphery::RouteKey((denom.clone(), "uosmo".to_string())),
-                types::SwapRoutes(vec![types::SwapRoute {
-                    pool_id: *pool_id,
-                    token_denom: "uosmo".to_string(),
-                }]),
-            ))
-        })
-        .collect::<Vec<_>>();
+    let swap_info = periphery::SwapInfosCompact(
+        pairs
+            .iter()
+            .map(|(denom, pool_id)| periphery::SwapInfoCompact {
+                key: format!("{},uosmo", denom),
+                routes: vec![format!("{},uosmo", pool_id)],
+            })
+            .collect::<Vec<_>>(),
+    );
 
     let sim_burn_resp: periphery::SimulateBurnExactAmountInResponse = wasm
         .query(
