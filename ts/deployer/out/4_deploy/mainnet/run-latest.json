@@ -1,7 +1,7 @@
 {
   "txs": {
     "core": {
-      "contractAddress": "osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4",
+      "contractAddress": "osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu",
       "logs": [
         {
           "msg_index": 0,
@@ -12,7 +12,7 @@
               "attributes": [
                 {
                   "key": "receiver",
-                  "value": "osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4"
+                  "value": "osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu"
                 },
                 {
                   "key": "amount",
@@ -41,7 +41,7 @@
                 },
                 {
                   "key": "spender",
-                  "value": "osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4"
+                  "value": "osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu"
                 },
                 {
                   "key": "amount",
@@ -54,11 +54,11 @@
               "attributes": [
                 {
                   "key": "creator",
-                  "value": "osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4"
+                  "value": "osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu"
                 },
                 {
                   "key": "new_token_denom",
-                  "value": "factory/osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4/uibcx"
+                  "value": "factory/osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu/uibcx"
                 }
               ]
             },
@@ -67,7 +67,7 @@
               "attributes": [
                 {
                   "key": "_contract_address",
-                  "value": "osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4"
+                  "value": "osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu"
                 },
                 {
                   "key": "code_id",
@@ -97,7 +97,7 @@
               "attributes": [
                 {
                   "key": "_contract_address",
-                  "value": "osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4"
+                  "value": "osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu"
                 }
               ]
             },
@@ -106,7 +106,7 @@
               "attributes": [
                 {
                   "key": "recipient",
-                  "value": "osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4"
+                  "value": "osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu"
                 },
                 {
                   "key": "sender",
@@ -122,7 +122,7 @@
                 },
                 {
                   "key": "sender",
-                  "value": "osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4"
+                  "value": "osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu"
                 },
                 {
                   "key": "amount",
@@ -135,7 +135,7 @@
               "attributes": [
                 {
                   "key": "_contract_address",
-                  "value": "osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4"
+                  "value": "osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu"
                 },
                 {
                   "key": "method",
@@ -143,7 +143,7 @@
                 },
                 {
                   "key": "_contract_address",
-                  "value": "osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4"
+                  "value": "osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu"
                 },
                 {
                   "key": "method",
@@ -151,15 +151,15 @@
                 },
                 {
                   "key": "new_denom",
-                  "value": "factory/osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4/uibcx"
+                  "value": "factory/osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu/uibcx"
                 }
               ]
             }
           ]
         }
       ],
-      "height": 9652835,
-      "transactionHash": "863E6D4AE5B15F4AF1CF053BE2A099E70C7F1D9B0417CEB9F4F84E67A28A008A",
+      "height": 9653091,
+      "transactionHash": "D563A2050974EB86C52E6768E6264F616C1B98FB64D028CED4EC2C22B1F1394E",
       "events": [
         {
           "type": "coin_spent",
@@ -170,7 +170,7 @@
             },
             {
               "key": "amount",
-              "value": "12196uosmo"
+              "value": "12003uosmo"
             }
           ]
         },
@@ -183,7 +183,7 @@
             },
             {
               "key": "amount",
-              "value": "12196uosmo"
+              "value": "12003uosmo"
             }
           ]
         },
@@ -200,7 +200,7 @@
             },
             {
               "key": "amount",
-              "value": "12196uosmo"
+              "value": "12003uosmo"
             }
           ]
         },
@@ -218,7 +218,7 @@
           "attributes": [
             {
               "key": "fee",
-              "value": "12196uosmo"
+              "value": "12003uosmo"
             }
           ]
         },
@@ -227,7 +227,7 @@
           "attributes": [
             {
               "key": "acc_seq",
-              "value": "osmo1yms874yjkgx4z86082e38fvp5myzdcu5xnhnam/0"
+              "value": "osmo1yms874yjkgx4z86082e38fvp5myzdcu5xnhnam/2"
             }
           ]
         },
@@ -236,7 +236,7 @@
           "attributes": [
             {
               "key": "signature",
-              "value": "gZNINX3sv7ywnnbiL+Gr+phyEkhzKuXpjKZaXGOCMUR+LrFcWusePoY0frOrNuv1ryaRyZaLtqhr9Ab3KgpJVA=="
+              "value": "ca1a6k0bOAPsO5k0NI0EuLnDX6QQAvg98XLGadY6aKBQsL4WdqGUhmXLiRq/GyDZg+jAPQP/dMrnqydCC1MChg=="
             }
           ]
         },
@@ -280,7 +280,7 @@
           "attributes": [
             {
               "key": "receiver",
-              "value": "osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4"
+              "value": "osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu"
             },
             {
               "key": "amount",
@@ -293,7 +293,7 @@
           "attributes": [
             {
               "key": "recipient",
-              "value": "osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4"
+              "value": "osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu"
             },
             {
               "key": "sender",
@@ -310,7 +310,7 @@
           "attributes": [
             {
               "key": "_contract_address",
-              "value": "osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4"
+              "value": "osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu"
             },
             {
               "key": "code_id",
@@ -323,7 +323,7 @@
           "attributes": [
             {
               "key": "_contract_address",
-              "value": "osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4"
+              "value": "osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu"
             },
             {
               "key": "method",
@@ -336,7 +336,7 @@
           "attributes": [
             {
               "key": "spender",
-              "value": "osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4"
+              "value": "osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu"
             },
             {
               "key": "amount",
@@ -366,7 +366,7 @@
             },
             {
               "key": "sender",
-              "value": "osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4"
+              "value": "osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu"
             },
             {
               "key": "amount",
@@ -379,11 +379,11 @@
           "attributes": [
             {
               "key": "creator",
-              "value": "osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4"
+              "value": "osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu"
             },
             {
               "key": "new_token_denom",
-              "value": "factory/osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4/uibcx"
+              "value": "factory/osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu/uibcx"
             }
           ]
         },
@@ -392,7 +392,7 @@
           "attributes": [
             {
               "key": "_contract_address",
-              "value": "osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4"
+              "value": "osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu"
             }
           ]
         },
@@ -401,7 +401,7 @@
           "attributes": [
             {
               "key": "_contract_address",
-              "value": "osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4"
+              "value": "osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu"
             },
             {
               "key": "method",
@@ -409,7 +409,7 @@
             },
             {
               "key": "new_denom",
-              "value": "factory/osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4/uibcx"
+              "value": "factory/osmo1w2dqd98hzu4ydku5hhv3f0gc468jdlayrqeqedrjxwrq62m7yekqrgvlyu/uibcx"
             }
           ]
         },
@@ -422,7 +422,7 @@
             },
             {
               "key": "amount",
-              "value": "12196uosmo"
+              "value": "12003uosmo"
             }
           ]
         },
@@ -435,7 +435,7 @@
             },
             {
               "key": "amount",
-              "value": "12196uosmo"
+              "value": "12003uosmo"
             }
           ]
         },
@@ -452,7 +452,7 @@
             },
             {
               "key": "amount",
-              "value": "12196uosmo"
+              "value": "12003uosmo"
             }
           ]
         },
@@ -470,7 +470,7 @@
           "attributes": [
             {
               "key": "fee",
-              "value": "12196uosmo"
+              "value": "12003uosmo"
             }
           ]
         },
@@ -479,7 +479,7 @@
           "attributes": [
             {
               "key": "acc_seq",
-              "value": "osmo1yms874yjkgx4z86082e38fvp5myzdcu5xnhnam/0"
+              "value": "osmo1yms874yjkgx4z86082e38fvp5myzdcu5xnhnam/2"
             }
           ]
         },
@@ -488,13 +488,13 @@
           "attributes": [
             {
               "key": "signature",
-              "value": "gZNINX3sv7ywnnbiL+Gr+phyEkhzKuXpjKZaXGOCMUR+LrFcWusePoY0frOrNuv1ryaRyZaLtqhr9Ab3KgpJVA=="
+              "value": "ca1a6k0bOAPsO5k0NI0EuLnDX6QQAvg98XLGadY6aKBQsL4WdqGUhmXLiRq/GyDZg+jAPQP/dMrnqydCC1MChg=="
             }
           ]
         }
       ],
-      "gasWanted": 487817,
-      "gasUsed": 396078
+      "gasWanted": 480097,
+      "gasUsed": 390040
     },
     "periphery": {
       "contractAddress": "osmo10z78vdfj2skumuxmcq53yahckras5f7fp03cjknlaj9rr9nzk66scfkkft",
@@ -764,7 +764,7 @@
     }
   },
   "contracts": {
-    "core": "osmo1fd33mtk06awg0v2hhd6djcjvvzcv90s8u03qujcjnlu87wm65xjs305mr4",
+    "core": "osmo1yhd9tzp09d833u7ray4pc6wwp72aewtt2xwakszn3lzlf2klnlwscjwhxt",
     "periphery": "osmo10z78vdfj2skumuxmcq53yahckras5f7fp03cjknlaj9rr9nzk66scfkkft"
   }
 }

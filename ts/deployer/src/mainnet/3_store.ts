@@ -3,7 +3,7 @@ const { createRPCQueryClient } = osmosis.ClientFactory;
 
 import { SigningCosmWasmClient, UploadResult } from "@cosmjs/cosmwasm-stargate";
 import path from "path";
-import { readFileSync, readdirSync } from "fs";
+import { readFileSync, readdirSync, writeFileSync } from "fs";
 import { GasPrice } from "@cosmjs/stargate";
 
 import config, { NETWORK } from "../config";
