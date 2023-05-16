@@ -104,7 +104,7 @@ impl IbcCore {
         &self,
         querier: &QuerierWrapper<CQ>,
         amount: Uint128,
-        funds: Vec<Coin>,
+        funds: Option<Vec<Coin>>,
         time: Option<u64>,
     ) -> StdResult<SimulateMintResponse>
     where
