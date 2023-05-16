@@ -34,7 +34,7 @@ export interface CoreReadOnlyInterface {
     }) => Promise<ListTradeInfoResponse>;
     simulateMint: ({ amount, funds, time }: {
         amount: Uint128;
-        funds: Coin[];
+        funds?: Coin[];
         time?: number;
     }) => Promise<SimulateMintResponse>;
     simulateBurn: ({ amount, time }: {
@@ -72,7 +72,7 @@ export declare class CoreQueryClient implements CoreReadOnlyInterface {
     }) => Promise<ListTradeInfoResponse>;
     simulateMint: ({ amount, funds, time }: {
         amount: Uint128;
-        funds: Coin[];
+        funds?: Coin[] | undefined;
         time?: number | undefined;
     }) => Promise<SimulateMintResponse>;
     simulateBurn: ({ amount, time }: {

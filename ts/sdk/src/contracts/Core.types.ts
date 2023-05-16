@@ -130,7 +130,7 @@ export type QueryMsg = {
 } | {
   simulate_mint: {
     amount: Uint128;
-    funds: Coin[];
+    funds?: Coin[] | null;
     time?: number | null;
   };
 } | {

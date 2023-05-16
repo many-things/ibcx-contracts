@@ -55,7 +55,7 @@ export interface CoreReadOnlyInterface {
     time
   }: {
     amount: Uint128;
-    funds: Coin[];
+    funds?: Coin[];
     time?: number;
   }) => Promise<SimulateMintResponse>;
   simulateBurn: ({
@@ -179,7 +179,7 @@ export class CoreQueryClient implements CoreReadOnlyInterface {
     time
   }: {
     amount: Uint128;
-    funds: Coin[];
+    funds?: Coin[];
     time?: number;
   }): Promise<SimulateMintResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {

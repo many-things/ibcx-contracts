@@ -22,7 +22,7 @@ export declare function useCoreSimulateBurnQuery<TData = SimulateBurnResponse>({
 export interface CoreSimulateMintQuery<TData> extends CoreReactQuery<SimulateMintResponse, TData> {
     args: {
         amount: Uint128;
-        funds: Coin[];
+        funds?: Coin[];
         time?: number;
     };
 }
