@@ -36,13 +36,6 @@ async function main() {
       routes: [`${poolIds[i] || 0},uosmo`],
     }));
 
-  const burnRoutes = Object.entries(config.args.assets)
-    .filter(([origin]) => origin !== "uosmo")
-    .map(([, { alias }], i) => ({
-      key: `${alias},uosmo`,
-      routes: [`${poolIds[i] || 0},uosmo`],
-    }));
-
   const simMintResp = await client.qc.simulateMintExactAmountOut({
     coreAddr: core,
     inputAsset: "uosmo",
@@ -50,14 +43,6 @@ async function main() {
     swapInfo: mintRoutes,
   });
   console.log(simMintResp);
-
-  const simBurnResp = await client.qc.simulateBurnExactAmountIn({
-    coreAddr: core,
-    inputAmount: `${1e6}`,
-    outputAsset: "uosmo",
-    swapInfo: burnRoutes,
-  });
-  console.log(simBurnResp);
 
   const mintResp = await client.qc.mintExactAmountOut(
     {
@@ -68,12 +53,27 @@ async function main() {
     },
     "auto",
     undefined,
-    [{ denom: "uosmo", amount: `${1000 * 1e6}` }]
+    [{ denom: "uosmo", amount: "110074876" }]
   );
   console.log({
     action: "mint",
     txHash: mintResp.transactionHash,
   });
+
+  const burnRoutes = Object.entries(config.args.assets)
+    .filter(([origin]) => origin !== "uosmo")
+    .map(([, { alias }], i) => ({
+      key: `${alias},uosmo`,
+      routes: [`${poolIds[i] || 0},uosmo`],
+    }));
+
+  const simBurnResp = await client.qc.simulateBurnExactAmountIn({
+    coreAddr: core,
+    inputAmount: `${1e6}`,
+    outputAsset: "uosmo",
+    swapInfo: burnRoutes,
+  });
+  console.log(simBurnResp);
 
   const burnResp = await client.qc.burnExactAmountIn(
     {
