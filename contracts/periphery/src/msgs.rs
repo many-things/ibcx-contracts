@@ -1,4 +1,4 @@
-use cosmwasm_std::{coin, Addr, BankMsg, Coin, Uint128};
+use cosmwasm_std::{coin, Addr, BankMsg, Coin, Decimal, Uint128};
 use cosmwasm_std::{CosmosMsg, QuerierWrapper};
 use ibcx_interface::periphery::{RouteKey, SwapInfo};
 
@@ -43,6 +43,8 @@ pub fn make_mint_swap_exact_out_msgs(
                 amount: want,
             })?;
 
+        let multiplier = Decimal::from_ratio(100001u64, 100000u64); // 100.001%
+        let simulated_token_in = multiplier * simulated_token_in;
         simulated_total_spend_amount += simulated_token_in;
 
         swap_msgs.push(swap_info.msg_swap_exact_out(contract, &denom, want, simulated_token_in));
@@ -104,13 +106,15 @@ pub fn make_burn_swap_msgs(
                 amount: expected,
             })?;
 
+        let multiplier = Decimal::from_ratio(99999u64, 100000u64); // 99.999%
+        let simulated_token_out = multiplier * simulated_token_out;
         simulated_total_receive_amount += simulated_token_out;
 
         swap_msgs.push(swap_info.msg_swap_exact_in(
             contract,
             &denom,
             expected,
-            simulated_token_out,
+            multiplier * simulated_token_out,
         ));
     }
 
