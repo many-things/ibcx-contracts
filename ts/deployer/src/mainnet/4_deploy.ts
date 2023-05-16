@@ -46,7 +46,7 @@ async function main() {
     sender,
     codes.core,
     initCoreMsg,
-    "ibcx-core",
+    "IBCX Core <Product of ION DAO>",
     "auto",
     {
       admin: config.args.addresses.dao,
@@ -65,7 +65,7 @@ async function main() {
     sender,
     codes.periphery,
     initPeripheryMsg,
-    "ibcx-periphery",
+    "IBCX Periphery <Product of ION DAO>",
     "auto",
     {
       admin: config.args.addresses.dao,
