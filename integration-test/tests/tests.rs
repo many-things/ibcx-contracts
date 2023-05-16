@@ -210,8 +210,8 @@ fn test_integration() {
                 gov: acc.address(),
                 fee: core::FeePayload {
                     collector: acc.address(),
-                    mint_fee: None,
-                    burn_fee: None,
+                    mint_fee: Some(Decimal::from_ratio(5u64, 10000u64)),
+                    burn_fee: Some(Decimal::from_ratio(15u64, 10000u64)),
                     streaming_fee: None,
                 },
                 index_denom: "uibcx".to_string(),
@@ -300,7 +300,7 @@ fn test_integration() {
         })
         .unwrap()
         .balance;
-    assert_eq!(balance.unwrap().amount, "0");
+    assert_eq!(balance.unwrap().amount, "1500");
 
     // test estimation
 
