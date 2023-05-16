@@ -130,7 +130,7 @@ pub enum QueryMsg {
     #[returns(SimulateMintResponse)]
     SimulateMint {
         amount: Uint128,
-        funds: Vec<Coin>,
+        funds: Option<Vec<Coin>>,
         time: Option<u64>,
     },
 

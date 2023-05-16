@@ -168,7 +168,7 @@ pub fn simulate_mint(
     deps: Deps,
     env: Env,
     amount: Uint128,
-    funds: Vec<Coin>,
+    funds: Option<Vec<Coin>>,
     time: Option<u64>,
 ) -> Result<SimulateMintResponse, ContractError> {
     let now_in_sec = env.block.time.seconds();
@@ -187,7 +187,7 @@ pub fn simulate_mint(
         .unwrap_or(index_units);
 
     let spent = index_units.calc_require_amount(amount);
-    let refund = index_units.calc_refund_amount(funds, amount)?;
+    let refund = index_units.calc_refund_amount(funds.unwrap_or_else(|| spent.clone()), amount)?;
     let mint_fee = fee.mint_fee.map(|v| v * amount);
     let mint_send = amount.checked_sub(mint_fee.unwrap_or_default())?;
 

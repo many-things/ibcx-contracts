@@ -60,7 +60,7 @@ pub fn mint(
     // calculate
     let refund = index_units.calc_refund_amount(info.funds, amount)?;
 
-    let mint_fee = fee.mint_fee.map(|v| v * amount);
+    let mint_fee = fee.mint_fee.map(|v| (v * amount).max(Uint128::one()));
     let mint_send = amount.checked_sub(mint_fee.unwrap_or_default())?;
 
     // state applier

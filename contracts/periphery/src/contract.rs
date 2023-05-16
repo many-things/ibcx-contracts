@@ -131,8 +131,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
             // input & output
             let output = coin(output_amount.u128(), core_config.index_denom);
 
-            let sim_resp = core.simulate_burn(&deps.querier, output.amount, None)?;
-            let sim_amount_desired = sim_resp.redeem_amount;
+            let sim_resp = core.simulate_mint(&deps.querier, output.amount, None, None)?;
+            let sim_amount_desired = sim_resp.fund_spent;
 
             let (_, refund) = make_mint_swap_exact_out_msgs(
                 &deps.querier,
