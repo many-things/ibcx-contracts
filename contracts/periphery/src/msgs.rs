@@ -43,15 +43,11 @@ pub fn make_mint_swap_exact_out_msgs(
                 amount: want,
             })?;
 
+        let multiplier = Decimal::from_ratio(100001u64, 100000u64); // 100.001%
+        let simulated_token_in = multiplier * simulated_token_in;
         simulated_total_spend_amount += simulated_token_in;
 
-        let multiplier = Decimal::from_ratio(1001u64, 1000u64);
-        swap_msgs.push(swap_info.msg_swap_exact_out(
-            contract,
-            &denom,
-            want,
-            multiplier * simulated_token_in,
-        ));
+        swap_msgs.push(swap_info.msg_swap_exact_out(contract, &denom, want, simulated_token_in));
     }
 
     if max_input.amount < simulated_total_spend_amount {
@@ -110,9 +106,10 @@ pub fn make_burn_swap_msgs(
                 amount: expected,
             })?;
 
+        let multiplier = Decimal::from_ratio(99999u64, 100000u64); // 99.999%
+        let simulated_token_out = multiplier * simulated_token_out;
         simulated_total_receive_amount += simulated_token_out;
 
-        let multiplier = Decimal::from_ratio(999u64, 1000u64); // 99.9%
         swap_msgs.push(swap_info.msg_swap_exact_in(
             contract,
             &denom,
