@@ -136,7 +136,11 @@ impl Units {
         mut funds: Vec<Coin>,
         index_amount: Uint128,
     ) -> Result<Vec<Coin>, ContractError> {
-        let required = self.calc_require_amount(index_amount);
+        let required = self
+            .calc_require_amount(index_amount)
+            .into_iter()
+            .map(|v| coin(v.amount.max(Uint128::one()).u128(), v.denom))
+            .collect::<Vec<_>>();
         let mut denoms: Vec<_> = funds.clone().into_iter().map(|v| Some(v.denom)).collect();
 
         for Coin { denom, amount } in required {
