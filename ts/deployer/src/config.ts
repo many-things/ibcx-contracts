@@ -1,4 +1,8 @@
-import { DirectSecp256k1HdWallet, OfflineSigner } from "@cosmjs/proto-signing";
+import {
+  DirectSecp256k1HdWallet,
+  DirectSecp256k1Wallet,
+  OfflineSigner,
+} from "@cosmjs/proto-signing";
 import { readFileSync } from "fs";
 import yaml from "js-yaml";
 
@@ -18,7 +22,8 @@ const chainId = (() => {
 })();
 
 type ConfigArgs = {
-  mnemonic: string;
+  mnemonic?: string;
+  privkey?: string;
   keyring: {
     name: string;
     backend?: string;
@@ -43,9 +48,20 @@ class Config {
   constructor(public args: ConfigArgs) {}
 
   async getSigner(): Promise<OfflineSigner> {
-    return DirectSecp256k1HdWallet.fromMnemonic(this.args.mnemonic, {
-      prefix: "osmo",
-    });
+    if (this.args.mnemonic) {
+      return DirectSecp256k1HdWallet.fromMnemonic(this.args.mnemonic, {
+        prefix: "osmo",
+      });
+    }
+
+    if (this.args.privkey) {
+      return DirectSecp256k1Wallet.fromKey(
+        Buffer.from(this.args.privkey, "hex"),
+        "osmo"
+      );
+    }
+
+    throw Error("no mnemonic or privkey");
   }
 
   get command(): string {
