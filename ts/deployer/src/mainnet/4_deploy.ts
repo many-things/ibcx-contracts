@@ -27,7 +27,7 @@ async function main() {
   const initCoreMsg: CoreTypes.InstantiateMsg = {
     fee: {
       collector: config.args.addresses.dao,
-      burn_fee: "0.15",
+      burn_fee: "0.0015",
       streaming_fee: {
         rate: "0.000000000173926",
         freeze: false,
