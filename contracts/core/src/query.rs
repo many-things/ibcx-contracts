@@ -221,7 +221,7 @@ pub fn simulate_burn(
 
     let burn_fee = fee.burn_fee.map(|v| v * amount);
     let burn_amount = amount.checked_sub(burn_fee.unwrap_or_default())?;
-    let burn_send_amount = index_units.calc_require_amount(amount);
+    let burn_send_amount = index_units.calc_require_amount(burn_amount);
 
     Ok(SimulateBurnResponse {
         burn_amount, // recognize user to burn entire amount
