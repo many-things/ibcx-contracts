@@ -53,7 +53,12 @@ async function main() {
     },
     "auto",
     undefined,
-    [{ denom: "uosmo", amount: "110074876" }]
+    [
+      {
+        denom: "uosmo",
+        amount: `${Number(simMintResp.swap_result_amount.amount) + 1e6}`,
+      },
+    ]
   );
   console.log({
     action: "mint",
@@ -79,7 +84,7 @@ async function main() {
     {
       coreAddr: core,
       outputAsset: "uosmo",
-      minOutputAmount: `${1e6}`,
+      minOutputAmount: `${Number(simBurnResp.swap_result_amount.amount) - 1e6}`,
       swapInfo: burnRoutes,
     },
     "auto",

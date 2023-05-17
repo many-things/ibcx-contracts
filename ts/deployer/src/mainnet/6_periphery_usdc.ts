@@ -45,10 +45,12 @@ async function main() {
       })),
   ];
 
+  const mintAmount = `${1e6 * 0.5}`;
+
   const simMintResp = await client.qc.simulateMintExactAmountOut({
     coreAddr: core,
     inputAsset: usdc,
-    outputAmount: `${1e6}`,
+    outputAmount: mintAmount,
     swapInfo: mintRoutes,
   });
   console.log(simMintResp);
@@ -57,12 +59,19 @@ async function main() {
     {
       coreAddr: core,
       inputAsset: usdc,
-      outputAmount: `${1e6}`,
+      outputAmount: mintAmount,
       swapInfo: mintRoutes,
     },
     "auto",
     undefined,
-    [{ denom: "uosmo", amount: `${1000 * 1e6}` }]
+    [
+      {
+        denom: usdc,
+        amount: `${Math.ceil(
+          Number(simMintResp.swap_result_amount.amount) * 1.001
+        )}`,
+      },
+    ]
   );
   console.log({
     action: "mint",
@@ -82,9 +91,11 @@ async function main() {
       })),
   ];
 
+  const burnAmount = `${1e6 * 0.5}`;
+
   const simBurnResp = await client.qc.simulateBurnExactAmountIn({
     coreAddr: core,
-    inputAmount: `${1e6}`,
+    inputAmount: burnAmount,
     outputAsset: usdc,
     swapInfo: burnRoutes,
   });
@@ -94,12 +105,14 @@ async function main() {
     {
       coreAddr: core,
       outputAsset: usdc,
-      minOutputAmount: `${Number(simBurnResp.swap_result_amount.amount) + 1e6}`,
+      minOutputAmount: `${Math.floor(
+        Number(simBurnResp.swap_result_amount.amount) * 0.999
+      )}`,
       swapInfo: burnRoutes,
     },
     "auto",
     undefined,
-    [{ denom: index_denom, amount: `${1e6}` }]
+    [{ denom: index_denom, amount: burnAmount }]
   );
   console.log({
     action: "burn",
