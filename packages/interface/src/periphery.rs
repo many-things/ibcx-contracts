@@ -68,6 +68,12 @@ pub enum ExecuteMsg {
         min_output_amount: Uint128,
         swap_info: SwapInfosCompact,
     },
+
+    // internal
+    FinishOperation {
+        refund_to: String,
+        refund_asset: String,
+    },
 }
 
 #[cw_serde]

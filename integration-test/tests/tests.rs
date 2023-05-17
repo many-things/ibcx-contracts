@@ -25,7 +25,7 @@ use osmosis_test_tube::{
 
 use ibcx_interface::{core, periphery};
 
-const NORM: u128 = 1_000_000_000_000_000;
+const NORM: u128 = 40_000_000_000_000;
 
 pub struct Querier<'a, R: Runner<'a>> {
     runner: &'a R,
@@ -178,7 +178,10 @@ fn test_integration() {
     let ukrw = create_denom(&fact, &acc, "ukrw");
     let ukrw_pool = create_pool(&gamm, &acc, &ukrw, "uosmo", (99245, 10000));
 
-    println!("uusd: {uusd_pool}, ujpy: {ujpy_pool}, ukrw: {ukrw_pool}");
+    let uatom = create_denom(&fact, &acc, "uatom");
+    let uatom_pool = create_pool(&gamm, &acc, &uatom, "uosmo", (57622, 1000000));
+
+    println!("uusd: {uusd_pool}, ujpy: {ujpy_pool}, ukrw: {ukrw_pool}, uatom: {uatom_pool}");
 
     // store codes
     let base_path = Path::new("../target/wasm32-unknown-unknown/release/");
@@ -331,81 +334,176 @@ fn test_integration() {
         })
         .unwrap();
 
+    let estimate_multi_in_resp = querier
+        .estimate_swap_exact_amount_in(&EstimateSwapExactAmountInRequest {
+            sender: acc.address(),
+            pool_id: uatom_pool,
+            token_in: coin(1_000_000, &uatom).to_string(),
+            routes: vec![
+                SwapAmountInRoute {
+                    pool_id: uatom_pool,
+                    token_out_denom: "uosmo".to_string(),
+                },
+                SwapAmountInRoute {
+                    pool_id: uusd_pool,
+                    token_out_denom: uusd.to_string(),
+                },
+            ],
+        })
+        .unwrap();
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&estimate_multi_in_resp).unwrap()
+    );
+
+    let estimate_multi_out_resp = querier
+        .estimate_swap_exact_amount_out(&EstimateSwapExactAmountOutRequest {
+            sender: acc.address(),
+            pool_id: uatom_pool,
+            token_out: coin(
+                estimate_multi_in_resp.token_out_amount.parse().unwrap(),
+                &uatom,
+            )
+            .to_string(),
+            routes: vec![
+                SwapAmountOutRoute {
+                    pool_id: uusd_pool,
+                    token_in_denom: uusd.clone(),
+                },
+                SwapAmountOutRoute {
+                    pool_id: uatom_pool,
+                    token_in_denom: "uosmo".to_string(),
+                },
+            ],
+        })
+        .unwrap();
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&estimate_multi_out_resp).unwrap()
+    );
+
     assert_eq!(estimate_out_resp.token_in_amount, format!("{}", 1_000_000));
 
     // mint / burn (periphery)
-
+    let mint_burn_amount = 1_000_000_000;
+    let mint_slippage: (u128, u128) = (10040, 10000); // 0.50
+    let burn_slippage: (u128, u128) = (10050, 10000); // 0.50
     let pairs = [(uusd, uusd_pool), (ujpy, ujpy_pool), (ukrw, ukrw_pool)];
 
-    let swap_info = periphery::SwapInfosCompact(
-        pairs
-            .iter()
-            .map(|(denom, pool_id)| periphery::SwapInfoCompact {
-                key: format!("uosmo,{}", denom),
-                routes: vec![format!("{},uosmo", pool_id)],
-            })
-            .collect::<Vec<_>>(),
+    let swap_info = (
+        "uosmo",
+        periphery::SwapInfosCompact(
+            pairs
+                .iter()
+                .map(|(denom, pool_id)| periphery::SwapInfoCompact {
+                    key: format!("uosmo,{denom}"),
+                    routes: vec![format!("{pool_id},uosmo")],
+                })
+                .collect::<Vec<_>>(),
+        ),
     );
 
-    let sim_mint_resp: periphery::SimulateMintExactAmountOutResponse = wasm
-        .query(
-            &perp_addr,
-            &periphery::QueryMsg::SimulateMintExactAmountOut {
-                core_addr: core_addr.clone(),
-                output_amount: Uint128::new(1_000),
-                input_asset: "uosmo".to_string(),
-                swap_info: swap_info.clone(),
-            },
-        )
-        .unwrap();
-
-    wasm.execute(
-        &perp_addr,
-        &periphery::ExecuteMsg::MintExactAmountOut {
-            core_addr: core_addr.clone(),
-            output_amount: Uint128::new(1_000),
-            input_asset: "uosmo".to_string(),
-            swap_info,
-        },
-        &[coin(1_000_000, "uosmo")],
-        &acc,
-    )
-    .unwrap();
-
-    let swap_info = periphery::SwapInfosCompact(
-        pairs
-            .iter()
-            .map(|(denom, pool_id)| periphery::SwapInfoCompact {
-                key: format!("{},uosmo", denom),
-                routes: vec![format!("{},uosmo", pool_id)],
-            })
-            .collect::<Vec<_>>(),
+    let multihop_swap_info = (
+        uatom.as_str(),
+        periphery::SwapInfosCompact(
+            pairs
+                .iter()
+                .map(|(denom, pool_id)| periphery::SwapInfoCompact {
+                    key: format!("{uatom},{denom}"),
+                    routes: vec![format!("{uatom_pool},{uatom}"), format!("{pool_id},uosmo")],
+                })
+                .collect::<Vec<_>>(),
+        ),
     );
 
-    let sim_burn_resp: periphery::SimulateBurnExactAmountInResponse = wasm
-        .query(
+    for (input, swap) in [swap_info, multihop_swap_info] {
+        let sim_mint_resp: periphery::SimulateMintExactAmountOutResponse = wasm
+            .query(
+                &perp_addr,
+                &periphery::QueryMsg::SimulateMintExactAmountOut {
+                    core_addr: core_addr.clone(),
+                    output_amount: Uint128::new(mint_burn_amount),
+                    input_asset: input.to_string(),
+                    swap_info: swap.clone(),
+                },
+            )
+            .unwrap();
+        println!("{}", serde_json::to_string_pretty(&sim_mint_resp).unwrap());
+
+        wasm.execute(
             &perp_addr,
-            &periphery::QueryMsg::SimulateBurnExactAmountIn {
+            &periphery::ExecuteMsg::MintExactAmountOut {
                 core_addr: core_addr.clone(),
-                input_amount: Uint128::new(1_000),
-                output_asset: "uosmo".to_string(),
-                swap_info: swap_info.clone(),
+                output_amount: Uint128::new(mint_burn_amount),
+                input_asset: input.to_string(),
+                swap_info: swap,
             },
+            &[coin(
+                sim_mint_resp.swap_result_amount.amount.u128() * mint_slippage.0 / mint_slippage.1,
+                input,
+            )],
+            &acc,
         )
         .unwrap();
+    }
 
-    wasm.execute(
-        &perp_addr,
-        &periphery::ExecuteMsg::BurnExactAmountIn {
-            core_addr,
-            output_asset: "uosmo".to_string(),
-            min_output_amount: Uint128::new(50_000),
-            swap_info,
-        },
-        &[coin(1_000, &config.index_denom)],
-        &acc,
-    )
-    .unwrap();
+    let swap_info = (
+        "uosmo",
+        periphery::SwapInfosCompact(
+            pairs
+                .iter()
+                .map(|(denom, pool_id)| periphery::SwapInfoCompact {
+                    key: format!("{denom},uosmo"),
+                    routes: vec![format!("{pool_id},uosmo")],
+                })
+                .collect::<Vec<_>>(),
+        ),
+    );
+
+    let multihop_swap_info = (
+        uatom.as_str(),
+        periphery::SwapInfosCompact(
+            pairs
+                .iter()
+                .map(|(denom, pool_id)| periphery::SwapInfoCompact {
+                    key: format!("{denom},{uatom}"),
+                    routes: vec![format!("{pool_id},uosmo"), format!("{uatom_pool},{uatom}")],
+                })
+                .collect::<Vec<_>>(),
+        ),
+    );
+
+    for (output, swap) in [swap_info, multihop_swap_info] {
+        let sim_burn_resp: periphery::SimulateBurnExactAmountInResponse = wasm
+            .query(
+                &perp_addr,
+                &periphery::QueryMsg::SimulateBurnExactAmountIn {
+                    core_addr: core_addr.clone(),
+                    input_amount: Uint128::new(mint_burn_amount),
+                    output_asset: output.to_string(),
+                    swap_info: swap.clone(),
+                },
+            )
+            .unwrap();
+
+        println!("{}", serde_json::to_string_pretty(&sim_burn_resp).unwrap());
+
+        wasm.execute(
+            &perp_addr,
+            &periphery::ExecuteMsg::BurnExactAmountIn {
+                core_addr: core_addr.clone(),
+                output_asset: output.to_string(),
+                min_output_amount: Decimal::from_ratio(
+                    burn_slippage.1 - ((burn_slippage.0 - burn_slippage.1) * 2),
+                    burn_slippage.1,
+                ) * sim_burn_resp.swap_result_amount.amount,
+                swap_info: swap,
+            },
+            &[coin(mint_burn_amount, &config.index_denom)],
+            &acc,
+        )
+        .unwrap();
+    }
 
     let index_balance = bank
         .query_balance(&QueryBalanceRequest {
@@ -423,8 +521,15 @@ fn test_integration() {
         .unwrap()
         .balance;
 
+    let uatom_balance = bank
+        .query_balance(&QueryBalanceRequest {
+            address: acc.address(),
+            denom: uatom.to_string(),
+        })
+        .unwrap()
+        .balance;
+
     println!("{index_balance:?}");
     println!("{uosmo_balance:?}");
-    println!("{}", serde_json::to_string_pretty(&sim_mint_resp).unwrap());
-    println!("{}", serde_json::to_string_pretty(&sim_burn_resp).unwrap());
+    println!("{uatom_balance:?}");
 }

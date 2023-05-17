@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    attr, coin, entry_point, to_binary, Env, MessageInfo, QueryResponse, Reply, Uint128,
+    attr, coin, entry_point, to_binary, Env, MessageInfo, QueryResponse, Reply, Uint128, WasmMsg,
 };
 use cosmwasm_std::{Deps, DepsMut, Response};
 use ibcx_interface::{
@@ -71,6 +71,10 @@ pub fn execute(
             min_output_amount,
             swap_info.into(),
         ),
+        FinishOperation {
+            refund_to,
+            refund_asset,
+        } => execute::finish_operation(deps, env, info, refund_to, refund_asset),
     }
 }
 
@@ -92,17 +96,28 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, Contract
                     let (swap_msgs, refunds) = make_burn_swap_msgs(
                         &deps.querier,
                         &env.contract.address,
-                        &sender,
                         swap_info,
                         redeem_amounts,
                         &min_output,
                     )?;
 
-                    let resp = Response::new().add_messages(swap_msgs).add_attributes(vec![
-                        attr("method", "reply::burn_exact_amount_in"),
-                        attr("executor", sender),
-                        attr("refunds", refunds),
-                    ]);
+                    let finish_msg = WasmMsg::Execute {
+                        contract_addr: env.contract.address.to_string(),
+                        msg: to_binary(&ExecuteMsg::FinishOperation {
+                            refund_to: sender.to_string(),
+                            refund_asset: min_output.denom,
+                        })?,
+                        funds: vec![],
+                    };
+
+                    let resp = Response::new()
+                        .add_messages(swap_msgs)
+                        .add_message(finish_msg)
+                        .add_attributes(vec![
+                            attr("method", "reply::burn_exact_amount_in"),
+                            attr("executor", sender),
+                            attr("refunds", refunds),
+                        ]);
 
                     Ok(resp)
                 }
@@ -137,16 +152,18 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
             let (_, refund) = make_mint_swap_exact_out_msgs(
                 &deps.querier,
                 &env.contract.address,
-                &env.contract.address,
                 swap_info.into(),
                 sim_amount_desired.clone(),
-                &coin(Uint128::MAX.u128(), &input_asset),
+                &coin(u64::MAX as u128, &input_asset),
             )?;
 
             Ok(to_binary(&SimulateMintExactAmountOutResponse {
                 mint_amount: output.amount,
                 mint_spend_amount: sim_amount_desired,
-                swap_result_amount: coin(Uint128::MAX.checked_sub(refund)?.u128(), input_asset),
+                swap_result_amount: coin(
+                    Uint128::from(u64::MAX).checked_sub(refund)?.u128(),
+                    input_asset,
+                ),
             })?)
         }
 
@@ -164,7 +181,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
 
             let (_, receive) = make_burn_swap_msgs(
                 &deps.querier,
-                &env.contract.address,
                 &env.contract.address,
                 swap_info.into(),
                 expected,
