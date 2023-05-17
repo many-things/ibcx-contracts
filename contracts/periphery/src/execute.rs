@@ -1,6 +1,6 @@
-use cosmwasm_std::{attr, coin, Env, MessageInfo, SubMsg, Uint128};
+use cosmwasm_std::{attr, coin, to_binary, BankMsg, Env, MessageInfo, SubMsg, Uint128, WasmMsg};
 use cosmwasm_std::{DepsMut, Response};
-use ibcx_interface::periphery::SwapInfo;
+use ibcx_interface::periphery::{ExecuteMsg, SwapInfo};
 use ibcx_interface::{core, helpers::IbcCore};
 
 use crate::state::{Context, CONTEXT};
@@ -32,11 +32,19 @@ pub fn mint_exact_amount_out(
     let (swap_msgs, refund) = make_mint_swap_exact_out_msgs(
         &deps.querier,
         &env.contract.address,
-        &info.sender,
         swap_info,
         sim_amount_desired.clone(),
         &max_input,
     )?;
+
+    let finish_msg = WasmMsg::Execute {
+        contract_addr: env.contract.address.to_string(),
+        msg: to_binary(&ExecuteMsg::FinishOperation {
+            refund_to: info.sender.to_string(),
+            refund_asset: input_asset,
+        })?,
+        funds: vec![],
+    };
 
     let mint_msg = core.call_with_funds(
         core::ExecuteMsg::Mint {
@@ -50,6 +58,7 @@ pub fn mint_exact_amount_out(
     let resp = Response::new()
         .add_messages(swap_msgs)
         .add_message(mint_msg)
+        .add_message(finish_msg)
         .add_attributes(vec![
             attr("method", "mint_exact_amount_out"),
             attr("executor", info.sender),
@@ -112,6 +121,38 @@ pub fn burn_exact_amount_in(
             attr("input_amount", input.to_string()),
             attr("min_output_amount", min_output.to_string()),
         ]);
+
+    Ok(resp)
+}
+
+pub fn finish_operation(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    refund_to: String,
+    refund_asset: String,
+) -> Result<Response, ContractError> {
+    assert_eq!(info.sender, env.contract.address, "internal function");
+    deps.api.addr_validate(&refund_to)?;
+
+    let balance = deps
+        .querier
+        .query_balance(env.contract.address, &refund_asset)?;
+
+    deps.api
+        .debug(format!("finish balance {balance:?}").as_str());
+
+    let resp = Response::new()
+        .add_attributes(vec![
+            attr("method", "finish_operation"),
+            attr("refund_to", &refund_to),
+            attr("refund_asset", refund_asset),
+            attr("amount", balance.amount),
+        ])
+        .add_message(BankMsg::Send {
+            to_address: refund_to,
+            amount: vec![balance],
+        });
 
     Ok(resp)
 }
