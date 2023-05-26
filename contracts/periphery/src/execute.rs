@@ -1,11 +1,57 @@
-use cosmwasm_std::{attr, coin, to_binary, BankMsg, Env, MessageInfo, SubMsg, Uint128, WasmMsg};
+use std::collections::HashSet;
+
+use cosmwasm_std::{
+    attr, coin, to_binary, BankMsg, Env, MessageInfo, QuerierWrapper, StdResult, SubMsg, Uint128,
+    WasmMsg,
+};
 use cosmwasm_std::{DepsMut, Response};
 use ibcx_interface::periphery::{ExecuteMsg, SwapInfo};
 use ibcx_interface::{core, helpers::IbcCore};
 
+use osmosis_std::types::osmosis::gamm::v1beta1::{QueryPoolRequest, QueryPoolResponse};
+
+use crate::pool::resps_to_pools;
 use crate::state::{Context, CONTEXT};
 use crate::REPLY_ID_BURN_EXACT_AMOUNT_IN;
 use crate::{error::ContractError, msgs::make_mint_swap_exact_out_msgs};
+
+fn query_pool_infos(
+    querier: &QuerierWrapper,
+    pool_ids: Vec<u64>,
+) -> StdResult<Vec<QueryPoolResponse>> {
+    pool_ids
+        .into_iter()
+        .map(|v| querier.query(&QueryPoolRequest { pool_id: v }.into()))
+        .collect()
+}
+
+fn extract_pool_ids(swap_info: Vec<SwapInfo>) -> Vec<u64> {
+    swap_info
+        .into_iter()
+        .flat_map(|v| v.0 .1 .0.into_iter().map(|r| r.pool_id))
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>()
+}
+
+pub fn mint_exact_amount_in(
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
+    _core_addr: String,
+    _input_asset: String,
+    _min_output_amount: Uint128,
+    swap_info: Vec<SwapInfo>,
+) -> Result<Response, ContractError> {
+    let pool_ids = extract_pool_ids(swap_info);
+    let pool_resps = query_pool_infos(&deps.querier, pool_ids)?;
+
+    let pools = resps_to_pools(pool_resps)?;
+
+    deps.api.debug(&format!("{:?}", pools));
+
+    Ok(Response::default())
+}
 
 pub fn mint_exact_amount_out(
     deps: DepsMut,
@@ -123,6 +169,18 @@ pub fn burn_exact_amount_in(
         ]);
 
     Ok(resp)
+}
+
+pub fn burn_exact_amount_out(
+    _deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
+    _core_addr: String,
+    _output_asset: String,
+    _output_amount: Uint128,
+    _swap_info: Vec<SwapInfo>,
+) -> Result<Response, ContractError> {
+    Ok(Response::default())
 }
 
 pub fn finish_operation(

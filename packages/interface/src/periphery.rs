@@ -56,16 +56,36 @@ impl From<SwapInfosCompact> for Vec<SwapInfo> {
 
 #[cw_serde]
 pub enum ExecuteMsg {
+    // fixed input
+    // min output
+    MintExactAmountIn {
+        core_addr: String,
+        input_asset: String,
+        min_output_amount: Uint128,
+        swap_info: SwapInfosCompact,
+    },
+    // max input
+    // fixed output
     MintExactAmountOut {
         core_addr: String,
         output_amount: Uint128,
         input_asset: String,
         swap_info: SwapInfosCompact,
     },
+    // fixed input
+    // min output
     BurnExactAmountIn {
         core_addr: String,
         output_asset: String,
         min_output_amount: Uint128,
+        swap_info: SwapInfosCompact,
+    },
+    // max input
+    // fixed output
+    BurnExactAmountOut {
+        core_addr: String,
+        output_asset: String,
+        output_amount: Uint128,
         swap_info: SwapInfosCompact,
     },
 
