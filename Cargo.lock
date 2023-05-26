@@ -868,6 +868,7 @@ dependencies = [
  "ibcx-interface",
  "ibcx-utils",
  "osmosis-std 0.15.2",
+ "serde_json",
  "thiserror",
 ]
 
