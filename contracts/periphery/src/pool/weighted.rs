@@ -13,11 +13,21 @@ impl From<gamm::v1beta1::Pool> for WeightedPool {
 }
 
 impl OsmosisPool for WeightedPool {
-    fn swap_exact_amount_in(&mut self) {
+    fn swap_exact_amount_in(
+        &mut self,
+        input_amount: cosmwasm_std::Coin,
+        output_denom: String,
+        min_output_amount: cosmwasm_std::Uint128,
+    ) {
         todo!()
     }
 
-    fn swap_exact_amount_out(&mut self) {
+    fn swap_exact_amount_out(
+        &mut self,
+        input_denom: String,
+        max_input_amount: cosmwasm_std::Uint128,
+        output_amount: cosmwasm_std::Coin,
+    ) {
         todo!()
     }
 }

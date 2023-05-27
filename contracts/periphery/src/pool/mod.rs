@@ -3,14 +3,24 @@ mod weighted;
 
 use core::fmt::Debug;
 
-use cosmwasm_std::{Binary, StdResult};
+use cosmwasm_std::{Binary, Coin, StdResult, Uint128};
 use osmosis_std::types::osmosis::gamm::{self, poolmodels::stableswap, v1beta1::QueryPoolResponse};
 pub use stable::StablePool;
 pub use weighted::WeightedPool;
 
 pub trait OsmosisPool {
-    fn swap_exact_amount_in(&mut self);
-    fn swap_exact_amount_out(&mut self);
+    fn swap_exact_amount_in(
+        &mut self,
+        input_amount: Coin,
+        output_denom: String,
+        min_output_amount: Uint128,
+    );
+    fn swap_exact_amount_out(
+        &mut self,
+        input_denom: String,
+        max_input_amount: Uint128,
+        output_amount: Coin,
+    );
 }
 
 impl Debug for dyn OsmosisPool {
