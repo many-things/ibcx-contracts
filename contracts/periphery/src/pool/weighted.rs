@@ -1,6 +1,8 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::Decimal;
+use cosmwasm_std::{Decimal, Uint128};
 use osmosis_std::types::osmosis::gamm;
+
+use crate::error::ContractError;
 
 use super::OsmosisPool;
 
@@ -20,7 +22,7 @@ impl OsmosisPool for WeightedPool {
         output_denom: String,
         min_output_amount: cosmwasm_std::Uint128,
         spread_factor: Decimal,
-    ) {
+    ) -> Result<Uint128, ContractError> {
         todo!()
     }
 
@@ -30,7 +32,7 @@ impl OsmosisPool for WeightedPool {
         max_input_amount: cosmwasm_std::Uint128,
         output_amount: cosmwasm_std::Coin,
         spread_factor: Decimal,
-    ) {
+    ) -> Result<Uint128, ContractError> {
         todo!()
     }
 }

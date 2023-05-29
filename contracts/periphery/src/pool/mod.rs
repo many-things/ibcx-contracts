@@ -8,6 +8,8 @@ use osmosis_std::types::osmosis::gamm::{self, poolmodels::stableswap, v1beta1::Q
 pub use stable::StablePool;
 pub use weighted::WeightedPool;
 
+use crate::error::ContractError;
+
 pub trait OsmosisPool {
     fn swap_exact_amount_in(
         &mut self,
@@ -15,14 +17,14 @@ pub trait OsmosisPool {
         output_denom: String,
         min_output_amount: Uint128,
         spread_factor: Decimal,
-    );
+    ) -> Result<Uint128, ContractError>; // returns simulated amount out
     fn swap_exact_amount_out(
         &mut self,
         input_denom: String,
         max_input_amount: Uint128,
         output_amount: Coin,
         spread_factor: Decimal,
-    );
+    ) -> Result<Uint128, ContractError>; // returns simulated amount in
 }
 
 impl Debug for dyn OsmosisPool {
