@@ -1,8 +1,6 @@
 mod stable;
 mod weighted;
 
-use core::fmt::Debug;
-
 use cosmwasm_std::{Binary, Coin, Decimal, StdResult, Uint128};
 use osmosis_std::types::osmosis::gamm::{self, poolmodels::stableswap, v1beta1::QueryPoolResponse};
 pub use stable::StablePool;
@@ -11,6 +9,14 @@ pub use weighted::WeightedPool;
 use crate::error::ContractError;
 
 pub trait OsmosisPool {
+    fn get_id(&self) -> u64;
+
+    fn get_type(&self) -> &str;
+
+    fn get_spread_factor(&self) -> StdResult<Decimal>;
+
+    fn get_exit_fee(&self) -> StdResult<Decimal>;
+
     fn swap_exact_amount_in(
         &mut self,
         input_amount: Coin,
@@ -25,12 +31,6 @@ pub trait OsmosisPool {
         output_amount: Coin,
         spread_factor: Decimal,
     ) -> Result<Uint128, ContractError>; // returns simulated amount in
-}
-
-impl Debug for dyn OsmosisPool {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "OsmosisPool")
-    }
 }
 
 pub fn resp_to_pool(v: QueryPoolResponse) -> StdResult<Box<dyn OsmosisPool>> {

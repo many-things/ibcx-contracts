@@ -53,5 +53,5 @@ fn test_approx() {
         )
         .unwrap();
 
-    println!("{:?}", resp.gas_info.gas_used);
+    println!("gas used => {:?}", resp.gas_info.gas_used);
 }

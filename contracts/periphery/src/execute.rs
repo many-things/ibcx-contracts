@@ -48,7 +48,15 @@ pub fn mint_exact_amount_in(
 
     let pools = resps_to_pools(pool_resps)?;
 
-    deps.api.debug(&format!("{:?}", pools));
+    for pool in pools {
+        deps.api.debug(&format!(
+            "id: {}, type: {}, spread_factor: {}, exit_fee: {}",
+            pool.get_id(),
+            pool.get_type(),
+            pool.get_spread_factor()?,
+            pool.get_exit_fee()?
+        ));
+    }
 
     Ok(Response::default())
 }
