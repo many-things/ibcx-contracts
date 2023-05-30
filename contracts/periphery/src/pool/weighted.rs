@@ -111,7 +111,9 @@ impl WeightedPool {
 
         let minus_spread_factor = Decimal::one() - spread_factor;
 
-        let divided_token_out = (token_out_with_weight - Uint128::new(1)) / minus_spread_factor;
+        let divided_token_out = (token_out_with_weight - Uint128::new(1))
+            .checked_div_ceil(minus_spread_factor)
+            .unwrap();
 
         token_balance_in * divided_token_out
     }
