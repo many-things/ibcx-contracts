@@ -199,10 +199,6 @@ impl OsmosisPool for StablePool {
             .unwrap_or_default())
     }
 
-    // fn apply_new_liquidity(&mut self) {
-    //     self.0.pool_liquidity
-    // }
-
     fn swap_exact_amount_in(
         &mut self,
         input_amount: cosmwasm_std::Coin,
