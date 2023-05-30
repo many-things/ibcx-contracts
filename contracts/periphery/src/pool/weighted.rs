@@ -60,27 +60,27 @@ impl WeightedPool {
         let after_input_amount = (before_input_amount + input_value).to_string();
         let after_output_amount = (before_output_amount + output_value).to_string();
 
-        let temp_assets =
-            self.0
-                .pool_assets
-                .iter()
-                .map(|v| match v.token.as_ref().unwrap().denom.as_str() {
-                    input_denom => new_pool_assets.push(PoolAsset {
-                        token: Some(OsmosisCoin {
-                            denom: input_denom.to_string(),
-                            amount: after_input_amount.to_owned(),
-                        }),
-                        weight: v.weight.to_owned(),
+        let _temp_assets = self.0.pool_assets.iter().map(|v| {
+            if v.token.as_ref().unwrap().denom == input_denom {
+                new_pool_assets.push(PoolAsset {
+                    token: Some(OsmosisCoin {
+                        denom: input_denom.to_string(),
+                        amount: after_input_amount.to_owned(),
                     }),
-                    output_denom => new_pool_assets.push(PoolAsset {
-                        token: Some(OsmosisCoin {
-                            denom: output_denom.to_string(),
-                            amount: after_output_amount.to_owned(),
-                        }),
-                        weight: v.weight.to_owned(),
-                    }),
-                    _ => new_pool_assets.push(v.clone()),
+                    weight: v.weight.to_owned(),
                 });
+            } else if v.token.as_ref().unwrap().denom == output_denom {
+                new_pool_assets.push(PoolAsset {
+                    token: Some(OsmosisCoin {
+                        denom: output_denom.to_string(),
+                        amount: after_output_amount.to_owned(),
+                    }),
+                    weight: v.weight.to_owned(),
+                });
+            } else {
+                new_pool_assets.push(v.clone());
+            }
+        });
 
         new_pool_assets
     }
