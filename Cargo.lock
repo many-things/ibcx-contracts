@@ -1216,7 +1216,6 @@ dependencies = [
  "osmosis-std",
  "rust_decimal",
  "rust_decimal_macros",
- "serde_json",
  "thiserror",
 ]
 
@@ -1228,7 +1227,9 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "ibcx-interface",
+ "ibcx-periphery",
  "osmosis-test-tube",
+ "serde-json-wasm",
  "serde_json",
 ]
 
