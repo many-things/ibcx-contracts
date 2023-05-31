@@ -2,10 +2,11 @@ use std::ops::Div;
 use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
+use cosmwasm_std::StdError;
 use cosmwasm_std::{Coin, Decimal, StdResult, Uint128};
 use osmosis_std::types::cosmos::base::v1beta1::Coin as OsmosisCoin;
 use osmosis_std::types::osmosis::gamm;
-use osmosis_std::types::osmosis::gamm::v1beta1::PoolAsset;
+use osmosis_std::types::osmosis::gamm::v1beta1::PoolAsset as OsmosisPoolAsset;
 use rust_decimal::Decimal as RustDecimal;
 use rust_decimal::MathematicalOps;
 
@@ -22,183 +23,158 @@ impl From<gamm::v1beta1::Pool> for WeightedPool {
     }
 }
 
+struct PoolAsset {
+    pub denom: String,
+    pub amount: Uint128,
+    pub weight: Uint128,
+}
+
+struct PoolAssetTuple(pub (String, Uint128, Uint128));
+
+impl TryFrom<OsmosisPoolAsset> for PoolAsset {
+    type Error = ContractError;
+
+    fn try_from(v: OsmosisPoolAsset) -> Result<Self, Self::Error> {
+        let OsmosisCoin { denom, amount } = v
+            .token
+            .ok_or_else(|| StdError::generic_err("token is none"))?;
+
+        Ok(Self {
+            denom,
+            amount: Uint128::from_str(&amount)?,
+            weight: Uint128::from_str(&v.weight)?,
+        })
+    }
+}
+
+impl From<PoolAsset> for OsmosisPoolAsset {
+    fn from(v: PoolAsset) -> Self {
+        Self {
+            token: Some(OsmosisCoin {
+                denom: v.denom,
+                amount: v.amount.to_string(),
+            }),
+            weight: v.weight.to_string(),
+        }
+    }
+}
+
+impl From<PoolAssetTuple> for OsmosisPoolAsset {
+    fn from(v: PoolAssetTuple) -> Self {
+        Self {
+            token: Some(OsmosisCoin {
+                denom: v.0 .0,
+                amount: v.0 .1.to_string(),
+            }),
+            weight: v.0 .2.to_string(),
+        }
+    }
+}
+
 impl WeightedPool {
-    fn generate_new_pool_assets(
-        &self,
-        input_denom: String,
-        output_denom: String,
-        input_value: Uint128,
-        output_value: Uint128,
-    ) -> Vec<PoolAsset> {
-        let mut new_pool_assets: Vec<PoolAsset> = Vec::new();
-        let before_input_amount = self
-            .0
+    fn get_asset(&self, denom: &str) -> Result<PoolAsset, ContractError> {
+        self.0
             .pool_assets
             .iter()
-            .find(|v| v.token.as_ref().unwrap().denom == input_denom.clone())
-            .unwrap()
-            .token
-            .as_ref()
-            .unwrap()
-            .amount
-            .parse::<Uint128>()
-            .unwrap();
-
-        let before_output_amount = self
-            .0
-            .pool_assets
-            .iter()
-            .find(|v| v.token.as_ref().unwrap().denom == output_denom.clone())
-            .unwrap()
-            .token
-            .as_ref()
-            .unwrap()
-            .amount
-            .parse::<Uint128>()
-            .unwrap();
-
-        let after_input_amount = (before_input_amount + input_value).to_string();
-        let after_output_amount = (before_output_amount + output_value).to_string();
-
-        let _temp_assets = self.0.pool_assets.iter().map(|v| {
-            if v.token.as_ref().unwrap().denom == input_denom {
-                new_pool_assets.push(PoolAsset {
-                    token: Some(OsmosisCoin {
-                        denom: input_denom.to_string(),
-                        amount: after_input_amount.to_owned(),
-                    }),
-                    weight: v.weight.to_owned(),
-                });
-            } else if v.token.as_ref().unwrap().denom == output_denom {
-                new_pool_assets.push(PoolAsset {
-                    token: Some(OsmosisCoin {
-                        denom: output_denom.to_string(),
-                        amount: after_output_amount.to_owned(),
-                    }),
-                    weight: v.weight.to_owned(),
-                });
-            } else {
-                new_pool_assets.push(v.clone());
-            }
-        });
-
-        new_pool_assets
+            .find(|v| {
+                v.token
+                    .as_ref()
+                    .map(|v| v.denom == denom)
+                    .unwrap_or_default()
+            })
+            .ok_or_else(|| StdError::generic_err(format!("asset {denom} not found")))?
+            .clone()
+            .try_into()
     }
 
-    fn calc_out_amount_given_in(&self, input_amount: Coin, output_denom: String) -> Uint128 {
-        let pool_assets = self.0.pool_assets.clone();
-        let pool_params = self.0.pool_params.clone();
+    fn apply_new_pool_assets(
+        &mut self,
+        input_denom: &str,
+        output_denom: &str,
+        input_value: Uint128,
+        output_value: Uint128,
+    ) -> Result<(), ContractError> {
+        let pool_assets = self
+            .0
+            .pool_assets
+            .clone()
+            .into_iter()
+            .map(PoolAsset::try_from)
+            .collect::<Result<Vec<_>, _>>()?;
 
-        let token_balance_out = pool_assets
-            .iter()
-            .find(|v| v.token.as_ref().unwrap().denom == output_denom)
-            .unwrap()
-            .token
-            .as_ref()
-            .unwrap()
-            .amount
-            .parse::<Uint128>()
-            .unwrap();
-        let token_balance_in = pool_assets
-            .iter()
-            .find(|v| v.token.as_ref().unwrap().denom == input_amount.denom)
-            .unwrap()
-            .token
-            .as_ref()
-            .unwrap()
-            .amount
-            .parse::<Uint128>()
-            .unwrap();
-        let spread_factor = Decimal::from_str(&pool_params.unwrap().swap_fee).unwrap();
-        let token_amount_in = input_amount.amount;
+        let before_input = self.get_asset(input_denom)?;
+        let before_output = self.get_asset(output_denom)?;
 
-        let token_weight_in = pool_assets
-            .iter()
-            .find(|v| v.token.as_ref().unwrap().denom == input_amount.denom)
-            .map(|s| s.weight.parse::<Uint128>().unwrap())
-            .unwrap();
-        let token_weight_out = pool_assets
-            .iter()
-            .find(|v| v.token.as_ref().unwrap().denom == output_denom)
-            .map(|s| s.weight.parse::<Uint128>().unwrap())
-            .unwrap();
+        let after_input_amount = before_input.amount.checked_add(input_value)?;
+        let after_output_amount = before_output.amount.checked_sub(output_value)?;
 
-        let minus_spread_factor = Decimal::one() - spread_factor;
+        let new_pool_assets = pool_assets
+            .into_iter()
+            .map(|v| match v.denom {
+                d if d == input_denom => (d, after_input_amount, v.weight),
+                d if d == output_denom => (d, after_output_amount, v.weight),
+                d => (d, v.amount, v.weight),
+            })
+            .map(|v| OsmosisPoolAsset::from(PoolAssetTuple(v)))
+            .collect::<Vec<_>>();
+
+        self.0.pool_assets = new_pool_assets;
+
+        Ok(())
+    }
+
+    fn calc_out_amount_given_in(
+        &self,
+        input_amount: &Coin,
+        output_denom: &str,
+        spread_factor: Decimal,
+    ) -> Result<Uint128, ContractError> {
+        let token_out = self.get_asset(output_denom)?;
+        let token_in = self.get_asset(&input_amount.denom)?;
+
+        let minus_spread_factor = Decimal::one().checked_sub(spread_factor)?;
         let token_sub_in = Decimal::checked_from_ratio(
-            token_balance_in,
-            token_balance_in + minus_spread_factor * token_amount_in,
-        )
-        .unwrap();
-        let token_weight_ratio =
-            Decimal::checked_from_ratio(token_weight_in, token_weight_out).unwrap();
+            token_in.amount,
+            token_in
+                .amount
+                .checked_add(token_in.amount * minus_spread_factor)?,
+        )?;
+        let token_weight_ratio = Decimal::checked_from_ratio(token_in.weight, token_out.weight)?;
 
-        let rust_token_weight_ratio =
-            RustDecimal::from_str(&token_weight_ratio.to_string()).unwrap();
-        let rust_token_sub_in = RustDecimal::from_str(&token_sub_in.to_string()).unwrap();
+        let rust_token_weight_ratio = RustDecimal::from_str(&token_weight_ratio.to_string())?;
+        let rust_token_sub_in = RustDecimal::from_str(&token_sub_in.to_string())?;
 
         let calculed_by_rust_decimal =
             Decimal::from_str(&rust_token_sub_in.powd(rust_token_weight_ratio).to_string())
                 .unwrap();
 
-        token_balance_out * (Decimal::one() - calculed_by_rust_decimal)
+        Ok(token_out.amount * (Decimal::one() - calculed_by_rust_decimal))
     }
 
-    fn calc_in_amount_given_out(&self, input_denom: String, output_amount: Coin) -> Uint128 {
-        let pool_assets = self.0.pool_assets.clone();
-        let pool_params = self.0.pool_params.clone();
+    fn calc_in_amount_given_out(
+        &self,
+        input_denom: &str,
+        output_amount: &Coin,
+        spread_factor: Decimal,
+    ) -> Result<Uint128, ContractError> {
+        let token_out = self.get_asset(&output_amount.denom)?;
+        let token_in = self.get_asset(input_denom)?;
 
-        let token_balance_out = pool_assets
-            .iter()
-            .find(|v| v.token.as_ref().unwrap().denom == output_amount.denom)
-            .unwrap()
-            .token
-            .as_ref()
-            .unwrap()
-            .amount
-            .parse::<Uint128>()
-            .unwrap();
-        let token_balance_in = pool_assets
-            .iter()
-            .find(|v| v.token.as_ref().unwrap().denom == input_denom)
-            .unwrap()
-            .token
-            .as_ref()
-            .unwrap()
-            .amount
-            .parse::<Uint128>()
-            .unwrap();
-        let spread_factor = Decimal::from_str(&pool_params.unwrap().swap_fee).unwrap();
-        let token_amount_out = output_amount.amount;
+        let token_sub_out = token_out.amount;
+        let token_weight_ratio = Decimal::checked_from_ratio(token_out.weight, token_in.weight)?;
 
-        let token_weight_in = pool_assets
-            .iter()
-            .find(|v| v.token.as_ref().unwrap().denom == input_denom)
-            .map(|s| s.weight.parse::<Uint128>().unwrap())
-            .unwrap();
-        let token_weight_out = pool_assets
-            .iter()
-            .find(|v| v.token.as_ref().unwrap().denom == output_amount.denom)
-            .map(|s| s.weight.parse::<Uint128>().unwrap())
-            .unwrap();
-
-        let token_sub_out = token_balance_out - token_amount_out;
-        let token_weight_ratio =
-            Decimal::checked_from_ratio(token_weight_out, token_weight_in).unwrap();
-
-        let rust_token_weight_ratio =
-            RustDecimal::from_str(&token_weight_ratio.to_string()).unwrap();
-        let rust_token_sub_out = RustDecimal::from_str(&token_sub_out.to_string()).unwrap();
+        let rust_token_weight_ratio = RustDecimal::from_str(&token_weight_ratio.to_string())?;
+        let rust_token_sub_out = RustDecimal::from_str(&token_sub_out.to_string())?;
 
         let calculed_by_rust_decimal =
-            Decimal::from_str(&rust_token_sub_out.powd(rust_token_weight_ratio).to_string())
-                .unwrap();
+            Decimal::from_str(&rust_token_sub_out.powd(rust_token_weight_ratio).to_string())?;
 
         let minus_spread_factor = Decimal::one() - spread_factor;
 
         let divided_token_out =
             (calculed_by_rust_decimal - Decimal::one()).div(minus_spread_factor);
 
-        token_balance_in * divided_token_out
+        Ok(token_in.amount * divided_token_out)
     }
 }
 
@@ -235,19 +211,18 @@ impl OsmosisPool for WeightedPool {
         &mut self,
         input_amount: Coin,
         output_denom: String,
-        min_output_amount: Uint128,
+        _min_output_amount: Uint128,
         spread_factor: Decimal,
     ) -> Result<Uint128, ContractError> {
-        let amount_out = self.calc_out_amount_given_in(input_amount.clone(), output_denom.clone());
+        let amount_out =
+            self.calc_out_amount_given_in(&input_amount, &output_denom, spread_factor)?;
 
-        let new_pool_assets = self.generate_new_pool_assets(
-            input_amount.denom,
-            output_denom.clone(),
-            Uint128::zero() - input_amount.amount,
+        self.apply_new_pool_assets(
+            &input_amount.denom,
+            &output_denom,
+            input_amount.amount,
             amount_out,
-        );
-
-        self.0.pool_assets = new_pool_assets;
+        )?;
 
         Ok(amount_out)
     }
@@ -255,20 +230,19 @@ impl OsmosisPool for WeightedPool {
     fn swap_exact_amount_out(
         &mut self,
         input_denom: String,
-        max_input_amount: Uint128,
+        _max_input_amount: Uint128,
         output_amount: Coin,
         spread_factor: Decimal,
     ) -> Result<Uint128, ContractError> {
-        let amount_in = self.calc_in_amount_given_out(input_denom.clone(), output_amount.clone());
+        let amount_in =
+            self.calc_in_amount_given_out(&input_denom, &output_amount, spread_factor)?;
 
-        let new_pool_assets = self.generate_new_pool_assets(
-            input_denom.clone(),
-            output_amount.denom,
+        self.apply_new_pool_assets(
+            &input_denom,
+            &output_amount.denom,
             amount_in,
-            Uint128::zero() - output_amount.amount,
-        );
-
-        self.0.pool_assets = new_pool_assets;
+            output_amount.amount,
+        )?;
 
         Ok(amount_in)
     }
