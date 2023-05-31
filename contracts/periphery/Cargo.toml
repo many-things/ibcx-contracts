@@ -26,6 +26,8 @@ serde_json = { version = "1.0.96" }
 osmosis-std = "0.15.2"
 ibcx-utils = { path = "../../packages/utils" }
 ibcx-interface = { path = "../../packages/interface" }
+rust_decimal = { version = "1.29.1", features = ["maths"] }
+rust_decimal_macros = "1.29.1"
 
 [dev-dependencies]
 cw-multi-test = "0.16.1"
