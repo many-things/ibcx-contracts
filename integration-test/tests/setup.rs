@@ -2,16 +2,43 @@
 
 use std::{collections::BTreeMap, fs, path::Path, str::FromStr};
 
-use cosmwasm_std::{coin, Coin, Decimal};
+use cosmwasm_std::{coin, Coin, Decimal, Uint128};
 use ibcx_interface::{core, periphery};
 use osmosis_test_tube::{
-    osmosis_std::types::osmosis::tokenfactory::v1beta1::{
-        MsgCreateDenom, MsgMint, QueryParamsRequest,
+    fn_execute,
+    osmosis_std::types::{
+        cosmos::base::v1beta1::Coin as OsmosisCoin,
+        osmosis::{
+            gamm::poolmodels::stableswap::{
+                self,
+                v1beta1::{MsgCreateStableswapPool, MsgCreateStableswapPoolResponse},
+            },
+            tokenfactory::v1beta1::{MsgCreateDenom, MsgMint, QueryParamsRequest},
+        },
     },
     Account, Gamm, Module, OsmosisTestApp, Runner, SigningAccount, TokenFactory, Wasm,
 };
 
 pub const NORM: u128 = 40_000_000_000_000;
+
+pub struct StableSwap<'a, R: Runner<'a>> {
+    runner: &'a R,
+}
+
+impl<'a, R: Runner<'a>> Module<'a, R> for StableSwap<'a, R> {
+    fn new(runner: &'a R) -> Self {
+        Self { runner }
+    }
+}
+
+impl<'a, R> StableSwap<'a, R>
+where
+    R: Runner<'a>,
+{
+    fn_execute! {
+        pub create_stable_pool: MsgCreateStableswapPool => MsgCreateStableswapPoolResponse
+    }
+}
 
 pub fn create_denom(
     fact: &TokenFactory<OsmosisTestApp>,
@@ -33,7 +60,7 @@ pub fn create_denom(
     fact.mint(
         MsgMint {
             sender: signer.address(),
-            amount: Some(coin(10 * NORM, &new_denom).into()),
+            amount: Some(coin(NORM * NORM, &new_denom).into()),
         },
         signer,
     )
@@ -58,6 +85,35 @@ pub fn create_pool(
     .pool_id
 }
 
+pub fn create_stable_pool(
+    stable: &StableSwap<OsmosisTestApp>,
+    signer: &SigningAccount,
+    initial_liquidity: Vec<Coin>,
+    scaling_factors: Vec<u64>,
+) -> u64 {
+    stable
+        .create_stable_pool(
+            MsgCreateStableswapPool {
+                sender: signer.address(),
+                pool_params: Some(stableswap::v1beta1::PoolParams {
+                    swap_fee: "10000000000000000".to_string(),
+                    exit_fee: "0".to_string(),
+                }),
+                initial_pool_liquidity: initial_liquidity
+                    .into_iter()
+                    .map(OsmosisCoin::from)
+                    .collect(),
+                scaling_factors,
+                future_pool_governor: signer.address(),
+                scaling_factor_controller: signer.address(),
+            },
+            signer,
+        )
+        .unwrap()
+        .data
+        .pool_id
+}
+
 pub struct TestAsset {
     pub denom: String,
     pub pool_id: u64,
@@ -71,6 +127,7 @@ pub struct TestEnv<'a, R: Runner<'a>> {
     pub perp_addr: String,
 
     pub assets: BTreeMap<&'a str, TestAsset>,
+    pub stable_pool: u64,
 }
 
 pub fn setup(initial_fund: &[Coin], signer_count: u64) -> TestEnv<'static, OsmosisTestApp> {
@@ -81,7 +138,7 @@ pub fn setup(initial_fund: &[Coin], signer_count: u64) -> TestEnv<'static, Osmos
 
     // create denoms / provide liquidity
     let uusd = create_denom(&TokenFactory::new(&app), owner, "uusd");
-    let uusd_pool = create_pool(&Gamm::new(&app), owner, &uusd, "uosmo", (74, 100));
+    let uusd_pool = create_pool(&Gamm::new(&app), owner, &uusd, "uosmo", (7400, 10000));
 
     let ujpy = create_denom(&TokenFactory::new(&app), owner, "ujpy");
     let ujpy_pool = create_pool(&Gamm::new(&app), owner, &ujpy, "uosmo", (10164, 10000));
@@ -92,7 +149,20 @@ pub fn setup(initial_fund: &[Coin], signer_count: u64) -> TestEnv<'static, Osmos
     let uatom = create_denom(&TokenFactory::new(&app), owner, "uatom");
     let uatom_pool = create_pool(&Gamm::new(&app), owner, &uatom, "uosmo", (57622, 1000000));
 
-    println!("uusd: {uusd_pool}, ujpy: {ujpy_pool}, ukrw: {ukrw_pool}, uatom: {uatom_pool}");
+    let ujk_stable_pool = create_stable_pool(
+        &StableSwap::new(&app),
+        owner,
+        vec![coin(10164, &ujpy), coin(99245, &ukrw), coin(7400, &uusd)]
+            .into_iter()
+            .map(|v| Coin {
+                amount: v.amount * Uint128::from(NORM),
+                ..v
+            })
+            .collect(),
+        vec![1, 1, 1],
+    );
+
+    println!("uusd: {uusd_pool}, ujpy: {ujpy_pool}, ukrw: {ukrw_pool}, uatom: {uatom_pool}, ujk_stable: {ujk_stable_pool}");
 
     // store codes
     let base_path = Path::new("../target/wasm32-unknown-unknown/release/");
@@ -198,5 +268,6 @@ pub fn setup(initial_fund: &[Coin], signer_count: u64) -> TestEnv<'static, Osmos
                 },
             ),
         ]),
+        stable_pool: ujk_stable_pool,
     }
 }
