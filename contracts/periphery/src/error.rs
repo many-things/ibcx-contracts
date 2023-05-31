@@ -24,6 +24,9 @@ pub enum ContractError {
     #[error("{0}")]
     CheckedFromRatioError(#[from] cosmwasm_std::CheckedFromRatioError),
 
+    #[error("{0}")]
+    RustDecimalError(#[from] rust_decimal::Error),
+
     #[error("Paused")]
     Paused {},
 
