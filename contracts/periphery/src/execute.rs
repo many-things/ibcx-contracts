@@ -26,12 +26,16 @@ fn query_pool_infos(
 }
 
 fn extract_pool_ids(swap_info: Vec<SwapInfo>) -> Vec<u64> {
-    swap_info
+    let mut pool_ids = swap_info
         .into_iter()
         .flat_map(|v| v.0 .1 .0.into_iter().map(|r| r.pool_id))
         .collect::<HashSet<_>>()
         .into_iter()
-        .collect::<Vec<_>>()
+        .collect::<Vec<_>>();
+
+    pool_ids.sort();
+
+    pool_ids
 }
 
 pub fn mint_exact_amount_in(
