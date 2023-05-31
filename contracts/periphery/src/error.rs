@@ -57,4 +57,7 @@ pub enum ContractError {
         output: String,
         amount: Uint128,
     },
+
+    #[error("Unsupported pool type")]
+    UnsupportedPoolType,
 }

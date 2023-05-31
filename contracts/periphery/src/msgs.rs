@@ -30,14 +30,15 @@ pub fn make_mint_swap_exact_out_msgs(
                     to: v.denom.clone(),
                 })?;
 
-            let simulated_token_in = swap_info
-                .sim_swap_exact_out(querier, contract, v.clone())
-                .map_err(|e| ContractError::SimulateQueryError {
-                    err: e.to_string(),
-                    input: max_input.denom.clone(),
-                    output: v.denom.clone(),
-                    amount: v.amount,
-                })?;
+            let simulated_token_in =
+                swap_info
+                    .sim_swap_exact_out(querier, v.clone())
+                    .map_err(|e| ContractError::SimulateQueryError {
+                        err: e.to_string(),
+                        input: max_input.denom.clone(),
+                        output: v.denom.clone(),
+                        amount: v.amount,
+                    })?;
 
             Ok((v, Some(swap_info), simulated_token_in))
         })
@@ -104,14 +105,15 @@ pub fn make_burn_swap_msgs(
                     to: v.denom.clone(),
                 })?;
 
-            let simulated_token_out = swap_info
-                .sim_swap_exact_in(querier, contract, v.clone())
-                .map_err(|e| ContractError::SimulateQueryError {
-                    err: e.to_string(),
-                    input: v.denom.clone(),
-                    output: min_output.denom.clone(),
-                    amount: v.amount,
-                })?;
+            let simulated_token_out =
+                swap_info
+                    .sim_swap_exact_in(querier, v.clone())
+                    .map_err(|e| ContractError::SimulateQueryError {
+                        err: e.to_string(),
+                        input: v.denom.clone(),
+                        output: min_output.denom.clone(),
+                        amount: v.amount,
+                    })?;
 
             Ok((v, Some(swap_info), simulated_token_out))
         })

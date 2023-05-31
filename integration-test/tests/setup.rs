@@ -61,6 +61,7 @@ pub fn create_denom(
         MsgMint {
             sender: signer.address(),
             amount: Some(coin(NORM * NORM, &new_denom).into()),
+            mint_to_address: signer.address(),
         },
         signer,
     )

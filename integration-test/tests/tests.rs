@@ -8,8 +8,8 @@ use osmosis_std::types::osmosis::poolmanager::v1beta1::{
     SwapAmountOutRoute,
 };
 use osmosis_test_tube::{
-    cosmrs::proto::cosmos::bank::v1beta1::QueryBalanceRequest, fn_query, Account, Bank, Module,
-    Runner, Wasm,
+    cosmrs::proto::cosmos::bank::v1beta1::QueryBalanceRequest, fn_query, osmosis_std, Account,
+    Bank, Module, Runner, Wasm,
 };
 
 use ibcx_interface::{core, periphery};
@@ -122,7 +122,6 @@ fn test_integration() {
 
     let estimate_in_resp = querier
         .estimate_swap_exact_amount_in(&EstimateSwapExactAmountInRequest {
-            sender: acc.address(),
             pool_id: uusd_pool,
             token_in: coin(1_000_000, &uusd).to_string(),
             routes: vec![SwapAmountInRoute {
@@ -134,7 +133,6 @@ fn test_integration() {
 
     let estimate_out_resp = querier
         .estimate_swap_exact_amount_out(&EstimateSwapExactAmountOutRequest {
-            sender: acc.address(),
             pool_id: uusd_pool,
             token_out: coin(estimate_in_resp.token_out_amount.parse().unwrap(), "uosmo")
                 .to_string(),
@@ -147,7 +145,6 @@ fn test_integration() {
 
     let estimate_multi_in_resp = querier
         .estimate_swap_exact_amount_in(&EstimateSwapExactAmountInRequest {
-            sender: acc.address(),
             pool_id: uatom_pool,
             token_in: coin(1_000_000, &uatom).to_string(),
             routes: vec![
@@ -169,7 +166,6 @@ fn test_integration() {
 
     let estimate_multi_out_resp = querier
         .estimate_swap_exact_amount_out(&EstimateSwapExactAmountOutRequest {
-            sender: acc.address(),
             pool_id: uatom_pool,
             token_out: coin(
                 estimate_multi_in_resp.token_out_amount.parse().unwrap(),

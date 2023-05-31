@@ -19,6 +19,8 @@ cosmwasm-std = { version = "1.1.9", features = ["stargate"] }
 [dev_dependencies]
 osmosis-test-tube = { version = "15.1.0" }
 serde_json = { version = "1.0.96" }
+serde-json-wasm = "0.5.1"
 cosmwasm-schema = "1.2.5"
 base64 = "0.21.2"
 ibcx-interface = { path = "../packages/interface" }
+ibcx-periphery = { path = "../contracts/periphery" }

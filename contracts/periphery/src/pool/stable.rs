@@ -1,27 +1,81 @@
 use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Coin, Decimal, Decimal256, StdError, StdResult, Uint128};
-use osmosis_std::types::{cosmos, osmosis::gamm::poolmodels::stableswap};
+use cosmwasm_std::{from_binary, Binary, Coin, Decimal, Decimal256, StdError, StdResult, Uint128};
 
 use crate::error::ContractError;
 
 use super::OsmosisPool;
 
-fn to_std_coin(v: cosmos::base::v1beta1::Coin) -> StdResult<Coin> {
-    Ok(Coin {
-        denom: v.denom,
-        amount: Uint128::from_str(&v.amount)?,
-    })
+/*
+{
+   "pool":{
+      "@type":"/osmosis.gamm.poolmodels.stableswap.v1beta1.Pool",
+      "address":"osmo1pjkt93g9lhntcpxk6pn04xwa87gf23wpjghjudql5p7n2exujh7szrdvtc",
+      "id":"5",
+      "pool_params":{
+         "swap_fee":"0.010000000000000000",
+         "exit_fee":"0.000000000000000000"
+      },
+      "future_pool_governor":"osmo1gxygw5gy8yhyuu05qa9fmgadyyane87prwp65g",
+      "total_shares":{
+         "denom":"gamm/pool/5",
+         "amount":"100000000000000000000"
+      },
+      "pool_liquidity":[
+         {
+            "denom":"factory/osmo1gxygw5gy8yhyuu05qa9fmgadyyane87prwp65g/ujpy",
+            "amount":"406560000000000000"
+         },
+         {
+            "denom":"factory/osmo1gxygw5gy8yhyuu05qa9fmgadyyane87prwp65g/ukrw",
+            "amount":"3969800000000000000"
+         },
+         {
+            "denom":"factory/osmo1gxygw5gy8yhyuu05qa9fmgadyyane87prwp65g/uusd",
+            "amount":"296000000000000000"
+         }
+      ],
+      "scaling_factors":[
+         "1",
+         "1",
+         "1"
+      ],
+      "scaling_factor_controller":"osmo1gxygw5gy8yhyuu05qa9fmgadyyane87prwp65g"
+   }
+}
+ */
+#[cw_serde]
+pub struct StablePoolResponse {
+    pub pool: StablePool,
+}
+
+impl TryFrom<Binary> for StablePoolResponse {
+    type Error = ContractError;
+
+    fn try_from(v: Binary) -> Result<Self, Self::Error> {
+        Ok(from_binary(&v)?)
+    }
 }
 
 #[cw_serde]
-pub struct StablePool(stableswap::v1beta1::Pool);
+pub struct StablePool {
+    #[serde(rename = "@type")]
+    pub type_url: String,
+    pub address: String,
+    pub id: String,
+    pub pool_params: StablePoolParams,
+    pub pool_liquidity: Vec<Coin>,
+    pub scaling_factors: Vec<String>,
+    pub scaling_factor_controller: String,
+    pub total_shares: Coin,
+    pub future_pool_governor: String,
+}
 
-impl From<stableswap::v1beta1::Pool> for StablePool {
-    fn from(v: stableswap::v1beta1::Pool) -> Self {
-        Self(v)
-    }
+#[cw_serde]
+pub struct StablePoolParams {
+    pub swap_fee: Decimal,
+    pub exit_fee: Decimal,
 }
 
 impl StablePool {
@@ -164,23 +218,26 @@ impl StablePool {
 }
 
 impl StablePool {
+    fn get_scaling_factor(&self, idx: usize) -> u64 {
+        self.scaling_factors[idx].parse::<u64>().unwrap()
+    }
+
     fn scaled_sorted_pool_reserves(
         &self,
         first: &str,
         second: &str,
     ) -> Result<Vec<Decimal256>, ContractError> {
-        let pool_liquidity = self.0.pool_liquidity.clone();
-        let scaling_factors = self.0.scaling_factors.clone();
+        let pool_liquidity = self.pool_liquidity.clone();
 
         let mut reserves: Vec<(Coin, u64)> = Vec::with_capacity(pool_liquidity.len());
         let mut cur_idx = 2;
 
         for (i, v) in pool_liquidity.into_iter().enumerate() {
             match &v.denom {
-                d if d == first => reserves[0] = (to_std_coin(v)?, scaling_factors[i]),
-                d if d == second => reserves[1] = (to_std_coin(v)?, scaling_factors[i]),
+                d if d == first => reserves[0] = (v, self.get_scaling_factor(i)),
+                d if d == second => reserves[1] = (v, self.get_scaling_factor(i)),
                 _ => {
-                    reserves[cur_idx] = (to_std_coin(v)?, scaling_factors[i]);
+                    reserves[cur_idx] = (v, self.get_scaling_factor(i));
                     cur_idx += 1;
                 }
             }
@@ -193,10 +250,10 @@ impl StablePool {
     }
 
     fn scale_coin(&self, Coin { denom, amount }: Coin) -> Result<Decimal256, ContractError> {
-        let found = self.0.pool_liquidity.iter().position(|c| c.denom == denom);
+        let found = self.pool_liquidity.iter().position(|c| c.denom == denom);
 
         let scaling_factor = found
-            .map(|i| self.0.scaling_factors[i])
+            .map(|i| self.get_scaling_factor(i))
             .ok_or_else(|| StdError::generic_err("scaling factor not found"))?;
 
         let scaled = Decimal256::checked_from_ratio(amount, scaling_factor)?;
@@ -205,9 +262,9 @@ impl StablePool {
     }
 
     fn descale_amount(&self, denom: &str, amount: Decimal256) -> Result<Decimal256, ContractError> {
-        let found = self.0.pool_liquidity.iter().position(|c| c.denom == denom);
+        let found = self.pool_liquidity.iter().position(|c| c.denom == denom);
 
-        let scaling_factor = found.map(|i| self.0.scaling_factors[i]).unwrap_or(1);
+        let scaling_factor = found.map(|i| self.get_scaling_factor(i)).unwrap_or(1);
         let scaling_factor_dec = Decimal256::checked_from_ratio(scaling_factor, 1u64)?;
 
         let descaled = amount.checked_mul(scaling_factor_dec)?;
@@ -270,7 +327,7 @@ impl StablePool {
 
 impl OsmosisPool for StablePool {
     fn get_id(&self) -> u64 {
-        self.0.id
+        self.id.parse::<u64>().unwrap()
     }
 
     fn get_type(&self) -> &str {
@@ -278,23 +335,11 @@ impl OsmosisPool for StablePool {
     }
 
     fn get_spread_factor(&self) -> StdResult<Decimal> {
-        Ok(self
-            .0
-            .pool_params
-            .clone()
-            .map(|v| Decimal::from_str(&v.swap_fee))
-            .transpose()?
-            .unwrap_or_default())
+        Ok(self.pool_params.swap_fee)
     }
 
     fn get_exit_fee(&self) -> StdResult<Decimal> {
-        Ok(self
-            .0
-            .pool_params
-            .clone()
-            .map(|v| Decimal::from_str(&v.exit_fee))
-            .transpose()?
-            .unwrap_or_default())
+        Ok(self.pool_params.exit_fee)
     }
 
     fn swap_exact_amount_in(

@@ -1,29 +1,14 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{
-    attr, coin, to_binary, BankMsg, Env, MessageInfo, QuerierWrapper, StdResult, SubMsg, Uint128,
-    WasmMsg,
-};
+use cosmwasm_std::{attr, coin, to_binary, BankMsg, Env, MessageInfo, SubMsg, Uint128, WasmMsg};
 use cosmwasm_std::{DepsMut, Response};
 use ibcx_interface::periphery::{ExecuteMsg, SwapInfo};
 use ibcx_interface::{core, helpers::IbcCore};
 
-use osmosis_std::types::osmosis::gamm::v1beta1::{QueryPoolRequest, QueryPoolResponse};
-
-use crate::pool::resps_to_pools;
+use crate::pool::query_pools;
 use crate::state::{Context, CONTEXT};
 use crate::REPLY_ID_BURN_EXACT_AMOUNT_IN;
 use crate::{error::ContractError, msgs::make_mint_swap_exact_out_msgs};
-
-fn query_pool_infos(
-    querier: &QuerierWrapper,
-    pool_ids: Vec<u64>,
-) -> StdResult<Vec<QueryPoolResponse>> {
-    pool_ids
-        .into_iter()
-        .map(|v| querier.query(&QueryPoolRequest { pool_id: v }.into()))
-        .collect()
-}
 
 fn extract_pool_ids(swap_info: Vec<SwapInfo>) -> Vec<u64> {
     let mut pool_ids = swap_info
@@ -48,9 +33,8 @@ pub fn mint_exact_amount_in(
     swap_info: Vec<SwapInfo>,
 ) -> Result<Response, ContractError> {
     let pool_ids = extract_pool_ids(swap_info);
-    let pool_resps = query_pool_infos(&deps.querier, pool_ids)?;
 
-    let pools = resps_to_pools(pool_resps)?;
+    let pools = query_pools(&deps.querier, pool_ids)?;
 
     for pool in pools {
         deps.api.debug(&format!(

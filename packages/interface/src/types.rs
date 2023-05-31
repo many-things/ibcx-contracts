@@ -1,14 +1,11 @@
 use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{
-    coin, from_binary, to_vec, Addr, Coin, ContractResult, Empty, HexBinary, Order, QueryRequest,
-    StdError, StdResult, SystemResult, Uint128,
-};
+use cosmwasm_std::{coin, Addr, Coin, Order, StdResult, Uint128};
 use cosmwasm_std::{CosmosMsg, QuerierWrapper};
 use osmosis_std::types::osmosis::poolmanager::v1beta1::{
-    EstimateSwapExactAmountOutRequest, EstimateSwapExactAmountOutResponse, MsgSwapExactAmountIn,
-    MsgSwapExactAmountOut, PoolmanagerQuerier, SwapAmountInRoute, SwapAmountOutRoute,
+    MsgSwapExactAmountIn, MsgSwapExactAmountOut, PoolmanagerQuerier, SwapAmountInRoute,
+    SwapAmountOutRoute,
 };
 
 #[cw_serde]
@@ -81,13 +78,11 @@ impl SwapRoutes {
     pub fn sim_swap_exact_in(
         &self,
         querier: &QuerierWrapper,
-        sender: &Addr,
         token_in: Coin,
     ) -> StdResult<Uint128> {
         let client = PoolmanagerQuerier::new(querier);
 
         let resp = client.estimate_swap_exact_amount_in(
-            sender.to_string(),
             self.0.first().unwrap().pool_id,
             token_in.to_string(),
             self.clone().into(),
@@ -100,45 +95,17 @@ impl SwapRoutes {
     pub fn sim_swap_exact_out(
         &self,
         querier: &QuerierWrapper,
-        sender: &Addr,
         token_out: Coin,
     ) -> StdResult<Uint128> {
-        let req = to_vec::<QueryRequest<Empty>>(
-            &EstimateSwapExactAmountOutRequest {
-                sender: sender.to_string(),
-                pool_id: self.0.first().unwrap().pool_id,
-                routes: self.clone().into(),
-                token_out: token_out.to_string(),
-            }
-            .into(),
+        let client = PoolmanagerQuerier::new(querier);
+
+        let resp = client.estimate_swap_exact_amount_out(
+            self.0.first().unwrap().pool_id,
+            self.clone().into(),
+            token_out.to_string(),
         )?;
 
-        match querier.raw_query(&req) {
-            SystemResult::Err(system_err) => Err(StdError::generic_err(format!(
-                "Querier system error: {}",
-                system_err
-            ))),
-            SystemResult::Ok(ContractResult::Err(contract_err)) => Err(StdError::generic_err(
-                format!("Querier contract error: {}", contract_err),
-            )),
-            SystemResult::Ok(ContractResult::Ok(value)) => {
-                let enc_a = from_binary::<EstimateSwapExactAmountOutRequest>(&value);
-                let enc_b = from_binary::<EstimateSwapExactAmountOutResponse>(&value);
-
-                match (enc_a, enc_b) {
-                    (Ok(v), Err(_)) => Uint128::from_str(&v.sender),
-                    (Err(_), Ok(v)) => Uint128::from_str(&v.token_in_amount),
-                    (Err(e1), Err(e2)) => Err(StdError::generic_err(format!(
-                        "decoding error. l:{e1:?} r:{e2:?} raw:{}",
-                        HexBinary::from(value)
-                    ))),
-                    _ => Err(StdError::generic_err(format!(
-                        "decoding error - both result is Ok. raw:{}",
-                        HexBinary::from(value),
-                    ))),
-                }
-            }
-        }
+        Uint128::from_str(&resp.token_in_amount)
     }
 
     pub fn msg_swap_exact_in(
