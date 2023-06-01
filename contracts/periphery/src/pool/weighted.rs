@@ -190,21 +190,21 @@ impl WeightedPool {
             weight: token_in_weight,
         } = self.get_asset(input_denom)?;
 
-        let token_sub_out = token_out.amount;
+        let token_sub_out = token_out.amount - output_amount.amount;
         let token_weight_ratio = Decimal::checked_from_ratio(token_out_weight, token_in_weight)?;
 
         let rust_token_weight_ratio = RustDecimal::from_str(&token_weight_ratio.to_string())?;
         let rust_token_sub_out = RustDecimal::from_str(&token_sub_out.to_string())?;
 
-        let calculed_by_rust_decimal =
+        let calculated_by_rust_decimal =
             Decimal::from_str(&rust_token_sub_out.powd(rust_token_weight_ratio).to_string())?;
-
         let minus_spread_factor = Decimal::one() - spread_factor;
+        let divided_token_out = Decimal::from_str(&token_out.amount.to_string())?
+            .div(calculated_by_rust_decimal)
+            - Decimal::one();
+        let divded_minus_spread_factor = divided_token_out.div(minus_spread_factor);
 
-        let divided_token_out =
-            (calculed_by_rust_decimal - Decimal::one()).div(minus_spread_factor);
-
-        Ok(token_in.amount * divided_token_out)
+        Ok(token_in.amount * divded_minus_spread_factor)
     }
 }
 
