@@ -1,10 +1,8 @@
 mod stable;
 mod weighted;
 
-use std::collections::BTreeMap;
-
 use cosmwasm_std::{
-    to_vec, Api, Binary, Coin, ContractResult, CustomQuery, Decimal, Empty, QuerierWrapper,
+    to_vec, Binary, Coin, ContractResult, CustomQuery, Decimal, Empty, QuerierWrapper,
     QueryRequest, StdError, StdResult, SystemResult, Uint128,
 };
 use osmosis_std::types::osmosis::poolmanager::v1beta1::PoolRequest;

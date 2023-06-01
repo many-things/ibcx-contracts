@@ -345,16 +345,84 @@ mod tests {
         ]
     }
 
+    struct Assets {
+        uusd: String,
+        uusd_pool: Box<dyn OsmosisPool>,
+
+        ujpy: String,
+        ujpy_pool: Box<dyn OsmosisPool>,
+
+        ukrw: String,
+        ukrw_pool: Box<dyn OsmosisPool>,
+        
+        uatom: String,
+        uatom_pool: Box<dyn OsmosisPool>,
+
+        stable_pool: Box<dyn OsmosisPool>,
+    }
+
+    impl Assets {
+        fn new(pools: Vec<Box<dyn OsmosisPool>>) -> Self {
+            let pools_map = pools.into_iter().map(|v| (v.get_id(), v)).collect::<BTreeMap<_, _>>();
+
+
+
+            Self { 
+                uusd: "factory/osmo1e62d0usjdp6rd94tl2p0g7ghxdledmcg294e29/uusd".to_string(),
+                uusd_pool: pools_map.get(&1u64).unwrap().clone(),
+                ujpy: "factory/osmo1e62d0usjdp6rd94tl2p0g7ghxdledmcg294e29/ujpy".to_string(),
+                ujpy_pool: pools_map.get(&2u64).unwrap().clone(),
+                ukrw:  "factory/osmo1e62d0usjdp6rd94tl2p0g7ghxdledmcg294e29/ukrw".to_string(),
+                ukrw_pool: pools_map.get(&3u64).unwrap().clone(),
+                uatom: "factory/osmo1e62d0usjdp6rd94tl2p0g7ghxdledmcg294e29/uatom".to_string(),
+                uatom_pool: pools_map.get(&4u64).unwrap().clone(),
+                stable_pool: pools_map.get(&5u64).unwrap().clone(),
+            }
+        }
+
+        pub fn pools(&self) -> Vec<Box<dyn OsmosisPool>> {
+            vec![
+                self.uusd_pool.clone(),
+                self.ujpy_pool.clone(),
+                self.ukrw_pool.clone(),
+                self.uatom_pool.clone(),
+                self.stable_pool.clone(),
+            ]
+        }
+    }
+
+    #[test]
+    fn test_swap_weighted_pool() {
+        let pools = mock_pools();
+        
+        let mut assets = Assets::new(pools);
+
+        let spread_factor = assets.uusd_pool.get_spread_factor().unwrap();
+        
+        let amount_out = assets.uusd_pool.swap_exact_amount_in(
+            coin(100000000000u128, &assets.uusd),
+            "uosmo".to_string(),
+            Uint128::zero(),
+            spread_factor,
+        ).unwrap();
+
+        let amount_in = assets.uusd_pool.swap_exact_amount_out(assets.uusd, Uint128::from(u64::MAX), coin(amount_out.u128(), "uosmo"), spread_factor).unwrap();
+
+        println!("in: {}, out: {}", amount_in, amount_out);
+    }
+
     #[test]
     fn test_estimate_swap() {
         let pools = mock_pools();
         let portfolio = mock_portfolio();
 
-        let (uusd, uusd_pool) = ("factory/osmo1e62d0usjdp6rd94tl2p0g7ghxdledmcg294e29/uusd".to_string(), 1);
-        let (ujpy, ujpy_pool) = ("factory/osmo1e62d0usjdp6rd94tl2p0g7ghxdledmcg294e29/ujpy".to_string(), 2);
-        let (ukrw, ukrw_pool) = ("factory/osmo1e62d0usjdp6rd94tl2p0g7ghxdledmcg294e29/ukrw".to_string(), 3);
-        let (uatom, uatom_pool) = ("factory/osmo1e62d0usjdp6rd94tl2p0g7ghxdledmcg294e29/uatom".to_string(), 4);
-        let stable_pool = 5;
+        let assets = Assets::new(pools);
+
+        let (uusd, uusd_pool) = (assets.uusd.clone(), assets.uusd_pool.get_id());
+        let (ujpy, ujpy_pool) = (assets.ujpy.clone(), assets.ujpy_pool.get_id());
+        let (ukrw, ukrw_pool) = (assets.ukrw.clone(), assets.ukrw_pool.get_id());
+        let (uatom, uatom_pool) = (assets.uatom.clone(), assets.uatom_pool.get_id());
+        let stable_pool = assets.stable_pool.get_id();
 
         let input_asset = uatom.clone();
         let swap_infos_compact = SwapInfosCompact(vec![
@@ -391,27 +459,28 @@ mod tests {
 
         let swap_info: Vec<SwapInfo> = swap_infos_compact.into();
 
-        let mut pools_map = pools
-            .clone()
+
+        let mut pools_map = assets.pools()
             .into_iter()
             .map(|v| (v.get_id(), v))
             .collect::<BTreeMap<_, _>>();
+            
+        _ = pools_map;
 
+        // let token_one_in = portfolio
+        //     .iter()
+        //     .map(|(denom, unit)| coin((Uint128::new(1000000) * *unit).u128(), denom))
+        //     .try_fold(Uint128::zero(), |acc, token_out| {
+        //         let token_in = estimate_in_given_out(
+        //             input_asset.clone(),
+        //             token_out,
+        //             &mut pools_map,
+        //             &swap_info,
+        //         )?;
 
-        let token_one_in = portfolio
-            .iter()
-            .map(|(denom, unit)| coin((Uint128::new(1000000) * *unit).u128(), denom))
-            .try_fold(Uint128::zero(), |acc, token_out| {
-                let token_in = estimate_in_given_out(
-                    input_asset.clone(),
-                    token_out,
-                    &mut pools_map,
-                    &swap_info,
-                )?;
+        //         Ok::<_, ContractError>(acc + token_in)
+        //     }).unwrap();
 
-                Ok::<_, ContractError>(acc + token_in)
-            }).unwrap();
-
-        println!("{}", token_one_in);
+        // println!("{}", token_one_in);
     }
 }
