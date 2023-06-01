@@ -222,6 +222,10 @@ impl OsmosisPool for WeightedPool {
         Ok(self.pool_params.exit_fee)
     }
 
+    fn clone_box(&self) -> Box<dyn OsmosisPool> {
+        Box::new(self.clone())
+    }
+
     fn swap_exact_amount_in(
         &mut self,
         input_amount: Coin,

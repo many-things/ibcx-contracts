@@ -1,8 +1,10 @@
 mod stable;
 mod weighted;
 
+use std::collections::BTreeMap;
+
 use cosmwasm_std::{
-    to_vec, Binary, Coin, ContractResult, CustomQuery, Decimal, Empty, QuerierWrapper,
+    to_vec, Api, Binary, Coin, ContractResult, CustomQuery, Decimal, Empty, QuerierWrapper,
     QueryRequest, StdError, StdResult, SystemResult, Uint128,
 };
 use osmosis_std::types::osmosis::poolmanager::v1beta1::PoolRequest;
@@ -21,6 +23,8 @@ pub trait OsmosisPool {
 
     fn get_exit_fee(&self) -> StdResult<Decimal>;
 
+    fn clone_box(&self) -> Box<dyn OsmosisPool>;
+
     fn swap_exact_amount_in(
         &mut self,
         input_amount: Coin,
@@ -35,6 +39,12 @@ pub trait OsmosisPool {
         output_amount: Coin,
         spread_factor: Decimal,
     ) -> Result<Uint128, ContractError>; // returns simulated amount in
+}
+
+impl Clone for Box<dyn OsmosisPool> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
 }
 
 fn raw_query<C: CustomQuery>(
@@ -58,9 +68,10 @@ fn raw_query<C: CustomQuery>(
 }
 
 // base64(`{"pool":{"@type":"/osmosis.gamm.v1beta1.Pool"`)
-const PREFIX_WEIGHTED_POOL: &str = "eyJwb29sIjp7IkB0eXBlIjoiL29zbW9zaXMuZ2FtbS52MWJldGExLlBvb2wiL";
+pub const PREFIX_WEIGHTED_POOL: &str =
+    "eyJwb29sIjp7IkB0eXBlIjoiL29zbW9zaXMuZ2FtbS52MWJldGExLlBvb2wiL";
 // base64(`{"pool":{"@type":"/osmosis.gamm.poolmodels.stableswap.v1beta1.Pool"`)
-const PREFIX_STABLE_POOL: &str =
+pub const PREFIX_STABLE_POOL: &str =
     "eyJwb29sIjp7IkB0eXBlIjoiL29zbW9zaXMuZ2FtbS5wb29sbW9kZWxzLnN0YWJsZXN3YXAudjFiZXRhMS5Qb29sIi";
 
 pub fn query_pools(
@@ -72,6 +83,7 @@ pub fn query_pools(
         .map(|v| Ok(raw_query::<Empty>(querier, &PoolRequest { pool_id: v }.into())?.to_base64()))
         .collect::<StdResult<Vec<_>>>()?;
 
+    // FIXME: hackyyy
     let pools = raw_pool_resps
         .into_iter()
         .map(|v| -> Result<Box<dyn OsmosisPool>, ContractError> {

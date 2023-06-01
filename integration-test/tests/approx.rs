@@ -40,7 +40,7 @@ fn test_approx() {
 
     let (uusd, uusd_pool) = unwrap_asset(env.assets.get("uusd"));
     let (ujpy, ujpy_pool) = unwrap_asset(env.assets.get("ujpy"));
-    let (ukrw, _ukrw_pool) = unwrap_asset(env.assets.get("ukrw"));
+    let (ukrw, ukrw_pool) = unwrap_asset(env.assets.get("ukrw"));
     let (uatom, uatom_pool) = unwrap_asset(env.assets.get("uatom"));
 
     let resp = wasm
@@ -69,13 +69,20 @@ fn test_approx() {
                         key: format!("{uatom},{ukrw}"),
                         routes: vec![
                             format!("{uatom_pool},{uatom}"),
+                            format!("{ukrw_pool},uosmo"),
+                        ],
+                    },
+                    periphery::SwapInfoCompact {
+                        key: format!("{uatom},uosmo"),
+                        routes: vec![
+                            format!("{uatom_pool},{uatom}"),
                             format!("{ujpy_pool},{ukrw}"),
                             format!("{},uosmo", env.stable_pool),
                         ],
                     },
                 ]),
             },
-            &[],
+            &[coin(10 * NORM, uatom)],
             owner,
         )
         .unwrap();

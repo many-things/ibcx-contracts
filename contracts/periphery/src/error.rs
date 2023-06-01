@@ -48,6 +48,9 @@ pub enum ContractError {
     #[error("Swap route not found. from:{from:?}, to:{to:?}")]
     SwapRouteNotFound { from: String, to: String },
 
+    #[error("Pool not found. pool_id:{0}")]
+    PoolNotFound(u64),
+
     #[error(
         "Simulate query error. err:{err:?}, input:{input:?}, output:{output:?}, amount:{amount:?}"
     )]

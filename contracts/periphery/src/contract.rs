@@ -1,23 +1,13 @@
-use cosmwasm_std::{
-    attr, coin, entry_point, to_binary, Env, MessageInfo, QueryResponse, Reply, Uint128, WasmMsg,
-};
+use cosmwasm_schema::serde::Serialize;
+use cosmwasm_std::{attr, entry_point, Env, MessageInfo, QueryResponse, Reply, WasmMsg};
 use cosmwasm_std::{Deps, DepsMut, Response};
-use ibcx_interface::{
-    helpers::IbcCore,
-    periphery::{
-        ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SimulateBurnExactAmountInResponse,
-        SimulateMintExactAmountOutResponse,
-    },
-};
+use ibcx_interface::periphery::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 use crate::state::{Context, CONTEXT};
-use crate::REPLY_ID_BURN_EXACT_AMOUNT_IN;
 use crate::{
-    error::ContractError,
-    execute,
-    msgs::{make_burn_swap_msgs, make_mint_swap_exact_out_msgs},
-    CONTRACT_NAME, CONTRACT_VERSION,
+    error::ContractError, execute, msgs::make_burn_swap_msgs, CONTRACT_NAME, CONTRACT_VERSION,
 };
+use crate::{query, REPLY_ID_BURN_EXACT_AMOUNT_IN};
 
 #[entry_point]
 pub fn instantiate(
@@ -131,7 +121,7 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, Contract
 
                     let finish_msg = WasmMsg::Execute {
                         contract_addr: env.contract.address.to_string(),
-                        msg: to_binary(&ExecuteMsg::FinishOperation {
+                        msg: cosmwasm_std::to_binary(&ExecuteMsg::FinishOperation {
                             refund_to: sender.to_string(),
                             refund_asset: min_output.denom,
                         })?,
@@ -156,72 +146,48 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, Contract
     }
 }
 
+pub fn to_binary<T: Serialize>(
+    r: Result<T, ContractError>,
+) -> Result<QueryResponse, ContractError> {
+    Ok(r.map(|v| cosmwasm_std::to_binary(&v))??)
+}
+
 #[entry_point]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, ContractError> {
     use QueryMsg::*;
 
     match msg {
+        // SimulateMintExactamountIn {} => {}
         SimulateMintExactAmountOut {
             core_addr,
             output_amount,
             input_asset,
             swap_info,
-        } => {
-            // query to core contract
-            let core = IbcCore(deps.api.addr_validate(&core_addr)?);
-            let core_config = core.get_config(&deps.querier, None)?;
-
-            // input & output
-            let output = coin(output_amount.u128(), core_config.index_denom);
-
-            let sim_resp = core.simulate_mint(&deps.querier, output.amount, None, None)?;
-            let sim_amount_desired = sim_resp.fund_spent;
-
-            let (_, refund) = make_mint_swap_exact_out_msgs(
-                &deps.querier,
-                &env.contract.address,
-                swap_info.into(),
-                sim_amount_desired.clone(),
-                &coin(u64::MAX as u128, &input_asset),
-            )?;
-
-            Ok(to_binary(&SimulateMintExactAmountOutResponse {
-                mint_amount: output.amount,
-                mint_spend_amount: sim_amount_desired,
-                swap_result_amount: coin(
-                    Uint128::from(u64::MAX).checked_sub(refund)?.u128(),
-                    input_asset,
-                ),
-            })?)
-        }
+        } => to_binary(query::simulate_mint_exact_amount_out(
+            deps,
+            env,
+            core_addr,
+            output_amount,
+            input_asset,
+            swap_info,
+        )),
 
         SimulateBurnExactAmountIn {
             core_addr,
             input_amount,
             output_asset,
             swap_info,
-        } => {
-            // query to core contract
-            let core = IbcCore(deps.api.addr_validate(&core_addr)?);
-
-            let sim_resp = core.simulate_burn(&deps.querier, input_amount, None)?;
-            let expected = sim_resp.redeem_amount.clone();
-
-            let (_, receive) = make_burn_swap_msgs(
-                &deps.querier,
-                &env.contract.address,
-                swap_info.into(),
-                expected,
-                &coin(Uint128::zero().u128(), &output_asset),
-            )?;
-
-            Ok(to_binary(&SimulateBurnExactAmountInResponse {
-                burn_amount: sim_resp.burn_amount,
-                burn_redeem_amount: sim_resp.redeem_amount,
-                swap_result_amount: coin(receive.u128(), &output_asset),
-            })?)
-        }
+        } => to_binary(query::simulate_burn_exact_amount_in(
+            deps,
+            env,
+            core_addr,
+            input_amount,
+            output_asset,
+            swap_info,
+        )),
     }
+
+    // SimulateMintExactamountIn {} => {}
 }
 
 #[entry_point]
