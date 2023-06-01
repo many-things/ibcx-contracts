@@ -229,23 +229,27 @@ impl StablePool {
     ) -> Result<Vec<Decimal256>, ContractError> {
         let pool_liquidity = self.pool_liquidity.clone();
 
-        let mut reserves: Vec<(Coin, u64)> = Vec::with_capacity(pool_liquidity.len());
         let mut cur_idx = 2;
 
-        for (i, v) in pool_liquidity.into_iter().enumerate() {
-            match &v.denom {
-                d if d == first => reserves[0] = (v, self.get_scaling_factor(i)),
-                d if d == second => reserves[1] = (v, self.get_scaling_factor(i)),
-                _ => {
-                    reserves[cur_idx] = (v, self.get_scaling_factor(i));
-                    cur_idx += 1;
-                }
-            }
-        }
-
-        Ok(reserves
+        let mut indexed = pool_liquidity
             .into_iter()
-            .map(|(liq, scale)| Decimal256::from_ratio(liq.amount, scale))
+            .enumerate()
+            .map(|(i, v)| match &v.denom {
+                d if d == first => (0, v, self.get_scaling_factor(i)),
+                d if d == second => (1, v, self.get_scaling_factor(i)),
+                _ => {
+                    let ret = (cur_idx, v, self.get_scaling_factor(i));
+                    cur_idx += 1;
+                    ret
+                }
+            })
+            .collect::<Vec<_>>();
+
+        indexed.sort_by(|a, b| a.0.cmp(&b.0));
+
+        Ok(indexed
+            .into_iter()
+            .map(|(_, liq, scale)| Decimal256::from_ratio(liq.amount, scale))
             .collect())
     }
 

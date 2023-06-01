@@ -412,6 +412,26 @@ mod tests {
     }
 
     #[test]
+    fn test_swap_stable_pool() {
+        let pools = mock_pools();
+
+        let mut assets = Assets::new(pools);
+        
+        let spread_factor = assets.stable_pool.get_spread_factor().unwrap();
+
+        let amount_out = assets.stable_pool.swap_exact_amount_in(
+            coin(100000000000u128, &assets.uusd),
+            assets.ukrw.clone(),
+            Uint128::zero(),
+            spread_factor,
+        ).unwrap();
+
+        let amount_in = assets.stable_pool.swap_exact_amount_out(assets.uusd, Uint128::from(u64::MAX), coin(amount_out.u128(), assets.ukrw), spread_factor).unwrap();
+
+        println!("in: {}, out: {}", amount_in, amount_out);
+    }
+
+    #[test]
     fn test_estimate_swap() {
         let pools = mock_pools();
         let portfolio = mock_portfolio();
