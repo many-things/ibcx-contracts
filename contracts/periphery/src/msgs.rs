@@ -48,12 +48,13 @@ pub fn make_mint_swap_exact_out_msgs(
     let swap_msgs = simulated
         .into_iter()
         .filter_map(|r| {
-            r.routes.map(|routes| {
+            r.routes.map(|mut routes| {
                 let ratio =
                     Decimal::checked_from_ratio(max_input.amount, simulated_total_spend_amount)
                         .unwrap();
                 let amount_in_max = ratio * r.sim_amount_in;
 
+                routes.0.reverse();
                 routes.msg_swap_exact_out(
                     contract,
                     &r.amount_out.denom,
