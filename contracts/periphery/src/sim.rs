@@ -210,3 +210,66 @@ pub fn search_efficient(
         loop_count += 1;
     }
 }
+
+#[cw_serde]
+pub struct EstimateResult {
+    pub max_est_in: Uint128,
+    pub max_est_out: Uint128,
+    pub max_routes: Vec<SimAmountInRoute>,
+
+    pub est_in: Uint128,
+    pub est_out: Uint128,
+    pub routes: Vec<SimAmountInRoute>,
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn estimate_max_index_for_input(
+    deps: &Deps,
+    units: &[(String, Decimal)],
+    input_asset: Coin,
+    init_index_amount: Option<Uint128>,
+    (min_index_amount, max_index_amount): (Uint128, Uint128), // min / max
+    pools: &[Box<dyn OsmosisPool>],
+    swap_info: &[SwapInfo],
+    err_tolerance: Option<Decimal>,
+) -> Result<EstimateResult, ContractError> {
+    let (max_est_in, max_est_out, max_routes) = search_efficient(
+        deps,
+        units,
+        input_asset.clone(),
+        init_index_amount,
+        pools,
+        swap_info,
+    )?;
+    deps.api.debug(&format!(
+        "from_contract    => max_est_in: {}, max_est_out: {}",
+        max_est_in, max_est_out
+    ));
+    if max_est_out < min_index_amount {
+        return Err(ContractError::TradeAmountExceeded {});
+    }
+
+    let est_out = {
+        let gap = max_est_out.checked_sub(min_index_amount)?;
+        let tol = gap * err_tolerance.unwrap_or_else(|| Decimal::from_ratio(1u64, 3u64));
+        max_est_out.checked_sub(tol)?
+    };
+    let (est_in, routes) =
+        calc_index_per_token(deps, units, est_out, &input_asset.denom, pools, swap_info)?;
+    deps.api.debug(&format!(
+        "from_contract    =>     est_in: {},     est_out: {}",
+        est_in, est_out
+    ));
+    if max_index_amount < est_out {
+        return Err(ContractError::TradeAmountExceeded {});
+    }
+
+    Ok(EstimateResult {
+        max_est_in,
+        max_est_out,
+        max_routes,
+        est_in,
+        est_out,
+        routes,
+    })
+}

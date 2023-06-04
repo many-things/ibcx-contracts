@@ -32,8 +32,7 @@ pub fn make_mint_swap_exact_out_msgs(
                 });
             }
 
-            let route =
-                estimate_in_given_out(deps, &max_input.denom, v.clone(), &mut pools, &swap_info)?;
+            let route = estimate_in_given_out(deps, &max_input.denom, v, &mut pools, &swap_info)?;
 
             Ok(route)
         })

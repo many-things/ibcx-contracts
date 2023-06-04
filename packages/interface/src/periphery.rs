@@ -99,8 +99,7 @@ pub enum ExecuteMsg {
     // fixed output
     BurnExactAmountOut {
         core_addr: String,
-        output_asset: String,
-        output_amount: Uint128,
+        output_asset: Coin,
         swap_info: SwapInfosCompact,
     },
 

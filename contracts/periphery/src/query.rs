@@ -2,8 +2,8 @@ use cosmwasm_std::{coin, Coin, Deps, Env, Uint128};
 use ibcx_interface::{
     helpers::IbcCore,
     periphery::{
-        extract_pool_ids, SimulateBurnExactAmountInResponse, SimulateMintExactAmountOutResponse,
-        SwapInfo,
+        extract_pool_ids, SimulateBurnExactAmountInResponse, SimulateBurnExactAmountOutResponse,
+        SimulateMintExactAmountOutResponse, SwapInfo,
     },
 };
 
@@ -22,7 +22,6 @@ pub fn simulate_mint_exact_amount_in(
     swap_info: Vec<SwapInfo>,
 ) -> Result<SimulateMintExactAmountOutResponse, ContractError> {
     let core = IbcCore(deps.api.addr_validate(&core_addr)?);
-    let _core_config = core.get_config(&deps.querier, None)?;
     let core_portfolio = core.get_portfolio(&deps.querier, None)?;
 
     let pool_ids = extract_pool_ids(swap_info.clone());
@@ -39,7 +38,11 @@ pub fn simulate_mint_exact_amount_in(
 
     Ok(SimulateMintExactAmountOutResponse {
         mint_amount: token_out,
-        mint_spend_amount: vec![],
+        mint_spend_amount: core_portfolio
+            .units
+            .into_iter()
+            .map(|(denom, unit)| coin((token_out * unit).u128(), denom))
+            .collect(),
         swap_result_amount: coin(token_in.u128(), input_asset.denom),
     })
 }
@@ -110,11 +113,34 @@ pub fn simulate_burn_exact_amount_in(
 }
 
 pub fn simulate_burn_exact_amount_out(
-    _deps: Deps,
+    deps: Deps,
     _env: Env,
-    _core_addr: String,
-    _output_asset: Coin,
-    _swap_info: Vec<SwapInfo>,
-) -> Result<SimulateBurnExactAmountInResponse, ContractError> {
-    todo!()
+    core_addr: String,
+    output_asset: Coin,
+    swap_info: Vec<SwapInfo>,
+) -> Result<SimulateBurnExactAmountOutResponse, ContractError> {
+    let core = IbcCore(deps.api.addr_validate(&core_addr)?);
+    let core_portfolio = core.get_portfolio(&deps.querier, None)?;
+
+    let pool_ids = extract_pool_ids(swap_info.clone());
+    let pools = query_pools(&deps, pool_ids)?;
+
+    let (token_in, token_out, _) = search_efficient(
+        &deps,
+        &core_portfolio.units,
+        output_asset.clone(),
+        None,
+        &pools,
+        &swap_info,
+    )?;
+
+    Ok(SimulateBurnExactAmountOutResponse {
+        burn_amount: token_out,
+        burn_redeem_amount: core_portfolio
+            .units
+            .into_iter()
+            .map(|(denom, unit)| coin((token_out * unit).u128(), denom))
+            .collect(),
+        swap_result_amount: coin(token_in.u128(), output_asset.denom),
+    })
 }

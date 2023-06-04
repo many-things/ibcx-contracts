@@ -1,12 +1,12 @@
 use cosmwasm_std::{
-    attr, coin, to_binary, BankMsg, Decimal, Env, MessageInfo, SubMsg, Uint128, WasmMsg,
+    attr, coin, to_binary, BankMsg, Coin, Decimal, Env, MessageInfo, SubMsg, Uint128, WasmMsg,
 };
 use cosmwasm_std::{DepsMut, Response};
 use ibcx_interface::periphery::{extract_pool_ids, ExecuteMsg, SwapInfo};
 use ibcx_interface::{core, helpers::IbcCore};
 
 use crate::pool::query_pools;
-use crate::sim::{calc_index_per_token, search_efficient};
+use crate::sim::estimate_max_index_for_input;
 use crate::state::{Context, CONTEXT};
 use crate::REPLY_ID_BURN_EXACT_AMOUNT_IN;
 use crate::{error::ContractError, msgs::make_mint_swap_exact_out_msgs};
@@ -21,7 +21,7 @@ pub fn mint_exact_amount_in(
     swap_info: Vec<SwapInfo>,
 ) -> Result<Response, ContractError> {
     let core = IbcCore(deps.api.addr_validate(&core_addr)?);
-    let _core_config = core.get_config(&deps.querier, None)?;
+    let core_config = core.get_config(&deps.querier, None)?;
     let core_portfolio = core.get_portfolio(&deps.querier, None)?;
 
     let input_amount = cw_utils::must_pay(&info, &input_asset)?;
@@ -30,39 +30,20 @@ pub fn mint_exact_amount_in(
     let pool_ids = extract_pool_ids(swap_info.clone());
     let pools = query_pools(&deps.as_ref(), pool_ids)?;
 
-    let (max_est_in, max_est_out, _) = search_efficient(
+    let est_res = estimate_max_index_for_input(
         &deps.as_ref(),
         &core_portfolio.units,
-        input_token,
+        input_token.clone(),
         Some(min_output_amount),
+        (min_output_amount, Uint128::MAX),
         &pools,
         &swap_info,
+        None,
     )?;
-    deps.api.debug(&format!(
-        "from_contract    => max_est_in: {}, max_est_out: {}",
-        max_est_in, max_est_out
-    ));
-    if max_est_out < min_output_amount {
-        return Err(ContractError::TradeAmountExceeded {});
-    }
 
-    let est_out =
-        max_est_out - ((max_est_out - min_output_amount) * Decimal::from_ratio(1u64, 3u64));
-    let (est_in, routes) = calc_index_per_token(
-        &deps.as_ref(),
-        &core_portfolio.units,
-        est_out,
-        &input_asset,
-        &pools,
-        &swap_info,
-    )?;
-    deps.api.debug(&format!(
-        "from_contract    =>     est_in: {},     est_out: {}",
-        est_in, est_out
-    ));
-
-    let amplifier = Decimal::checked_from_ratio(max_est_out, est_out)?;
-    let swap_msgs = routes
+    let amplifier = Decimal::checked_from_ratio(est_res.max_est_out, est_res.est_out)?;
+    let swap_msgs = est_res
+        .routes
         .into_iter()
         .filter_map(|r| {
             r.routes.map(|mut routes| {
@@ -88,14 +69,14 @@ pub fn mint_exact_amount_in(
 
     let mint_msg = core.call_with_funds(
         core::ExecuteMsg::Mint {
-            amount: est_out,
+            amount: est_res.est_out,
             receiver: Some(info.sender.to_string()),
             refund_to: Some(info.sender.to_string()),
         },
         core_portfolio
             .units
             .into_iter()
-            .map(|(denom, unit)| coin((est_out * unit).u128(), denom))
+            .map(|(denom, unit)| coin((est_res.est_out * unit).u128(), denom))
             .collect(),
     )?;
 
@@ -106,8 +87,11 @@ pub fn mint_exact_amount_in(
         .add_attributes(vec![
             attr("method", "mint_exact_amount_in"),
             attr("executor", info.sender),
-            // attr("input", input_token.amount.to_string()),
-            attr("min_output", min_output_amount.to_string()),
+            attr("input", input_token.to_string()),
+            attr(
+                "min_output",
+                coin(est_res.est_out.u128(), core_config.index_denom).to_string(),
+            ),
         ]);
 
     Ok(resp)
@@ -232,15 +216,72 @@ pub fn burn_exact_amount_in(
 }
 
 pub fn burn_exact_amount_out(
-    _deps: DepsMut,
+    deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
-    _core_addr: String,
-    _output_asset: String,
-    _output_amount: Uint128,
-    _swap_info: Vec<SwapInfo>,
+    info: MessageInfo,
+    core_addr: String,
+    output_asset: Coin,
+    swap_info: Vec<SwapInfo>,
 ) -> Result<Response, ContractError> {
-    Ok(Response::default())
+    // query to core contract
+    let core = IbcCore(deps.api.addr_validate(&core_addr)?);
+    let core_config = core.get_config(&deps.querier, None)?;
+    let core_portfolio = core.get_portfolio(&deps.querier, None)?;
+
+    let input_amount = cw_utils::must_pay(&info, &core_config.index_denom)?;
+    let input_token = coin(input_amount.u128(), &core_config.index_denom);
+
+    let pool_ids = extract_pool_ids(swap_info.clone());
+    let pools = query_pools(&deps.as_ref(), pool_ids)?;
+
+    // index -> units -> token
+    let est_res = estimate_max_index_for_input(
+        &deps.as_ref(),
+        &core_portfolio.units,
+        output_asset.clone(),
+        Some(input_token.amount),
+        (Uint128::zero(), input_token.amount),
+        &pools,
+        &swap_info,
+        None,
+    )?;
+
+    let burn_amount = coin(est_res.est_out.u128(), &core_config.index_denom);
+    let burn_msg = core.call_with_funds(
+        core::ExecuteMsg::Burn { redeem_to: None },
+        vec![burn_amount.clone()],
+    )?;
+
+    // save to context
+    CONTEXT.save(
+        deps.storage,
+        &Context::Burn {
+            core: core.addr(),
+            sender: info.sender.clone(),
+            input: burn_amount,
+            min_output: coin(est_res.est_in.u128(), &output_asset.denom),
+            redeem_amounts: core_portfolio
+                .units
+                .into_iter()
+                .map(|(denom, unit)| coin((est_res.est_out * unit).u128(), denom))
+                .collect(),
+            swap_info,
+        },
+    )?;
+
+    let resp = Response::new()
+        .add_submessage(SubMsg::reply_on_success(
+            burn_msg,
+            REPLY_ID_BURN_EXACT_AMOUNT_IN, // FIXME
+        ))
+        .add_attributes(vec![
+            attr("method", "burn_exact_amount_in"),
+            attr("executor", info.sender),
+            attr("max_input", input_token.to_string()),
+            attr("output", output_asset.to_string()),
+        ]);
+
+    Ok(resp)
 }
 
 pub fn finish_operation(

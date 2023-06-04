@@ -15,7 +15,7 @@ fn execute_mint_exact_amount_in(token_in: Uint128) {
 
     let (uusd, uusd_pool) = unwrap_asset(env.assets.get("uusd"));
     let (ujpy, ujpy_pool) = unwrap_asset(env.assets.get("ujpy"));
-    let (ukrw, ukrw_pool) = unwrap_asset(env.assets.get("ukrw"));
+    let (ukrw, _ukrw_pool) = unwrap_asset(env.assets.get("ukrw"));
     let (uatom, uatom_pool) = unwrap_asset(env.assets.get("uatom"));
 
     let swap_info = periphery::SwapInfosCompact(vec![
@@ -41,7 +41,6 @@ fn execute_mint_exact_amount_in(token_in: Uint128) {
             key: format!("{uatom},{ukrw}"),
             routes: vec![
                 format!("{uatom_pool},{uatom}"),
-                // format!("{ukrw_pool},uosmo"),
                 format!("{ujpy_pool},uosmo"),
                 format!("{},{ujpy}", env.stable_pool),
             ],
@@ -84,6 +83,11 @@ fn execute_mint_exact_amount_in(token_in: Uint128) {
         .filter(|v| v.ty == "wasm")
         .collect::<Vec<_>>();
 
+    println!(
+        "wasm_evts: {}",
+        serde_json::to_string_pretty(&wasm_evts).unwrap()
+    );
+
     let wasm_evt = wasm_evts.last().unwrap();
     let act_token_in = test_res.swap_result_amount.amount
         - Uint128::from_str(&wasm_evt.attributes[1].value).unwrap();
@@ -93,7 +97,7 @@ fn execute_mint_exact_amount_in(token_in: Uint128) {
 }
 
 #[test]
-fn test_approx() {
+fn test_mint() {
     for token_in in [
         Uint128::new(100000),
         Uint128::new(200000),
@@ -104,3 +108,6 @@ fn test_approx() {
         execute_mint_exact_amount_in(token_in)
     }
 }
+
+#[test]
+fn test_burn() {}

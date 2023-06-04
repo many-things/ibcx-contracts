@@ -78,7 +78,6 @@ pub fn execute(
         BurnExactAmountOut {
             core_addr,
             output_asset,
-            output_amount,
             swap_info,
         } => execute::burn_exact_amount_out(
             deps,
@@ -86,7 +85,6 @@ pub fn execute(
             info,
             core_addr,
             output_asset,
-            output_amount,
             swap_info.into(),
         ),
         FinishOperation {
