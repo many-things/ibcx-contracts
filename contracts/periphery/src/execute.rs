@@ -266,7 +266,7 @@ pub fn burn_exact_amount_out(
         vec![burn_amount],
     )?;
 
-    let amplifier = Decimal::checked_from_ratio(est_res.est_out, est_res.max_est_out)?;
+    let _amplifier = Decimal::checked_from_ratio(est_res.est_out, est_res.max_est_out)?;
     let swap_msgs = est_res
         .max_routes
         .into_iter()
