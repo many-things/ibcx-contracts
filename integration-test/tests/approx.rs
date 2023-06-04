@@ -101,6 +101,6 @@ fn test_approx() {
         Uint128::new(800000),
     ] {
         println!("simulate {}", token_in);
-        simulate(token_in)
+        execute_mint_exact_amount_in(token_in)
     }
 }
