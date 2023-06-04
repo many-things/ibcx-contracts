@@ -185,10 +185,16 @@ fn test_integration() {
     let mint_burn_amount = 1_000_000_000;
     let mint_slippage: (u128, u128) = (10040, 10000); // 0.50
     let burn_slippage: (u128, u128) = (10050, 10000); // 0.50
-    let pairs = [(uusd, uusd_pool), (ujpy, ujpy_pool), (ukrw, ukrw_pool)];
+    let pairs = [
+        ("uosmo".to_string(), uatom_pool),
+        (uusd, uusd_pool),
+        (ujpy, ujpy_pool),
+        (ukrw, ukrw_pool),
+    ];
 
     let swap_info = (
         "uosmo",
+        "single",
         periphery::SwapInfosCompact(
             pairs
                 .iter()
@@ -202,19 +208,32 @@ fn test_integration() {
 
     let multihop_swap_info = (
         uatom.as_str(),
+        "multihop",
         periphery::SwapInfosCompact(
             pairs
                 .iter()
-                .map(|(denom, pool_id)| periphery::SwapInfoCompact {
-                    key: format!("{uatom},{denom}"),
-                    routes: vec![format!("{uatom_pool},{uatom}"), format!("{pool_id},uosmo")],
+                .map(|(denom, pool_id)| {
+                    if denom == "uosmo" {
+                        periphery::SwapInfoCompact {
+                            key: format!("{uatom},{denom}"),
+                            routes: vec![format!("{uatom_pool},{uatom}")],
+                        }
+                    } else {
+                        periphery::SwapInfoCompact {
+                            key: format!("{uatom},{denom}"),
+                            routes: vec![
+                                format!("{uatom_pool},{uatom}"),
+                                format!("{pool_id},uosmo"),
+                            ],
+                        }
+                    }
                 })
                 .collect::<Vec<_>>(),
         ),
     );
 
-    for (input, swap) in [swap_info, multihop_swap_info] {
-        println!("{input}");
+    for (input, op_type, swap) in [swap_info, multihop_swap_info] {
+        println!("============={op_type}=============");
 
         let sim_mint_resp: periphery::SimulateMintExactAmountOutResponse = wasm
             .query(

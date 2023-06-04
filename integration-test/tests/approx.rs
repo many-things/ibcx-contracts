@@ -96,6 +96,47 @@ fn execute_mint_exact_amount_in(token_in: Uint128) {
     println!("act_res.gas_used => {}", act_res.gas_info.gas_used);
 }
 
+fn execute_burn_exact_amount_out() {
+    let env = setup(&[coin(10 * NORM, "uosmo")], 1);
+    let owner = env.accs.first().unwrap();
+
+    let wasm = Wasm::new(&env.app);
+
+    let (uusd, uusd_pool) = unwrap_asset(env.assets.get("uusd"));
+    let (ujpy, ujpy_pool) = unwrap_asset(env.assets.get("ujpy"));
+    let (ukrw, _ukrw_pool) = unwrap_asset(env.assets.get("ukrw"));
+    let (uatom, uatom_pool) = unwrap_asset(env.assets.get("uatom"));
+
+    let swap_info = periphery::SwapInfosCompact(vec![
+        periphery::SwapInfoCompact {
+            key: format!("{uatom},uosmo"),
+            routes: vec![format!("{uatom_pool},{uatom}")],
+        },
+        periphery::SwapInfoCompact {
+            key: format!("{uatom},{uusd}"),
+            routes: vec![
+                format!("{uatom_pool},{uatom}"),
+                format!("{uusd_pool},uosmo"),
+            ],
+        },
+        periphery::SwapInfoCompact {
+            key: format!("{uatom},{ujpy}"),
+            routes: vec![
+                format!("{uatom_pool},{uatom}"),
+                format!("{ujpy_pool},uosmo"),
+            ],
+        },
+        periphery::SwapInfoCompact {
+            key: format!("{uatom},{ukrw}"),
+            routes: vec![
+                format!("{uatom_pool},{uatom}"),
+                format!("{ujpy_pool},uosmo"),
+                format!("{},{ujpy}", env.stable_pool),
+            ],
+        },
+    ]);
+}
+
 #[test]
 fn test_mint() {
     for token_in in [
