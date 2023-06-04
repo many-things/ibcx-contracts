@@ -40,6 +40,11 @@ where
     }
 }
 
+pub fn unwrap_asset(asset: Option<&TestAsset>) -> (String, u64) {
+    let TestAsset { denom, pool_id } = asset.unwrap();
+    (denom.clone(), *pool_id)
+}
+
 pub fn create_denom(
     fact: &TokenFactory<OsmosisTestApp>,
     signer: &SigningAccount,
@@ -201,6 +206,7 @@ pub fn setup(initial_fund: &[Coin], signer_count: u64) -> TestEnv<'static, Osmos
                 },
                 index_denom: "uibcx".to_string(),
                 index_units: vec![
+                    ("uosmo".to_string(), Decimal::one()),
                     (uusd.clone(), Decimal::from_str("22.2").unwrap()),
                     (ujpy.clone(), Decimal::from_str("20.328").unwrap()),
                     (ukrw.clone(), Decimal::from_str("496.225").unwrap()),

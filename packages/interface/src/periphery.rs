@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Coin, Uint128};
 
@@ -11,6 +13,19 @@ pub struct RouteKey(pub (String, String));
 
 #[cw_serde]
 pub struct SwapInfo(pub (RouteKey, SwapRoutes));
+
+pub fn extract_pool_ids(swap_info: Vec<SwapInfo>) -> Vec<u64> {
+    let mut pool_ids = swap_info
+        .into_iter()
+        .flat_map(|v| v.0 .1 .0.into_iter().map(|r| r.pool_id))
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+
+    pool_ids.sort();
+
+    pool_ids
+}
 
 #[cw_serde]
 pub struct SwapInfoCompact {
@@ -99,6 +114,13 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
+    #[returns(SimulateMintExactAmountInResponse)]
+    SimulateMintExactAmountIn {
+        core_addr: String,
+        input_asset: Coin,
+        swap_info: SwapInfosCompact,
+    },
+
     #[returns(SimulateMintExactAmountOutResponse)]
     SimulateMintExactAmountOut {
         core_addr: String,
@@ -114,6 +136,20 @@ pub enum QueryMsg {
         output_asset: String,
         swap_info: SwapInfosCompact,
     },
+
+    #[returns(SimulateBurnExactAmountOutResponse)]
+    SimulateBurnExactAmountOut {
+        core_addr: String,
+        output_asset: Coin,
+        swap_info: SwapInfosCompact,
+    },
+}
+
+#[cw_serde]
+pub struct SimulateMintExactAmountInResponse {
+    pub mint_amount: Uint128,
+    pub mint_spend_amount: Vec<Coin>,
+    pub swap_result_amount: Coin,
 }
 
 #[cw_serde]
@@ -125,6 +161,13 @@ pub struct SimulateMintExactAmountOutResponse {
 
 #[cw_serde]
 pub struct SimulateBurnExactAmountInResponse {
+    pub burn_amount: Uint128,
+    pub burn_redeem_amount: Vec<Coin>,
+    pub swap_result_amount: Coin,
+}
+
+#[cw_serde]
+pub struct SimulateBurnExactAmountOutResponse {
     pub burn_amount: Uint128,
     pub burn_redeem_amount: Vec<Coin>,
     pub swap_result_amount: Coin,

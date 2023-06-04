@@ -112,7 +112,7 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, Contract
                     ..
                 } => {
                     let (swap_msgs, refunds) = make_burn_swap_msgs(
-                        &deps.querier,
+                        &deps.as_ref(),
                         &env.contract.address,
                         swap_info,
                         redeem_amounts,
@@ -157,7 +157,17 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
     use QueryMsg::*;
 
     match msg {
-        // SimulateMintExactamountIn {} => {}
+        SimulateMintExactAmountIn {
+            core_addr,
+            input_asset,
+            swap_info,
+        } => to_binary(query::simulate_mint_exact_amount_in(
+            deps,
+            env,
+            core_addr,
+            input_asset,
+            swap_info.into(),
+        )),
         SimulateMintExactAmountOut {
             core_addr,
             output_amount,
@@ -169,7 +179,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
             core_addr,
             output_amount,
             input_asset,
-            swap_info,
+            swap_info.into(),
         )),
 
         SimulateBurnExactAmountIn {
@@ -183,11 +193,20 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
             core_addr,
             input_amount,
             output_asset,
+            swap_info.into(),
+        )),
+        SimulateBurnExactAmountOut {
+            core_addr,
             swap_info,
+            output_asset,
+        } => to_binary(query::simulate_burn_exact_amount_out(
+            deps,
+            env,
+            core_addr,
+            output_asset,
+            swap_info.into(),
         )),
     }
-
-    // SimulateMintExactamountIn {} => {}
 }
 
 #[entry_point]

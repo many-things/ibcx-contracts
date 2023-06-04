@@ -1,4 +1,7 @@
-use cosmwasm_std::{StdError, StdResult, Storage};
+use cosmwasm_std::{
+    to_vec, Binary, ContractResult, CustomQuery, QuerierWrapper, QueryRequest, StdError, StdResult,
+    Storage, SystemResult,
+};
 use semver::Version;
 
 pub fn store_version<T, U>(storage: &mut dyn Storage, contract: T, version: U) -> StdResult<()>
@@ -25,6 +28,26 @@ where
     cw2::set_contract_version(storage, contract, version)?;
 
     Ok(())
+}
+
+pub fn raw_query_bin<C: CustomQuery>(
+    querier: &QuerierWrapper,
+    req: &QueryRequest<C>,
+) -> StdResult<Binary> {
+    let raw = to_vec(req).map_err(|serialize_err| {
+        StdError::generic_err(format!("Serializing QueryRequest: {}", serialize_err))
+    })?;
+    match querier.raw_query(&raw) {
+        SystemResult::Err(system_err) => Err(StdError::generic_err(format!(
+            "Querier system error: {}",
+            system_err
+        ))),
+        SystemResult::Ok(ContractResult::Err(contract_err)) => Err(StdError::generic_err(format!(
+            "Querier contract error: {}",
+            contract_err
+        ))),
+        SystemResult::Ok(ContractResult::Ok(value)) => Ok(value),
+    }
 }
 
 #[cfg(test)]

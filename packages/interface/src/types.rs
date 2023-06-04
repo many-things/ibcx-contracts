@@ -1,11 +1,14 @@
 use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{coin, Addr, Coin, Order, StdResult, Uint128};
+use cosmwasm_std::{
+    coin, from_binary, Addr, Coin, Empty, HexBinary, Order, StdError, StdResult, Uint128,
+};
 use cosmwasm_std::{CosmosMsg, QuerierWrapper};
+use ibcx_utils::raw_query_bin;
 use osmosis_std::types::osmosis::poolmanager::v1beta1::{
-    MsgSwapExactAmountIn, MsgSwapExactAmountOut, PoolmanagerQuerier, SwapAmountInRoute,
-    SwapAmountOutRoute,
+    EstimateSwapExactAmountOutRequest, EstimateSwapExactAmountOutResponse, MsgSwapExactAmountIn,
+    MsgSwapExactAmountOut, PoolmanagerQuerier, SwapAmountInRoute, SwapAmountOutRoute,
 };
 
 #[cw_serde]
@@ -91,21 +94,46 @@ impl SwapRoutes {
         Uint128::from_str(&resp.token_out_amount)
     }
 
-    // TODO: not to use double encoding after fix
+    // FIXME: not to use double encoding after fix
     pub fn sim_swap_exact_out(
         &self,
         querier: &QuerierWrapper,
         token_out: Coin,
     ) -> StdResult<Uint128> {
-        let client = PoolmanagerQuerier::new(querier);
-
-        let resp = client.estimate_swap_exact_amount_out(
-            self.0.first().unwrap().pool_id,
-            self.clone().into(),
-            token_out.to_string(),
+        let raw_res = raw_query_bin::<Empty>(
+            querier,
+            &EstimateSwapExactAmountOutRequest {
+                pool_id: self.0.first().unwrap().pool_id,
+                routes: self.clone().into(),
+                token_out: token_out.to_string(),
+            }
+            .into(),
         )?;
 
-        Uint128::from_str(&resp.token_in_amount)
+        #[cw_serde]
+        struct ExpectedResp {
+            pub pool_id: String,
+            pub routes: Vec<SwapAmountOutRoute>,
+            pub token_out: String,
+        }
+
+        let enc_a = from_binary::<ExpectedResp>(&raw_res);
+        let enc_b = from_binary::<EstimateSwapExactAmountOutResponse>(&raw_res);
+
+        if let Ok(v) = enc_a {
+            return Uint128::from_str(&v.pool_id);
+        }
+
+        if let Ok(v) = enc_b {
+            return Uint128::from_str(&v.token_in_amount);
+        }
+
+        Err(StdError::generic_err(format!(
+            "decoding error. l:{:?} r:{:?} raw:{}",
+            enc_a.unwrap_err(),
+            enc_b.unwrap_err(),
+            HexBinary::from(raw_res)
+        )))
     }
 
     pub fn msg_swap_exact_in(

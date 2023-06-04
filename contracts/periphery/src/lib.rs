@@ -5,6 +5,7 @@ pub mod execute;
 pub mod msgs;
 pub mod pool;
 pub mod query;
+pub mod sim;
 pub mod state;
 
 pub const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");

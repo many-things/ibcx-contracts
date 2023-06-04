@@ -2,24 +2,46 @@ use cosmwasm_std::{coin, Coin, Deps, Env, Uint128};
 use ibcx_interface::{
     helpers::IbcCore,
     periphery::{
-        SimulateBurnExactAmountInResponse, SimulateMintExactAmountOutResponse, SwapInfosCompact,
+        extract_pool_ids, SimulateBurnExactAmountInResponse, SimulateMintExactAmountOutResponse,
+        SwapInfo,
     },
 };
 
 use crate::{
     error::ContractError,
     msgs::{make_burn_swap_msgs, make_mint_swap_exact_out_msgs},
+    pool::query_pools,
+    sim::search_efficient,
 };
 
 pub fn simulate_mint_exact_amount_in(
     deps: Deps,
-    env: Env,
+    _env: Env,
     core_addr: String,
-    input_amount: Uint128,
-    output_asset: String,
-    swap_info: SwapInfosCompact,
+    input_asset: Coin,
+    swap_info: Vec<SwapInfo>,
 ) -> Result<SimulateMintExactAmountOutResponse, ContractError> {
-    todo!()
+    let core = IbcCore(deps.api.addr_validate(&core_addr)?);
+    let _core_config = core.get_config(&deps.querier, None)?;
+    let core_portfolio = core.get_portfolio(&deps.querier, None)?;
+
+    let pool_ids = extract_pool_ids(swap_info.clone());
+    let pools = query_pools(&deps, pool_ids)?;
+
+    let (token_in, token_out, _) = search_efficient(
+        &deps,
+        &core_portfolio.units,
+        input_asset.clone(),
+        None,
+        &pools,
+        &swap_info,
+    )?;
+
+    Ok(SimulateMintExactAmountOutResponse {
+        mint_amount: token_out,
+        mint_spend_amount: vec![],
+        swap_result_amount: coin(token_in.u128(), input_asset.denom),
+    })
 }
 
 pub fn simulate_mint_exact_amount_out(
@@ -28,7 +50,7 @@ pub fn simulate_mint_exact_amount_out(
     core_addr: String,
     output_amount: Uint128,
     input_asset: String,
-    swap_info: SwapInfosCompact,
+    swap_info: Vec<SwapInfo>,
 ) -> Result<SimulateMintExactAmountOutResponse, ContractError> {
     // query to core contract
     let core = IbcCore(deps.api.addr_validate(&core_addr)?);
@@ -41,9 +63,9 @@ pub fn simulate_mint_exact_amount_out(
     let sim_amount_desired = sim_resp.fund_spent;
 
     let (_, refund) = make_mint_swap_exact_out_msgs(
-        &deps.querier,
+        &deps,
         &env.contract.address,
-        swap_info.into(),
+        swap_info,
         sim_amount_desired.clone(),
         &coin(u64::MAX as u128, &input_asset),
     )?;
@@ -64,7 +86,7 @@ pub fn simulate_burn_exact_amount_in(
     core_addr: String,
     input_amount: Uint128,
     output_asset: String,
-    swap_info: SwapInfosCompact,
+    swap_info: Vec<SwapInfo>,
 ) -> Result<SimulateBurnExactAmountInResponse, ContractError> {
     // query to core contract
     let core = IbcCore(deps.api.addr_validate(&core_addr)?);
@@ -73,9 +95,9 @@ pub fn simulate_burn_exact_amount_in(
     let expected = sim_resp.redeem_amount.clone();
 
     let (_, receive) = make_burn_swap_msgs(
-        &deps.querier,
+        &deps,
         &env.contract.address,
-        swap_info.into(),
+        swap_info,
         expected,
         &coin(Uint128::zero().u128(), &output_asset),
     )?;
@@ -88,12 +110,11 @@ pub fn simulate_burn_exact_amount_in(
 }
 
 pub fn simulate_burn_exact_amount_out(
-    deps: Deps,
-    env: Env,
-    core_addr: String,
-    output_amount: Coin,
-    input_asset: String,
-    swap_info: SwapInfosCompact,
+    _deps: Deps,
+    _env: Env,
+    _core_addr: String,
+    _output_asset: Coin,
+    _swap_info: Vec<SwapInfo>,
 ) -> Result<SimulateBurnExactAmountInResponse, ContractError> {
     todo!()
 }

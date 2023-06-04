@@ -1,7 +1,10 @@
 use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{from_binary, Binary, Coin, Decimal, Decimal256, StdError, StdResult, Uint128};
+use cosmwasm_std::{
+    from_binary, Binary, Coin, Decimal, Decimal256, Deps, StdError, StdResult, Uint128,
+};
+use ibcx_interface::types::{SwapRoute, SwapRoutes};
 
 use crate::error::ContractError;
 
@@ -217,6 +220,7 @@ impl StablePool {
     }
 }
 
+#[allow(dead_code)]
 impl StablePool {
     fn get_scaling_factor(&self, idx: usize) -> u64 {
         self.scaling_factors[idx].parse::<u64>().unwrap()
@@ -352,31 +356,49 @@ impl OsmosisPool for StablePool {
 
     fn swap_exact_amount_in(
         &mut self,
+        deps: &Deps,
         input_amount: cosmwasm_std::Coin,
         output_denom: String,
         _min_output_amount: cosmwasm_std::Uint128,
-        spread_factor: Decimal,
+        _spread_factor: Decimal,
     ) -> Result<Uint128, ContractError> {
-        let amount_out_dec =
-            self.calc_out_amount_given_in(input_amount, output_denom, spread_factor)?;
+        Ok(SwapRoutes(vec![SwapRoute {
+            pool_id: self.get_id(),
+            token_denom: output_denom,
+        }])
+        .sim_swap_exact_in(&deps.querier, input_amount)?)
 
-        let amount_out = amount_out_dec.to_uint_floor();
+        // ============= TODO: use this
+        //
+        // let amount_out_dec =
+        //     self.calc_out_amount_given_in(input_amount, output_denom, spread_factor)?;
 
-        Ok(Uint128::from_str(&amount_out.to_string())?)
+        // let amount_out = amount_out_dec.to_uint_floor();
+
+        // Ok(Uint128::from_str(&amount_out.to_string())?)
     }
 
     fn swap_exact_amount_out(
         &mut self,
+        deps: &Deps,
         input_denom: String,
         _max_input_amount: cosmwasm_std::Uint128,
         output_amount: cosmwasm_std::Coin,
-        spread_factor: Decimal,
+        _spread_factor: Decimal,
     ) -> Result<Uint128, ContractError> {
-        let amount_in_dec =
-            self.calc_in_amount_given_out(output_amount, input_denom, spread_factor)?;
+        Ok(SwapRoutes(vec![SwapRoute {
+            pool_id: self.get_id(),
+            token_denom: input_denom,
+        }])
+        .sim_swap_exact_out(&deps.querier, output_amount)?)
 
-        let amount_in = amount_in_dec.to_uint_floor();
+        // ============= TODO: use this
+        //
+        // let amount_in_dec =
+        //     self.calc_in_amount_given_out(output_amount, input_denom, spread_factor)?;
 
-        Ok(Uint128::from_str(&amount_in.to_string())?)
+        // let amount_in = amount_in_dec.to_uint_floor();
+
+        // Ok(Uint128::from_str(&amount_in.to_string())?)
     }
 }

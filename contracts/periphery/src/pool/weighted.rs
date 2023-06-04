@@ -2,7 +2,7 @@ use std::ops::Div;
 use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{from_binary, Binary, StdError};
+use cosmwasm_std::{from_binary, Binary, Deps, StdError};
 use cosmwasm_std::{Coin, Decimal, StdResult, Uint128};
 use rust_decimal::Decimal as RustDecimal;
 use rust_decimal::MathematicalOps;
@@ -228,11 +228,19 @@ impl OsmosisPool for WeightedPool {
 
     fn swap_exact_amount_in(
         &mut self,
+        _deps: &Deps,
         input_amount: Coin,
         output_denom: String,
         _min_output_amount: Uint128,
         spread_factor: Decimal,
     ) -> Result<Uint128, ContractError> {
+        // deps.api.debug(&format!(
+        //     "{}.swap_exact_amount_in => input: {}, output: {}",
+        //     self.get_type(),
+        //     input_amount,
+        //     output_denom
+        // ));
+
         let amount_out =
             self.calc_out_amount_given_in(&input_amount, &output_denom, spread_factor)?;
 
@@ -248,11 +256,20 @@ impl OsmosisPool for WeightedPool {
 
     fn swap_exact_amount_out(
         &mut self,
+        _deps: &Deps,
         input_denom: String,
         _max_input_amount: Uint128,
         output_amount: Coin,
         spread_factor: Decimal,
     ) -> Result<Uint128, ContractError> {
+        // deps.api.debug(&format!(
+        //     "[{}] {}.swap_exact_amount_out => input: {}, output: {}",
+        //     self.get_id(),
+        //     self.get_type(),
+        //     input_denom,
+        //     output_amount,
+        // ));
+
         let amount_in =
             self.calc_in_amount_given_out(&input_denom, &output_amount, spread_factor)?;
 

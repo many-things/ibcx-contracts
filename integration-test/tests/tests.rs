@@ -2,19 +2,20 @@ mod setup;
 
 use cosmwasm_std::{coin, Decimal, Uint128};
 
-use osmosis_std::types::osmosis::poolmanager::v1beta1::{
-    EstimateSwapExactAmountInRequest, EstimateSwapExactAmountInResponse,
-    EstimateSwapExactAmountOutRequest, EstimateSwapExactAmountOutResponse, SwapAmountInRoute,
-    SwapAmountOutRoute,
-};
 use osmosis_test_tube::{
-    cosmrs::proto::cosmos::bank::v1beta1::QueryBalanceRequest, fn_query, osmosis_std, Account,
-    Bank, Module, Runner, Wasm,
+    cosmrs::proto::cosmos::bank::v1beta1::QueryBalanceRequest,
+    fn_query,
+    osmosis_std::types::osmosis::poolmanager::v1beta1::{
+        EstimateSwapExactAmountInRequest, EstimateSwapExactAmountInResponse,
+        EstimateSwapExactAmountOutRequest, EstimateSwapExactAmountOutResponse, SwapAmountInRoute,
+        SwapAmountOutRoute,
+    },
+    Account, Bank, Module, Runner, Wasm,
 };
 
 use ibcx_interface::{core, periphery};
 
-use crate::setup::{setup, NORM};
+use crate::setup::{setup, unwrap_asset, NORM};
 
 pub struct Querier<'a, R: Runner<'a>> {
     runner: &'a R,
@@ -47,21 +48,10 @@ fn test_integration() {
     let bank = Bank::new(&env.app);
     let wasm = Wasm::new(&env.app);
 
-    let uusd_t = env.assets.get("uusd").unwrap();
-    let uusd = uusd_t.denom.clone();
-    let uusd_pool = uusd_t.pool_id;
-
-    let ujpy_t = env.assets.get("ujpy").unwrap();
-    let ujpy = ujpy_t.denom.clone();
-    let ujpy_pool = ujpy_t.pool_id;
-
-    let ukrw_t = env.assets.get("ukrw").unwrap();
-    let ukrw = ukrw_t.denom.clone();
-    let ukrw_pool = ukrw_t.pool_id;
-
-    let uatom_t = env.assets.get("uatom").unwrap();
-    let uatom = uatom_t.denom.clone();
-    let uatom_pool = uatom_t.pool_id;
+    let (uusd, uusd_pool) = unwrap_asset(env.assets.get("uusd"));
+    let (ujpy, ujpy_pool) = unwrap_asset(env.assets.get("ujpy"));
+    let (ukrw, ukrw_pool) = unwrap_asset(env.assets.get("ukrw"));
+    let (uatom, uatom_pool) = unwrap_asset(env.assets.get("uatom"));
 
     // mint & burn (core)
     let config: core::GetConfigResponse = wasm
@@ -224,6 +214,8 @@ fn test_integration() {
     );
 
     for (input, swap) in [swap_info, multihop_swap_info] {
+        println!("{input}");
+
         let sim_mint_resp: periphery::SimulateMintExactAmountOutResponse = wasm
             .query(
                 &env.perp_addr,

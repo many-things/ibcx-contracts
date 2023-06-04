@@ -1,78 +1,69 @@
-use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
-use cosmwasm_std::{CosmosMsg, QuerierWrapper};
-use ibcx_interface::periphery::{RouteKey, SwapInfo};
+use std::collections::BTreeMap;
+
+use cosmwasm_std::CosmosMsg;
+use cosmwasm_std::{Addr, Coin, Decimal, Deps, Uint128};
+use ibcx_interface::periphery::{extract_pool_ids, RouteKey, SwapInfo};
 
 use crate::error::ContractError;
+use crate::pool::query_pools;
+use crate::sim::{estimate_in_given_out, SimAmountInRoute};
 
 pub fn make_mint_swap_exact_out_msgs(
-    querier: &QuerierWrapper,
+    deps: &Deps,
     contract: &Addr,
     swap_info: Vec<SwapInfo>,
     desired: Vec<Coin>,
     max_input: &Coin,
 ) -> Result<(Vec<CosmosMsg>, Uint128), ContractError> {
-    let mut swap_msgs: Vec<CosmosMsg> = Vec::new();
+    let pool_ids = extract_pool_ids(swap_info.clone());
+    let mut pools = query_pools(deps, pool_ids)?
+        .into_iter()
+        .map(|v| (v.get_id(), v))
+        .collect::<BTreeMap<_, _>>();
 
     let simulated = desired
         .into_iter()
         .map(|v| {
             if v.denom == max_input.denom {
-                return Ok((v.clone(), None, v.amount));
+                return Ok(SimAmountInRoute {
+                    sim_amount_in: v.amount,
+                    amount_out: v,
+                    routes: None,
+                });
             }
 
-            let SwapInfo((_, swap_info)) = swap_info
-                .iter()
-                .find(|SwapInfo((RouteKey((from, to)), _))| {
-                    from == &max_input.denom && to == &v.denom
-                })
-                .ok_or(ContractError::SwapRouteNotFound {
-                    from: max_input.denom.clone(),
-                    to: v.denom.clone(),
-                })?;
+            let route =
+                estimate_in_given_out(deps, &max_input.denom, v.clone(), &mut pools, &swap_info)?;
 
-            let simulated_token_in =
-                swap_info
-                    .sim_swap_exact_out(querier, v.clone())
-                    .map_err(|e| ContractError::SimulateQueryError {
-                        err: e.to_string(),
-                        input: max_input.denom.clone(),
-                        output: v.denom.clone(),
-                        amount: v.amount,
-                    })?;
-
-            Ok((v, Some(swap_info), simulated_token_in))
+            Ok(route)
         })
         .collect::<Result<Vec<_>, ContractError>>()?;
 
     let simulated_total_spend_amount = simulated
         .iter()
-        .fold(Uint128::zero(), |acc, (_, _, v)| acc + v);
+        .fold(Uint128::zero(), |acc, v| acc + v.sim_amount_in);
     if max_input.amount < simulated_total_spend_amount {
         return Err(ContractError::TradeAmountExceeded {});
     }
 
-    for (
-        Coin {
-            denom,
-            amount: amount_out,
-        },
-        swap_info,
-        sim_amount_in,
-    ) in simulated
-    {
-        if let Some(swap_info) = swap_info {
-            let ratio =
-                Decimal::checked_from_ratio(max_input.amount, simulated_total_spend_amount)?;
-            let amount_in_max = ratio * sim_amount_in;
+    let swap_msgs = simulated
+        .into_iter()
+        .filter_map(|r| {
+            r.routes.map(|routes| {
+                let ratio =
+                    Decimal::checked_from_ratio(max_input.amount, simulated_total_spend_amount)
+                        .unwrap();
+                let amount_in_max = ratio * r.sim_amount_in;
 
-            swap_msgs.push(swap_info.msg_swap_exact_out(
-                contract,
-                &denom,
-                amount_out,
-                amount_in_max,
-            ));
-        }
-    }
+                routes.msg_swap_exact_out(
+                    contract,
+                    &r.amount_out.denom,
+                    r.amount_out.amount,
+                    amount_in_max,
+                )
+            })
+        })
+        .collect::<Vec<_>>();
 
     let refund = max_input.amount.checked_sub(simulated_total_spend_amount)?;
 
@@ -80,7 +71,7 @@ pub fn make_mint_swap_exact_out_msgs(
 }
 
 pub fn make_burn_swap_msgs(
-    querier: &QuerierWrapper,
+    deps: &Deps,
     contract: &Addr,
     swap_info: Vec<SwapInfo>,
     expected: Vec<Coin>,
@@ -105,15 +96,14 @@ pub fn make_burn_swap_msgs(
                     to: v.denom.clone(),
                 })?;
 
-            let simulated_token_out =
-                swap_info
-                    .sim_swap_exact_in(querier, v.clone())
-                    .map_err(|e| ContractError::SimulateQueryError {
-                        err: e.to_string(),
-                        input: v.denom.clone(),
-                        output: min_output.denom.clone(),
-                        amount: v.amount,
-                    })?;
+            let simulated_token_out = swap_info
+                .sim_swap_exact_in(&deps.querier, v.clone())
+                .map_err(|e| ContractError::SimulateQueryError {
+                    err: e.to_string(),
+                    input: v.denom.clone(),
+                    output: min_output.denom.clone(),
+                    amount: v.amount,
+                })?;
 
             Ok((v, Some(swap_info), simulated_token_out))
         })

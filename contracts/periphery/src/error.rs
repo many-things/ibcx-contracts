@@ -63,4 +63,7 @@ pub enum ContractError {
 
     #[error("Unsupported pool type")]
     UnsupportedPoolType,
+
+    #[error("Max loop exceeded")]
+    MaxLoopExceeded,
 }
