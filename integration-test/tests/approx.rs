@@ -1,7 +1,10 @@
 mod setup;
 
 use cosmwasm_std::{coin, Uint128};
-use ibcx_interface::periphery::{self, SimulateMintExactAmountInResponse};
+use ibcx_interface::{
+    core,
+    periphery::{self, SimulateBurnExactAmountOutResponse, SimulateMintExactAmountInResponse},
+};
 use osmosis_test_tube::{Module, Wasm};
 use std::str::FromStr;
 
@@ -96,7 +99,7 @@ fn execute_mint_exact_amount_in(token_in: Uint128) {
     println!("act_res.gas_used => {}", act_res.gas_info.gas_used);
 }
 
-fn execute_burn_exact_amount_out() {
+fn execute_burn_exact_amount_out(token_out: Uint128) {
     let env = setup(&[coin(10 * NORM, "uosmo")], 1);
     let owner = env.accs.first().unwrap();
 
@@ -135,6 +138,45 @@ fn execute_burn_exact_amount_out() {
             ],
         },
     ]);
+
+    let token_out_amount = Uint128::new(1000000) * token_out;
+
+    let core_portfolio: core::GetPortfolioResponse = wasm
+        .query(&env.core_addr, &core::QueryMsg::GetPortfolio { time: None })
+        .unwrap();
+
+    let mut funds_required = core_portfolio
+        .units
+        .into_iter()
+        .map(|(denom, unit)| coin((token_out_amount * unit).u128(), &denom))
+        .collect::<Vec<_>>();
+    funds_required.sort_by(|a, b| a.denom.cmp(&b.denom));
+
+    wasm.execute(
+        &env.core_addr,
+        &core::ExecuteMsg::Mint {
+            amount: token_out_amount,
+            receiver: None,
+            refund_to: None,
+        },
+        &funds_required,
+        owner,
+    )
+    .unwrap();
+
+    let test_res: SimulateBurnExactAmountOutResponse = wasm
+        .query(
+            &env.perp_addr,
+            &periphery::QueryMsg::SimulateBurnExactAmountOut {
+                core_addr: env.perp_addr.clone(),
+                output_asset: coin(token_out_amount.u128(), &uatom),
+                swap_info: swap_info.clone(),
+            },
+        )
+        .unwrap();
+
+    println!("test_res_mint    => {}", test_res.burn_amount);
+    println!("test_res_spent   => {}", test_res.swap_result_amount);
 }
 
 #[test]
@@ -151,4 +193,14 @@ fn test_mint() {
 }
 
 #[test]
-fn test_burn() {}
+fn test_burn() {
+    for token_out in [
+        Uint128::new(100000),
+        Uint128::new(200000),
+        Uint128::new(400000),
+        Uint128::new(800000),
+    ] {
+        println!("simulate {}", token_out);
+        execute_burn_exact_amount_out(token_out)
+    }
+}
