@@ -11,14 +11,5 @@ deploy-testnet:
 	NODE="https://rpc-test.osmosis.zone:443" \
 	./scripts/deploy-test.sh
 
-localnet-start:
-	./scripts/localnet-start.sh
-
-localnet-startd:
-	BACKGROUND=1 ./scripts/localnet-start.sh
-
-localnet-stop:
-	./scripts/localnet-stop.sh
-
 schema:
 	ls ./contracts | xargs -n 1 -t beaker wasm ts-gen
