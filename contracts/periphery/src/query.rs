@@ -1,4 +1,4 @@
-use cosmwasm_std::{coin, Coin, Deps, Env, Uint128};
+use cosmwasm_std::{coin, Coin, Decimal, Deps, Env, Uint128};
 use ibcx_interface::{
     helpers::IbcCore,
     periphery::{
@@ -120,6 +120,7 @@ pub fn simulate_burn_exact_amount_out(
     swap_info: Vec<SwapInfo>,
 ) -> Result<SimulateBurnExactAmountOutResponse, ContractError> {
     let core = IbcCore(deps.api.addr_validate(&core_addr)?);
+    let core_fee = core.get_fee(&deps.querier, None)?;
     let core_portfolio = core.get_portfolio(&deps.querier, None)?;
 
     let pool_ids = extract_pool_ids(swap_info.clone());
@@ -134,8 +135,15 @@ pub fn simulate_burn_exact_amount_out(
         &swap_info,
     )?;
 
+    let invert = Decimal::one().checked_div(
+        core_fee
+            .burn_fee
+            .map(|v| Decimal::one() - v)
+            .unwrap_or(Decimal::one()),
+    )?;
+
     Ok(SimulateBurnExactAmountOutResponse {
-        burn_amount: token_out,
+        burn_amount: token_out * invert,
         burn_redeem_amount: core_portfolio
             .units
             .into_iter()
@@ -143,4 +151,17 @@ pub fn simulate_burn_exact_amount_out(
             .collect(),
         swap_result_amount: coin(token_in.u128(), output_asset.denom),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use cosmwasm_std::Decimal;
+
+    #[test]
+    fn test_sad() {
+        let invert = Decimal::one()
+            .checked_div(Some(Decimal::from_ratio(5u64, 1000u64)).unwrap_or(Decimal::one()))
+            .unwrap();
+        assert_eq!(invert, Decimal::from_ratio(200u64, 1u64));
+    }
 }

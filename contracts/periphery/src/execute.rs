@@ -1,5 +1,6 @@
 use cosmwasm_std::{
-    attr, coin, to_binary, BankMsg, Coin, Decimal, Env, MessageInfo, SubMsg, Uint128, WasmMsg,
+    attr, coin, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Env, MessageInfo, SubMsg, Uint128,
+    WasmMsg,
 };
 use cosmwasm_std::{DepsMut, Response};
 use ibcx_interface::periphery::{extract_pool_ids, ExecuteMsg, SwapInfo};
@@ -35,7 +36,7 @@ pub fn mint_exact_amount_in(
         &core_portfolio.units,
         input_token.clone(),
         Some(min_output_amount),
-        (min_output_amount, Uint128::MAX),
+        (Some(min_output_amount), None),
         &pools,
         &swap_info,
         None,
@@ -217,7 +218,7 @@ pub fn burn_exact_amount_in(
 
 pub fn burn_exact_amount_out(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     core_addr: String,
     output_asset: Coin,
@@ -226,6 +227,7 @@ pub fn burn_exact_amount_out(
     // query to core contract
     let core = IbcCore(deps.api.addr_validate(&core_addr)?);
     let core_config = core.get_config(&deps.querier, None)?;
+    let core_fee = core.get_fee(&deps.querier, None)?;
     let core_portfolio = core.get_portfolio(&deps.querier, None)?;
 
     let input_amount = cw_utils::must_pay(&info, &core_config.index_denom)?;
@@ -240,42 +242,74 @@ pub fn burn_exact_amount_out(
         &core_portfolio.units,
         output_asset.clone(),
         Some(input_token.amount),
-        (Uint128::zero(), input_token.amount),
+        (None, Some(input_token.amount)),
         &pools,
         &swap_info,
         None,
     )?;
 
-    let burn_amount = coin(est_res.est_out.u128(), &core_config.index_denom);
+    let invert = Decimal::one().checked_div(
+        core_fee
+            .burn_fee
+            .map(|v| Decimal::one() - v)
+            .unwrap_or(Decimal::one()),
+    )?;
+
+    let burn_amount = coin(
+        (est_res.max_est_out * invert).u128(),
+        &core_config.index_denom,
+    );
+    deps.api.debug(&format!("input_token: {}", input_token));
+    deps.api.debug(&format!("burn_amount: {}", burn_amount));
     let burn_msg = core.call_with_funds(
         core::ExecuteMsg::Burn { redeem_to: None },
-        vec![burn_amount.clone()],
+        vec![burn_amount],
     )?;
 
-    // save to context
-    CONTEXT.save(
-        deps.storage,
-        &Context::Burn {
-            core: core.addr(),
-            sender: info.sender.clone(),
-            input: burn_amount,
-            min_output: coin(est_res.est_in.u128(), &output_asset.denom),
-            redeem_amounts: core_portfolio
-                .units
-                .into_iter()
-                .map(|(denom, unit)| coin((est_res.est_out * unit).u128(), denom))
-                .collect(),
-            swap_info,
-        },
-    )?;
+    let amplifier = Decimal::checked_from_ratio(est_res.est_out, est_res.max_est_out)?;
+    let swap_msgs = est_res
+        .max_routes
+        .into_iter()
+        .filter_map(|r| {
+            r.routes.map(|routes| {
+                routes.msg_swap_exact_in(
+                    &env.contract.address,
+                    &r.amount_out.denom,
+                    r.amount_out.amount,
+                    Uint128::one(),
+                    // r.sim_amount_in * amplifier,
+                )
+            })
+        })
+        .collect::<Vec<_>>();
+
+    let finish_msgs: Vec<CosmosMsg> = vec![
+        WasmMsg::Execute {
+            contract_addr: env.contract.address.to_string(),
+            msg: to_binary(&ExecuteMsg::FinishOperation {
+                refund_to: info.sender.to_string(),
+                refund_asset: core_config.index_denom,
+            })?,
+            funds: vec![],
+        }
+        .into(),
+        WasmMsg::Execute {
+            contract_addr: env.contract.address.to_string(),
+            msg: to_binary(&ExecuteMsg::FinishOperation {
+                refund_to: info.sender.to_string(),
+                refund_asset: output_asset.denom.clone(),
+            })?,
+            funds: vec![],
+        }
+        .into(),
+    ];
 
     let resp = Response::new()
-        .add_submessage(SubMsg::reply_on_success(
-            burn_msg,
-            REPLY_ID_BURN_EXACT_AMOUNT_IN, // FIXME
-        ))
+        .add_message(burn_msg)
+        .add_messages(swap_msgs)
+        .add_messages(finish_msgs)
         .add_attributes(vec![
-            attr("method", "burn_exact_amount_in"),
+            attr("method", "burn_exact_amount_out"),
             attr("executor", info.sender),
             attr("max_input", input_token.to_string()),
             attr("output", output_asset.to_string()),

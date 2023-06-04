@@ -228,7 +228,7 @@ pub fn estimate_max_index_for_input(
     units: &[(String, Decimal)],
     input_asset: Coin,
     init_index_amount: Option<Uint128>,
-    (min_index_amount, max_index_amount): (Uint128, Uint128), // min / max
+    (min_index_amount, max_index_amount): (Option<Uint128>, Option<Uint128>), // min / max
     pools: &[Box<dyn OsmosisPool>],
     swap_info: &[SwapInfo],
     err_tolerance: Option<Decimal>,
@@ -245,23 +245,35 @@ pub fn estimate_max_index_for_input(
         "from_contract    => max_est_in: {}, max_est_out: {}",
         max_est_in, max_est_out
     ));
-    if max_est_out < min_index_amount {
-        return Err(ContractError::TradeAmountExceeded {});
+    if let Some(boundary) = min_index_amount {
+        if max_est_out < boundary {
+            return Err(ContractError::TradeAmountExceeded {});
+        }
     }
 
-    let est_out = {
-        let gap = max_est_out.checked_sub(min_index_amount)?;
-        let tol = gap * err_tolerance.unwrap_or_else(|| Decimal::from_ratio(1u64, 3u64));
-        max_est_out.checked_sub(tol)?
+    let tol = err_tolerance.unwrap_or_else(|| Decimal::from_ratio(1u64, 3u64));
+    let est_out = match (min_index_amount, max_index_amount) {
+        (None, Some(max)) => {
+            let gap = max.checked_sub(max_est_out)?;
+            max_est_out.checked_add(gap * tol)?
+        }
+        (Some(min), None) => {
+            let gap = max_est_out.checked_sub(min)?;
+            max_est_out.checked_sub(gap * tol)?
+        }
+        _ => return Err(ContractError::InvalidIndexAmountRange),
     };
+
     let (est_in, routes) =
         calc_index_per_token(deps, units, est_out, &input_asset.denom, pools, swap_info)?;
     deps.api.debug(&format!(
         "from_contract    =>     est_in: {},     est_out: {}",
         est_in, est_out
     ));
-    if max_index_amount < est_out {
-        return Err(ContractError::TradeAmountExceeded {});
+    if let Some(boundary) = max_index_amount {
+        if boundary < est_out {
+            return Err(ContractError::TradeAmountExceeded {});
+        }
     }
 
     Ok(EstimateResult {

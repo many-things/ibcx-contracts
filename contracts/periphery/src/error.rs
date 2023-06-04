@@ -66,4 +66,7 @@ pub enum ContractError {
 
     #[error("Max loop exceeded")]
     MaxLoopExceeded,
+
+    #[error("Invalid index amount range")]
+    InvalidIndexAmountRange,
 }

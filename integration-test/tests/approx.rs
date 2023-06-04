@@ -1,6 +1,6 @@
 mod setup;
 
-use cosmwasm_std::{coin, Uint128};
+use cosmwasm_std::{coin, Decimal, Uint128};
 use ibcx_interface::{
     core,
     periphery::{self, SimulateBurnExactAmountOutResponse, SimulateMintExactAmountInResponse},
@@ -141,6 +141,9 @@ fn execute_burn_exact_amount_out(token_out: Uint128) {
 
     let token_out_amount = Uint128::new(1000000) * token_out;
 
+    let core_config: core::GetConfigResponse = wasm
+        .query(&env.core_addr, &core::QueryMsg::GetConfig { time: None })
+        .unwrap();
     let core_portfolio: core::GetPortfolioResponse = wasm
         .query(&env.core_addr, &core::QueryMsg::GetPortfolio { time: None })
         .unwrap();
@@ -148,7 +151,7 @@ fn execute_burn_exact_amount_out(token_out: Uint128) {
     let mut funds_required = core_portfolio
         .units
         .into_iter()
-        .map(|(denom, unit)| coin((token_out_amount * unit).u128(), &denom))
+        .map(|(denom, unit)| coin((token_out_amount * unit).u128(), denom))
         .collect::<Vec<_>>();
     funds_required.sort_by(|a, b| a.denom.cmp(&b.denom));
 
@@ -168,15 +171,43 @@ fn execute_burn_exact_amount_out(token_out: Uint128) {
         .query(
             &env.perp_addr,
             &periphery::QueryMsg::SimulateBurnExactAmountOut {
-                core_addr: env.perp_addr.clone(),
+                core_addr: env.core_addr.clone(),
                 output_asset: coin(token_out_amount.u128(), &uatom),
                 swap_info: swap_info.clone(),
             },
         )
         .unwrap();
 
-    println!("test_res_mint    => {}", test_res.burn_amount);
-    println!("test_res_spent   => {}", test_res.swap_result_amount);
+    println!("test_res_burn    => {}", test_res.burn_amount);
+    println!("test_res_return   => {}", test_res.swap_result_amount);
+
+    let act_res = wasm
+        .execute(
+            &env.perp_addr,
+            &periphery::ExecuteMsg::BurnExactAmountOut {
+                core_addr: env.core_addr.clone(),
+                output_asset: test_res.swap_result_amount,
+                swap_info,
+            },
+            &[coin(
+                (test_res.burn_amount * Decimal::from_ratio(10015u64, 10000u64)).u128(),
+                core_config.index_denom,
+            )],
+            owner,
+        )
+        .unwrap();
+
+    let wasm_evts = act_res
+        .events
+        .into_iter()
+        .filter(|v| v.ty == "wasm")
+        .collect::<Vec<_>>();
+
+    println!(
+        "wasm_evts: {}",
+        serde_json::to_string_pretty(&wasm_evts).unwrap()
+    );
+    println!("act_res.gas_used => {}", act_res.gas_info.gas_used);
 }
 
 #[test]
@@ -196,9 +227,9 @@ fn test_mint() {
 fn test_burn() {
     for token_out in [
         Uint128::new(100000),
-        Uint128::new(200000),
-        Uint128::new(400000),
-        Uint128::new(800000),
+        // Uint128::new(200000),
+        // Uint128::new(400000),
+        // Uint128::new(800000),
     ] {
         println!("simulate {}", token_out);
         execute_burn_exact_amount_out(token_out)

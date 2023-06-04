@@ -200,7 +200,7 @@ pub fn setup(initial_fund: &[Coin], signer_count: u64) -> TestEnv<'static, Osmos
                 gov: owner.address(),
                 fee: core::FeePayload {
                     collector: owner.address(),
-                    mint_fee: Some(Decimal::from_ratio(5u64, 10000u64)),
+                    mint_fee: None,
                     burn_fee: Some(Decimal::from_ratio(15u64, 10000u64)),
                     streaming_fee: None,
                 },
