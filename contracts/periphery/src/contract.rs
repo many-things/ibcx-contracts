@@ -5,7 +5,8 @@ use ibcx_interface::periphery::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg
 
 use crate::state::{Context, CONTEXT};
 use crate::{
-    error::ContractError, execute, msgs::make_burn_swap_msgs, CONTRACT_NAME, CONTRACT_VERSION,
+    error::ContractError, execute, msgs::make_burn_swap_exact_in_msgs, CONTRACT_NAME,
+    CONTRACT_VERSION,
 };
 use crate::{query, REPLY_ID_BURN_EXACT_AMOUNT_IN};
 
@@ -109,7 +110,7 @@ pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, Contract
                     swap_info,
                     ..
                 } => {
-                    let (swap_msgs, refunds) = make_burn_swap_msgs(
+                    let (swap_msgs, refunds) = make_burn_swap_exact_in_msgs(
                         &deps.as_ref(),
                         &env.contract.address,
                         swap_info,

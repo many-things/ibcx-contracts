@@ -9,7 +9,7 @@ use ibcx_interface::{
 
 use crate::{
     error::ContractError,
-    msgs::{make_burn_swap_msgs, make_mint_swap_exact_out_msgs},
+    msgs::{make_burn_swap_exact_in_msgs, make_mint_swap_exact_out_msgs},
     pool::query_pools,
     sim::search_efficient,
 };
@@ -97,7 +97,7 @@ pub fn simulate_burn_exact_amount_in(
     let sim_resp = core.simulate_burn(&deps.querier, input_amount, None)?;
     let expected = sim_resp.redeem_amount.clone();
 
-    let (_, receive) = make_burn_swap_msgs(
+    let (_, receive) = make_burn_swap_exact_in_msgs(
         &deps,
         &env.contract.address,
         swap_info,

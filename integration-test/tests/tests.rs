@@ -267,6 +267,7 @@ fn test_integration() {
 
     let swap_info = (
         "uosmo",
+        "single",
         periphery::SwapInfosCompact(
             pairs
                 .iter()
@@ -280,18 +281,33 @@ fn test_integration() {
 
     let multihop_swap_info = (
         uatom.as_str(),
+        "multihop",
         periphery::SwapInfosCompact(
             pairs
                 .iter()
-                .map(|(denom, pool_id)| periphery::SwapInfoCompact {
-                    key: format!("{denom},{uatom}"),
-                    routes: vec![format!("{pool_id},uosmo"), format!("{uatom_pool},{uatom}")],
+                .map(|(denom, pool_id)| {
+                    if denom == "uosmo" {
+                        periphery::SwapInfoCompact {
+                            key: format!("{denom},{uatom}"),
+                            routes: vec![format!("{uatom_pool},{uatom}")],
+                        }
+                    } else {
+                        periphery::SwapInfoCompact {
+                            key: format!("{denom},{uatom}"),
+                            routes: vec![
+                                format!("{pool_id},uosmo"),
+                                format!("{uatom_pool},{uatom}"),
+                            ],
+                        }
+                    }
                 })
                 .collect::<Vec<_>>(),
         ),
     );
 
-    for (output, swap) in [swap_info, multihop_swap_info] {
+    for (output, op_type, swap) in [swap_info, multihop_swap_info] {
+        println!("============={op_type}=============");
+
         let sim_burn_resp: periphery::SimulateBurnExactAmountInResponse = wasm
             .query(
                 &env.perp_addr,
