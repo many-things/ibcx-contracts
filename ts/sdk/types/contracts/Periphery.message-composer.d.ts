@@ -8,6 +8,12 @@ import { Uint128, SwapInfosCompact, Coin } from "./Periphery.types";
 export interface PeripheryMessage {
     contractAddress: string;
     sender: string;
+    mintExactAmountIn: ({ coreAddr, inputAsset, minOutputAmount, swapInfo }: {
+        coreAddr: string;
+        inputAsset: string;
+        minOutputAmount: Uint128;
+        swapInfo: SwapInfosCompact;
+    }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
     mintExactAmountOut: ({ coreAddr, inputAsset, outputAmount, swapInfo }: {
         coreAddr: string;
         inputAsset: string;
@@ -19,12 +25,27 @@ export interface PeripheryMessage {
         minOutputAmount: Uint128;
         outputAsset: string;
         swapInfo: SwapInfosCompact;
+    }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
+    burnExactAmountOut: ({ coreAddr, outputAsset, swapInfo }: {
+        coreAddr: string;
+        outputAsset: Coin;
+        swapInfo: SwapInfosCompact;
+    }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
+    finishOperation: ({ refundAsset, refundTo }: {
+        refundAsset: string;
+        refundTo: string;
     }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
 }
 export declare class PeripheryMessageComposer implements PeripheryMessage {
     sender: string;
     contractAddress: string;
     constructor(sender: string, contractAddress: string);
+    mintExactAmountIn: ({ coreAddr, inputAsset, minOutputAmount, swapInfo }: {
+        coreAddr: string;
+        inputAsset: string;
+        minOutputAmount: Uint128;
+        swapInfo: SwapInfosCompact;
+    }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
     mintExactAmountOut: ({ coreAddr, inputAsset, outputAmount, swapInfo }: {
         coreAddr: string;
         inputAsset: string;
@@ -36,6 +57,15 @@ export declare class PeripheryMessageComposer implements PeripheryMessage {
         minOutputAmount: Uint128;
         outputAsset: string;
         swapInfo: SwapInfosCompact;
+    }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
+    burnExactAmountOut: ({ coreAddr, outputAsset, swapInfo }: {
+        coreAddr: string;
+        outputAsset: Coin;
+        swapInfo: SwapInfosCompact;
+    }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
+    finishOperation: ({ refundAsset, refundTo }: {
+        refundAsset: string;
+        refundTo: string;
     }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
 }
 //# sourceMappingURL=Periphery.message-composer.d.ts.map

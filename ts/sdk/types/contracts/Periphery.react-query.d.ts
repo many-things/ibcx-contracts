@@ -4,7 +4,7 @@
 * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
 */
 import { UseQueryOptions } from "@tanstack/react-query";
-import { Uint128, SwapInfosCompact, SimulateBurnExactAmountInResponse, SimulateMintExactAmountOutResponse } from "./Periphery.types";
+import { Uint128, SwapInfosCompact, Coin, SimulateBurnExactAmountInResponse, SimulateBurnExactAmountOutResponse, SimulateMintExactAmountInResponse, SimulateMintExactAmountOutResponse } from "./Periphery.types";
 import { PeripheryQueryClient } from "./Periphery.client";
 export interface PeripheryReactQuery<TResponse, TData = TResponse> {
     client: PeripheryQueryClient;
@@ -12,6 +12,14 @@ export interface PeripheryReactQuery<TResponse, TData = TResponse> {
         initialData?: undefined;
     };
 }
+export interface PeripherySimulateBurnExactAmountOutQuery<TData> extends PeripheryReactQuery<SimulateBurnExactAmountOutResponse, TData> {
+    args: {
+        coreAddr: string;
+        outputAsset: Coin;
+        swapInfo: SwapInfosCompact;
+    };
+}
+export declare function usePeripherySimulateBurnExactAmountOutQuery<TData = SimulateBurnExactAmountOutResponse>({ client, args, options }: PeripherySimulateBurnExactAmountOutQuery<TData>): import("@tanstack/react-query").UseQueryResult<TData, Error>;
 export interface PeripherySimulateBurnExactAmountInQuery<TData> extends PeripheryReactQuery<SimulateBurnExactAmountInResponse, TData> {
     args: {
         coreAddr: string;
@@ -30,4 +38,12 @@ export interface PeripherySimulateMintExactAmountOutQuery<TData> extends Periphe
     };
 }
 export declare function usePeripherySimulateMintExactAmountOutQuery<TData = SimulateMintExactAmountOutResponse>({ client, args, options }: PeripherySimulateMintExactAmountOutQuery<TData>): import("@tanstack/react-query").UseQueryResult<TData, Error>;
+export interface PeripherySimulateMintExactAmountInQuery<TData> extends PeripheryReactQuery<SimulateMintExactAmountInResponse, TData> {
+    args: {
+        coreAddr: string;
+        inputAsset: Coin;
+        swapInfo: SwapInfosCompact;
+    };
+}
+export declare function usePeripherySimulateMintExactAmountInQuery<TData = SimulateMintExactAmountInResponse>({ client, args, options }: PeripherySimulateMintExactAmountInQuery<TData>): import("@tanstack/react-query").UseQueryResult<TData, Error>;
 //# sourceMappingURL=Periphery.react-query.d.ts.map

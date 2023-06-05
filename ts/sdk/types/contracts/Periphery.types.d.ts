@@ -6,6 +6,13 @@
 export interface InstantiateMsg {
 }
 export type ExecuteMsg = {
+    mint_exact_amount_in: {
+        core_addr: string;
+        input_asset: string;
+        min_output_amount: Uint128;
+        swap_info: SwapInfosCompact;
+    };
+} | {
     mint_exact_amount_out: {
         core_addr: string;
         input_asset: string;
@@ -19,6 +26,17 @@ export type ExecuteMsg = {
         output_asset: string;
         swap_info: SwapInfosCompact;
     };
+} | {
+    burn_exact_amount_out: {
+        core_addr: string;
+        output_asset: Coin;
+        swap_info: SwapInfosCompact;
+    };
+} | {
+    finish_operation: {
+        refund_asset: string;
+        refund_to: string;
+    };
 };
 export type Uint128 = string;
 export type SwapInfosCompact = SwapInfoCompact[];
@@ -26,7 +44,18 @@ export interface SwapInfoCompact {
     key: string;
     routes: string[];
 }
+export interface Coin {
+    amount: Uint128;
+    denom: string;
+    [k: string]: unknown;
+}
 export type QueryMsg = {
+    simulate_mint_exact_amount_in: {
+        core_addr: string;
+        input_asset: Coin;
+        swap_info: SwapInfosCompact;
+    };
+} | {
     simulate_mint_exact_amount_out: {
         core_addr: string;
         input_asset: string;
@@ -40,6 +69,12 @@ export type QueryMsg = {
         output_asset: string;
         swap_info: SwapInfosCompact;
     };
+} | {
+    simulate_burn_exact_amount_out: {
+        core_addr: string;
+        output_asset: Coin;
+        swap_info: SwapInfosCompact;
+    };
 };
 export interface MigrateMsg {
     force?: boolean | null;
@@ -49,10 +84,15 @@ export interface SimulateBurnExactAmountInResponse {
     burn_redeem_amount: Coin[];
     swap_result_amount: Coin;
 }
-export interface Coin {
-    amount: Uint128;
-    denom: string;
-    [k: string]: unknown;
+export interface SimulateBurnExactAmountOutResponse {
+    burn_amount: Uint128;
+    burn_redeem_amount: Coin[];
+    swap_result_amount: Coin;
+}
+export interface SimulateMintExactAmountInResponse {
+    mint_amount: Uint128;
+    mint_spend_amount: Coin[];
+    swap_result_amount: Coin;
 }
 export interface SimulateMintExactAmountOutResponse {
     mint_amount: Uint128;
