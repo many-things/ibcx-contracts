@@ -162,7 +162,7 @@ impl WeightedPool {
         } = self.get_asset(&input_amount.denom)?;
 
         let minus_spread_factor = Decimal256::one().checked_sub(spread_factor.into())?;
-        let token_sub_in = Decimal::checked_from_ratio(
+        let token_sub_in = Decimal256::checked_from_ratio(
             token_in.amount,
             token_in
                 .amount
