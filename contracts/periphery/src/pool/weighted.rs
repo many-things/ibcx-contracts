@@ -2,8 +2,8 @@ use std::ops::Div;
 use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{from_binary, Binary, Deps, StdError};
-use cosmwasm_std::{Coin, Decimal, StdResult, Uint128};
+use cosmwasm_std::{from_binary, Binary, Decimal256, Deps, StdError};
+use cosmwasm_std::{Coin, Decimal, StdResult, Uint256};
 use rust_decimal::Decimal as RustDecimal;
 use rust_decimal::MathematicalOps;
 
@@ -70,28 +70,34 @@ pub struct WeightedPool {
     pub pool_params: WeightedPoolParams,
     pub pool_assets: Vec<WeightedPoolAsset>,
     pub total_shares: Coin,
-    pub total_weight: Uint128,
+    pub total_weight: Uint256,
 }
 
 #[cw_serde]
 pub struct WeightedPoolParams {
     pub swap_fee: Decimal,
     pub exit_fee: Decimal,
-    pub smooth_weight_change_params: Option<Uint128>,
+    pub smooth_weight_change_params: Option<Uint256>,
+}
+
+#[cw_serde]
+pub struct BigCoin {
+    pub denom: String,
+    pub amount: Uint256,
 }
 
 #[cw_serde]
 pub struct WeightedPoolAsset {
-    pub token: Coin,
-    pub weight: Uint128,
+    pub token: BigCoin,
+    pub weight: Uint256,
 }
 
-struct PoolAssetTuple(pub (String, Uint128, Uint128));
+struct PoolAssetTuple(pub (String, Uint256, Uint256));
 
 impl From<PoolAssetTuple> for WeightedPoolAsset {
     fn from(v: PoolAssetTuple) -> Self {
         Self {
-            token: Coin {
+            token: BigCoin {
                 denom: v.0 .0,
                 amount: v.0 .1,
             },
@@ -114,8 +120,8 @@ impl WeightedPool {
         &mut self,
         input_denom: &str,
         output_denom: &str,
-        input_value: Uint128,
-        output_value: Uint128,
+        input_value: Uint256,
+        output_value: Uint256,
     ) -> Result<(), ContractError> {
         let pool_assets = self.pool_assets.clone();
 
@@ -145,7 +151,7 @@ impl WeightedPool {
         input_amount: &Coin,
         output_denom: &str,
         spread_factor: Decimal,
-    ) -> Result<Uint128, ContractError> {
+    ) -> Result<Uint256, ContractError> {
         let WeightedPoolAsset {
             token: token_out,
             weight: token_out_weight,
@@ -155,24 +161,24 @@ impl WeightedPool {
             weight: token_in_weight,
         } = self.get_asset(&input_amount.denom)?;
 
-        let minus_spread_factor = Decimal::one().checked_sub(spread_factor)?;
-        let token_sub_in = Decimal::checked_from_ratio(
+        let minus_spread_factor = Decimal256::one().checked_sub(spread_factor.into())?;
+        let token_sub_in = Decimal256::checked_from_ratio(
             token_in.amount,
             token_in
                 .amount
                 .checked_add(token_in.amount * minus_spread_factor)?,
         )?;
 
-        let token_weight_ratio = Decimal::checked_from_ratio(token_in_weight, token_out_weight)?;
+        let token_weight_ratio = Decimal256::checked_from_ratio(token_in_weight, token_out_weight)?;
 
         let rust_token_weight_ratio = RustDecimal::from_str(&token_weight_ratio.to_string())?;
         let rust_token_sub_in = RustDecimal::from_str(&token_sub_in.to_string())?;
 
         let calculed_by_rust_decimal =
-            Decimal::from_str(&rust_token_sub_in.powd(rust_token_weight_ratio).to_string())
+            Decimal256::from_str(&rust_token_sub_in.powd(rust_token_weight_ratio).to_string())
                 .unwrap();
 
-        Ok(token_out.amount * (Decimal::one() - calculed_by_rust_decimal))
+        Ok(token_out.amount * (Decimal256::one() - calculed_by_rust_decimal))
     }
 
     fn calc_in_amount_given_out(
@@ -180,7 +186,7 @@ impl WeightedPool {
         input_denom: &str,
         output_amount: &Coin,
         spread_factor: Decimal,
-    ) -> Result<Uint128, ContractError> {
+    ) -> Result<Uint256, ContractError> {
         let WeightedPoolAsset {
             token: token_out,
             weight: token_out_weight,
@@ -190,18 +196,18 @@ impl WeightedPool {
             weight: token_in_weight,
         } = self.get_asset(input_denom)?;
 
-        let token_sub_out = token_out.amount - output_amount.amount;
-        let token_weight_ratio = Decimal::checked_from_ratio(token_out_weight, token_in_weight)?;
+        let token_sub_out: Uint256 = token_out.amount.checked_sub(output_amount.amount.into())?;
+        let token_weight_ratio = Decimal256::checked_from_ratio(token_out_weight, token_in_weight)?;
 
         let rust_token_weight_ratio = RustDecimal::from_str(&token_weight_ratio.to_string())?;
         let rust_token_sub_out = RustDecimal::from_str(&token_sub_out.to_string())?;
 
         let calculated_by_rust_decimal =
-            Decimal::from_str(&rust_token_sub_out.powd(rust_token_weight_ratio).to_string())?;
-        let minus_spread_factor = Decimal::one() - spread_factor;
-        let divided_token_out = Decimal::from_str(&token_out.amount.to_string())?
+            Decimal256::from_str(&rust_token_sub_out.powd(rust_token_weight_ratio).to_string())?;
+        let minus_spread_factor = Decimal256::one().checked_sub(spread_factor.into())?;
+        let divided_token_out = Decimal256::from_str(&token_out.amount.to_string())?
             .div(calculated_by_rust_decimal)
-            - Decimal::one();
+            - Decimal256::one();
         let divded_minus_spread_factor = divided_token_out.div(minus_spread_factor);
 
         Ok(token_in.amount * divded_minus_spread_factor)
@@ -231,9 +237,9 @@ impl OsmosisPool for WeightedPool {
         _deps: &Deps,
         input_amount: Coin,
         output_denom: String,
-        _min_output_amount: Uint128,
+        _min_output_amount: Uint256,
         spread_factor: Decimal,
-    ) -> Result<Uint128, ContractError> {
+    ) -> Result<Uint256, ContractError> {
         // deps.api.debug(&format!(
         //     "{}.swap_exact_amount_in => input: {}, output: {}",
         //     self.get_type(),
@@ -247,7 +253,7 @@ impl OsmosisPool for WeightedPool {
         self.apply_new_pool_assets(
             &input_amount.denom,
             &output_denom,
-            input_amount.amount,
+            input_amount.amount.into(),
             amount_out,
         )?;
 
@@ -258,10 +264,10 @@ impl OsmosisPool for WeightedPool {
         &mut self,
         _deps: &Deps,
         input_denom: String,
-        _max_input_amount: Uint128,
+        _max_input_amount: Uint256,
         output_amount: Coin,
         spread_factor: Decimal,
-    ) -> Result<Uint128, ContractError> {
+    ) -> Result<Uint256, ContractError> {
         // deps.api.debug(&format!(
         //     "[{}] {}.swap_exact_amount_out => input: {}, output: {}",
         //     self.get_id(),
@@ -277,7 +283,7 @@ impl OsmosisPool for WeightedPool {
             &input_denom,
             &output_amount.denom,
             amount_in,
-            output_amount.amount,
+            output_amount.amount.into(),
         )?;
 
         Ok(amount_in)

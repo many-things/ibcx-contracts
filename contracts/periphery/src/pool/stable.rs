@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    from_binary, Binary, Coin, Decimal, Decimal256, Deps, StdError, StdResult, Uint128,
+    from_binary, Binary, Coin, Decimal, Decimal256, Deps, StdError, StdResult, Uint256,
 };
 use ibcx_interface::types::{SwapRoute, SwapRoutes};
 
@@ -359,14 +359,15 @@ impl OsmosisPool for StablePool {
         deps: &Deps,
         input_amount: cosmwasm_std::Coin,
         output_denom: String,
-        _min_output_amount: cosmwasm_std::Uint128,
+        _min_output_amount: cosmwasm_std::Uint256,
         _spread_factor: Decimal,
-    ) -> Result<Uint128, ContractError> {
+    ) -> Result<Uint256, ContractError> {
         Ok(SwapRoutes(vec![SwapRoute {
             pool_id: self.get_id(),
             token_denom: output_denom,
         }])
-        .sim_swap_exact_in(&deps.querier, input_amount)?)
+        .sim_swap_exact_in(&deps.querier, input_amount)?
+        .into())
 
         // ============= TODO: use this
         //
@@ -375,22 +376,23 @@ impl OsmosisPool for StablePool {
 
         // let amount_out = amount_out_dec.to_uint_floor();
 
-        // Ok(Uint128::from_str(&amount_out.to_string())?)
+        // Ok(Uint256::from_str(&amount_out.to_string())?)
     }
 
     fn swap_exact_amount_out(
         &mut self,
         deps: &Deps,
         input_denom: String,
-        _max_input_amount: cosmwasm_std::Uint128,
+        _max_input_amount: cosmwasm_std::Uint256,
         output_amount: cosmwasm_std::Coin,
         _spread_factor: Decimal,
-    ) -> Result<Uint128, ContractError> {
+    ) -> Result<Uint256, ContractError> {
         Ok(SwapRoutes(vec![SwapRoute {
             pool_id: self.get_id(),
             token_denom: input_denom,
         }])
-        .sim_swap_exact_out(&deps.querier, output_amount)?)
+        .sim_swap_exact_out(&deps.querier, output_amount)?
+        .into())
 
         // ============= TODO: use this
         //
@@ -399,6 +401,6 @@ impl OsmosisPool for StablePool {
 
         // let amount_in = amount_in_dec.to_uint_floor();
 
-        // Ok(Uint128::from_str(&amount_in.to_string())?)
+        // Ok(Uint256::from_str(&amount_in.to_string())?)
     }
 }

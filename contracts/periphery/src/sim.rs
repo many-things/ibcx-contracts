@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{coin, Coin, Decimal, Deps, Uint128};
+use cosmwasm_std::{coin, Coin, Decimal, Deps, Uint128, Uint256};
 use ibcx_interface::{
     periphery::{RouteKey, SwapInfo},
     types::SwapRoutes,
@@ -51,11 +51,14 @@ pub fn estimate_out_given_in(
             deps,
             acc,
             route.token_denom.clone(),
-            Uint128::zero(),
+            Uint256::zero(),
             spread_factor,
         )?;
 
-        Ok::<_, ContractError>(coin(amount_out.u128(), &route.token_denom))
+        Ok::<_, ContractError>(coin(
+            amount_out.to_string().parse::<u128>().unwrap(),
+            &route.token_denom,
+        ))
     })?;
 
     Ok(SimAmountOutRoute {
@@ -92,12 +95,15 @@ pub fn estimate_in_given_out(
         let amount_in = pool.swap_exact_amount_out(
             deps,
             route.token_denom.clone(),
-            Uint128::from(u64::MAX), // infinite
+            Uint256::from(u128::MAX), // infinite
             acc,
             spread_factor,
         )?;
 
-        Ok::<_, ContractError>(coin(amount_in.u128(), &route.token_denom))
+        Ok::<_, ContractError>(coin(
+            amount_in.to_string().parse::<u128>().unwrap(),
+            &route.token_denom,
+        ))
     })?;
 
     Ok(SimAmountInRoute {

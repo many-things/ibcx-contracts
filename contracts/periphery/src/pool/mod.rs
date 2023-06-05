@@ -1,7 +1,7 @@
 mod stable;
 mod weighted;
 
-use cosmwasm_std::{Binary, Coin, Decimal, Deps, Empty, StdResult, Uint128};
+use cosmwasm_std::{Binary, Coin, Decimal, Deps, Empty, StdResult, Uint256};
 use ibcx_utils::raw_query_bin;
 
 #[allow(deprecated)]
@@ -28,17 +28,17 @@ pub trait OsmosisPool {
         deps: &Deps,
         input_amount: Coin,
         output_denom: String,
-        min_output_amount: Uint128,
+        min_output_amount: Uint256,
         spread_factor: Decimal,
-    ) -> Result<Uint128, ContractError>; // returns simulated amount out
+    ) -> Result<Uint256, ContractError>; // returns simulated amount out
     fn swap_exact_amount_out(
         &mut self,
         deps: &Deps,
         input_denom: String,
-        max_input_amount: Uint128,
+        max_input_amount: Uint256,
         output_amount: Coin,
         spread_factor: Decimal,
-    ) -> Result<Uint128, ContractError>; // returns simulated amount in
+    ) -> Result<Uint256, ContractError>; // returns simulated amount in
 }
 
 impl Clone for Box<dyn OsmosisPool> {
