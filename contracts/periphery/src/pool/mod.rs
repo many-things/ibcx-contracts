@@ -4,7 +4,9 @@ mod weighted;
 use cosmwasm_std::{Binary, Coin, Decimal, Deps, Empty, StdResult, Uint128};
 use ibcx_utils::raw_query_bin;
 
-use osmosis_std::types::osmosis::poolmanager::v1beta1::PoolRequest;
+#[allow(deprecated)]
+use osmosis_std::types::osmosis::gamm::v1beta1::QueryPoolRequest;
+// use osmosis_std::types::osmosis::poolmanager::v1beta1::PoolRequest;
 pub use stable::{StablePool, StablePoolResponse};
 pub use weighted::{WeightedPool, WeightedPoolResponse};
 
@@ -62,7 +64,7 @@ pub fn query_pools(
             Ok(raw_query_bin::<Empty>(
                 &deps.querier,
                 #[allow(deprecated)]
-                &PoolRequest { pool_id: v }.into(),
+                &QueryPoolRequest { pool_id: v }.into(),
             )?
             .to_base64())
         })
