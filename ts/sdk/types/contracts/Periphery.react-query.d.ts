@@ -20,6 +20,15 @@ export interface PeripherySimulateBurnExactAmountOutQuery<TData> extends Periphe
     };
 }
 export declare function usePeripherySimulateBurnExactAmountOutQuery<TData = SimulateBurnExactAmountOutResponse>({ client, args, options }: PeripherySimulateBurnExactAmountOutQuery<TData>): import("@tanstack/react-query").UseQueryResult<TData, Error>;
+export interface PeripherySimulateBurnExactAmountInV2Query<TData> extends PeripheryReactQuery<SimulateBurnExactAmountInResponse, TData> {
+    args: {
+        coreAddr: string;
+        inputAmount: Uint128;
+        outputAsset: string;
+        swapInfo: SwapInfosCompact;
+    };
+}
+export declare function usePeripherySimulateBurnExactAmountInV2Query<TData = SimulateBurnExactAmountInResponse>({ client, args, options }: PeripherySimulateBurnExactAmountInV2Query<TData>): import("@tanstack/react-query").UseQueryResult<TData, Error>;
 export interface PeripherySimulateBurnExactAmountInQuery<TData> extends PeripheryReactQuery<SimulateBurnExactAmountInResponse, TData> {
     args: {
         coreAddr: string;

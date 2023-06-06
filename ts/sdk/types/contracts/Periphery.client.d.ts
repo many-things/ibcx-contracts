@@ -25,6 +25,12 @@ export interface PeripheryReadOnlyInterface {
         outputAsset: string;
         swapInfo: SwapInfosCompact;
     }) => Promise<SimulateBurnExactAmountInResponse>;
+    simulateBurnExactAmountInV2: ({ coreAddr, inputAmount, outputAsset, swapInfo }: {
+        coreAddr: string;
+        inputAmount: Uint128;
+        outputAsset: string;
+        swapInfo: SwapInfosCompact;
+    }) => Promise<SimulateBurnExactAmountInResponse>;
     simulateBurnExactAmountOut: ({ coreAddr, outputAsset, swapInfo }: {
         coreAddr: string;
         outputAsset: Coin;
@@ -47,6 +53,12 @@ export declare class PeripheryQueryClient implements PeripheryReadOnlyInterface 
         swapInfo: SwapInfosCompact;
     }) => Promise<SimulateMintExactAmountOutResponse>;
     simulateBurnExactAmountIn: ({ coreAddr, inputAmount, outputAsset, swapInfo }: {
+        coreAddr: string;
+        inputAmount: Uint128;
+        outputAsset: string;
+        swapInfo: SwapInfosCompact;
+    }) => Promise<SimulateBurnExactAmountInResponse>;
+    simulateBurnExactAmountInV2: ({ coreAddr, inputAmount, outputAsset, swapInfo }: {
         coreAddr: string;
         inputAmount: Uint128;
         outputAsset: string;
