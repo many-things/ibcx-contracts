@@ -166,7 +166,7 @@ impl WeightedPool {
             token_in.amount,
             token_in
                 .amount
-                .checked_add(input_amount.amount * minus_spread_factor)?,
+                .checked_add(Uint256::from(input_amount.amount) * minus_spread_factor)?,
         )?;
 
         let token_weight_ratio = Decimal256::checked_from_ratio(token_in_weight, token_out_weight)?;
