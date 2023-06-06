@@ -246,7 +246,7 @@ fn test_integration() {
                 },
             )
             .unwrap();
-        println!("{}", serde_json::to_string_pretty(&sim_mint_resp).unwrap());
+        println!("v1: {}", &sim_mint_resp.swap_result_amount);
 
         wasm.execute(
             &env.perp_addr,
@@ -320,7 +320,20 @@ fn test_integration() {
             )
             .unwrap();
 
-        println!("{}", serde_json::to_string_pretty(&sim_burn_resp).unwrap());
+        let sim_burn_resp_v2: periphery::SimulateBurnExactAmountInResponse = wasm
+            .query(
+                &env.perp_addr,
+                &periphery::QueryMsg::SimulateBurnExactAmountInV2 {
+                    core_addr: env.core_addr.clone(),
+                    input_amount: Uint128::new(mint_burn_amount),
+                    output_asset: output.to_string(),
+                    swap_info: swap.clone(),
+                },
+            )
+            .unwrap();
+
+        println!("v1: {}", &sim_burn_resp.swap_result_amount);
+        println!("v2: {}", &sim_burn_resp_v2.swap_result_amount);
 
         wasm.execute(
             &env.perp_addr,

@@ -6,7 +6,9 @@ use ibcx_interface::periphery::{extract_pool_ids, RouteKey, SwapInfo};
 
 use crate::error::ContractError;
 use crate::pool::query_pools;
-use crate::sim::{estimate_in_given_out, SimAmountInRoute};
+use crate::sim::{
+    estimate_in_given_out, estimate_out_given_in, SimAmountInRoute, SimAmountOutRoute,
+};
 
 pub fn make_mint_swap_exact_out_msgs(
     deps: &Deps,
@@ -141,54 +143,57 @@ pub fn make_burn_swap_exact_in_msgs(
     Ok((swap_msgs, simulated_total_receive_amount))
 }
 
-// FIXME: This is the advanced code, but it doesn't work
-// pub fn make_burn_swap_exact_in_msgs(
-//     deps: &Deps,
-//     contract: &Addr,
-//     swap_info: Vec<SwapInfo>,
-//     expected: Vec<Coin>,
-//     min_output: &Coin,
-// ) -> Result<(Vec<CosmosMsg>, Uint128), ContractError> {
-//     let pool_ids = extract_pool_ids(swap_info.clone());
-//     let mut pools = query_pools(deps, pool_ids)?
-//         .into_iter()
-//         .map(|v| (v.get_id(), v))
-//         .collect::<BTreeMap<_, _>>();
-//     let simulated = expected
-//         .into_iter()
-//         .map(|v| {
-//             if v.denom == min_output.denom {
-//                 return Ok(SimAmountOutRoute {
-//                     sim_amount_out: v.amount,
-//                     amount_in: v,
-//                     routes: None,
-//                 });
-//             }
-//             let route = estimate_out_given_in(deps, v, &min_output.denom, &mut pools, &swap_info)?;
-//             deps.api.debug(&format!("{route:?}"));
-//             Ok(route)
-//         })
-//         .collect::<Result<Vec<_>, ContractError>>()?;
-//     let simulated_total_receive_amount = simulated
-//         .iter()
-//         .fold(Uint128::zero(), |acc, v| acc + v.sim_amount_out);
-//     if min_output.amount > simulated_total_receive_amount {
-//         return Err(ContractError::TradeAmountExceeded {});
-//     }
-//     let amplifier = Decimal::checked_from_ratio(min_output.amount, simulated_total_receive_amount)?;
-//     let swap_msgs = simulated
-//         .into_iter()
-//         .filter_map(|r| {
-//             r.routes.map(|routes| {
-//                 let amount_out = r.sim_amount_out * amplifier;
-//                 routes.msg_swap_exact_in(
-//                     contract,
-//                     &r.amount_in.denom,
-//                     r.amount_in.amount,
-//                     amount_out,
-//                 )
-//             })
-//         })
-//         .collect::<Vec<_>>();
-//     Ok((swap_msgs, simulated_total_receive_amount))
-// }
+pub fn make_burn_swap_exact_in_msgs_v2(
+    deps: &Deps,
+    contract: &Addr,
+    swap_info: Vec<SwapInfo>,
+    expected: Vec<Coin>,
+    min_output: &Coin,
+) -> Result<(Vec<CosmosMsg>, Uint128), ContractError> {
+    let pool_ids = extract_pool_ids(swap_info.clone());
+    let mut pools = query_pools(deps, pool_ids)?
+        .into_iter()
+        .map(|v| (v.get_id(), v))
+        .collect::<BTreeMap<_, _>>();
+
+    let simulated = expected
+        .into_iter()
+        .map(|v| {
+            if v.denom == min_output.denom {
+                return Ok(SimAmountOutRoute {
+                    sim_amount_out: v.amount,
+                    amount_in: v,
+                    routes: None,
+                });
+            }
+            let route = estimate_out_given_in(deps, v, &min_output.denom, &mut pools, &swap_info)?;
+
+            Ok(route)
+        })
+        .collect::<Result<Vec<_>, ContractError>>()?;
+
+    let simulated_total_receive_amount = simulated
+        .iter()
+        .fold(Uint128::zero(), |acc, v| acc + v.sim_amount_out);
+    if min_output.amount > simulated_total_receive_amount {
+        return Err(ContractError::TradeAmountExceeded {});
+    }
+
+    let amplifier = Decimal::checked_from_ratio(min_output.amount, simulated_total_receive_amount)?;
+    let swap_msgs = simulated
+        .into_iter()
+        .filter_map(|r| {
+            r.routes.map(|routes| {
+                let amount_out = r.sim_amount_out * amplifier;
+                routes.msg_swap_exact_in(
+                    contract,
+                    &r.amount_in.denom,
+                    r.amount_in.amount,
+                    amount_out,
+                )
+            })
+        })
+        .collect::<Vec<_>>();
+
+    Ok((swap_msgs, simulated_total_receive_amount))
+}

@@ -194,6 +194,19 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<QueryResponse, Contr
             output_asset,
             swap_info.into(),
         )),
+        SimulateBurnExactAmountInV2 {
+            core_addr,
+            input_amount,
+            output_asset,
+            swap_info,
+        } => to_binary(query::simulate_burn_exact_amount_in_v2(
+            deps,
+            env,
+            core_addr,
+            input_amount,
+            output_asset,
+            swap_info.into(),
+        )),
         SimulateBurnExactAmountOut {
             core_addr,
             swap_info,

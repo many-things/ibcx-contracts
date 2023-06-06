@@ -136,6 +136,14 @@ pub enum QueryMsg {
         swap_info: SwapInfosCompact,
     },
 
+    #[returns(SimulateBurnExactAmountInResponse)]
+    SimulateBurnExactAmountInV2 {
+        core_addr: String,
+        input_amount: Uint128,
+        output_asset: String,
+        swap_info: SwapInfosCompact,
+    },
+
     #[returns(SimulateBurnExactAmountOutResponse)]
     SimulateBurnExactAmountOut {
         core_addr: String,
