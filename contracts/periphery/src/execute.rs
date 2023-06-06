@@ -68,17 +68,20 @@ pub fn mint_exact_amount_in(
         funds: vec![],
     };
 
+    let mut mint_msg_funds = core_portfolio
+        .units
+        .into_iter()
+        .map(|(denom, unit)| coin((est_res.est_out * unit).u128(), denom))
+        .collect::<Vec<_>>();
+    mint_msg_funds.sort_by(|a, b| a.denom.cmp(&b.denom));
+
     let mint_msg = core.call_with_funds(
         core::ExecuteMsg::Mint {
             amount: est_res.est_out,
             receiver: Some(info.sender.to_string()),
             refund_to: Some(info.sender.to_string()),
         },
-        core_portfolio
-            .units
-            .into_iter()
-            .map(|(denom, unit)| coin((est_res.est_out * unit).u128(), denom))
-            .collect(),
+        mint_msg_funds,
     )?;
 
     let resp = Response::new()
