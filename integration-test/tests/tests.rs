@@ -320,36 +320,40 @@ fn test_integration() {
             )
             .unwrap();
 
-        let sim_burn_resp_v2: periphery::SimulateBurnExactAmountInResponse = wasm
-            .query(
+        println!("sim_result: {}", &sim_burn_resp.swap_result_amount);
+
+        let act_burn_resp = wasm
+            .execute(
                 &env.perp_addr,
-                &periphery::QueryMsg::SimulateBurnExactAmountInV2 {
+                &periphery::ExecuteMsg::BurnExactAmountIn {
                     core_addr: env.core_addr.clone(),
-                    input_amount: Uint128::new(mint_burn_amount),
                     output_asset: output.to_string(),
-                    swap_info: swap.clone(),
+                    min_output_amount: Decimal::from_ratio(
+                        burn_slippage.1 - ((burn_slippage.0 - burn_slippage.1) * 2),
+                        burn_slippage.1,
+                    ) * sim_burn_resp.swap_result_amount.amount,
+                    swap_info: swap,
                 },
+                &[coin(mint_burn_amount, &config.index_denom)],
+                acc,
             )
             .unwrap();
 
-        println!("v1: {}", &sim_burn_resp.swap_result_amount);
-        println!("v2: {}", &sim_burn_resp_v2.swap_result_amount);
+        let act_burn_wasm_resp = act_burn_resp
+            .events
+            .into_iter()
+            .filter(|v| v.ty == "wasm")
+            .collect::<Vec<_>>();
 
-        wasm.execute(
-            &env.perp_addr,
-            &periphery::ExecuteMsg::BurnExactAmountIn {
-                core_addr: env.core_addr.clone(),
-                output_asset: output.to_string(),
-                min_output_amount: Decimal::from_ratio(
-                    burn_slippage.1 - ((burn_slippage.0 - burn_slippage.1) * 2),
-                    burn_slippage.1,
-                ) * sim_burn_resp.swap_result_amount.amount,
-                swap_info: swap,
-            },
-            &[coin(mint_burn_amount, &config.index_denom)],
-            acc,
-        )
-        .unwrap();
+        let finish_event = act_burn_wasm_resp
+            .last()
+            .unwrap()
+            .attributes
+            .iter()
+            .find(|v| v.key == "amount")
+            .unwrap();
+
+        println!("act_result: {}", finish_event.value);
     }
 
     let index_balance = bank
