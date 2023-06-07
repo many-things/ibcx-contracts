@@ -9,10 +9,7 @@ use ibcx_interface::{
 
 use crate::{
     error::ContractError,
-    msgs::{
-        make_burn_swap_exact_in_msgs, make_burn_swap_exact_in_msgs_v2,
-        make_mint_swap_exact_out_msgs,
-    },
+    msgs::{make_burn_swap_exact_in_msgs, make_mint_swap_exact_out_msgs},
     pool::query_pools,
     sim::search_efficient,
 };
@@ -101,35 +98,6 @@ pub fn simulate_burn_exact_amount_in(
     let expected = sim_resp.redeem_amount.clone();
 
     let (_, receive) = make_burn_swap_exact_in_msgs(
-        &deps,
-        &env.contract.address,
-        swap_info,
-        expected,
-        &coin(Uint128::zero().u128(), &output_asset),
-    )?;
-
-    Ok(SimulateBurnExactAmountInResponse {
-        burn_amount: sim_resp.burn_amount,
-        burn_redeem_amount: sim_resp.redeem_amount,
-        swap_result_amount: coin(receive.u128(), &output_asset),
-    })
-}
-
-pub fn simulate_burn_exact_amount_in_v2(
-    deps: Deps,
-    env: Env,
-    core_addr: String,
-    input_amount: Uint128,
-    output_asset: String,
-    swap_info: Vec<SwapInfo>,
-) -> Result<SimulateBurnExactAmountInResponse, ContractError> {
-    // query to core contract
-    let core = IbcCore(deps.api.addr_validate(&core_addr)?);
-
-    let sim_resp = core.simulate_burn(&deps.querier, input_amount, None)?;
-    let expected = sim_resp.redeem_amount.clone();
-
-    let (_, receive) = make_burn_swap_exact_in_msgs_v2(
         &deps,
         &env.contract.address,
         swap_info,

@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use cosmwasm_std::CosmosMsg;
 use cosmwasm_std::{Addr, Coin, Decimal, Deps, Uint128};
-use ibcx_interface::periphery::{extract_pool_ids, RouteKey, SwapInfo};
+use ibcx_interface::periphery::{extract_pool_ids, SwapInfo};
 
 use crate::error::ContractError;
 use crate::pool::query_pools;
@@ -72,78 +72,6 @@ pub fn make_mint_swap_exact_out_msgs(
 }
 
 pub fn make_burn_swap_exact_in_msgs(
-    deps: &Deps,
-    contract: &Addr,
-    swap_info: Vec<SwapInfo>,
-    expected: Vec<Coin>,
-    min_output: &Coin,
-) -> Result<(Vec<CosmosMsg>, Uint128), ContractError> {
-    let mut swap_msgs: Vec<CosmosMsg> = Vec::new();
-
-    let simulated = expected
-        .into_iter()
-        .map(|v| {
-            if v.denom == min_output.denom {
-                return Ok((v.clone(), None, v.amount));
-            }
-
-            let SwapInfo((_, swap_info)) = swap_info
-                .iter()
-                .find(|SwapInfo((RouteKey((from, to)), _))| {
-                    from == &v.denom && to == &min_output.denom
-                })
-                .ok_or(ContractError::SwapRouteNotFound {
-                    from: min_output.denom.clone(),
-                    to: v.denom.clone(),
-                })?;
-
-            let simulated_token_out = swap_info
-                .sim_swap_exact_in(&deps.querier, v.clone())
-                .map_err(|e| ContractError::SimulateQueryError {
-                    err: e.to_string(),
-                    input: v.denom.clone(),
-                    output: min_output.denom.clone(),
-                    amount: v.amount,
-                })?;
-
-            Ok((v, Some(swap_info), simulated_token_out))
-        })
-        .collect::<Result<Vec<_>, ContractError>>()?;
-
-    let simulated_total_receive_amount = simulated
-        .iter()
-        .fold(Uint128::zero(), |acc, (_, _, v)| acc + v);
-    if min_output.amount > simulated_total_receive_amount {
-        return Err(ContractError::TradeAmountExceeded {});
-    }
-
-    for (
-        Coin {
-            denom,
-            amount: amount_in,
-        },
-        swap_info,
-        sim_amount_out,
-    ) in simulated
-    {
-        if let Some(swap_info) = swap_info {
-            let ratio =
-                Decimal::checked_from_ratio(min_output.amount, simulated_total_receive_amount)?;
-            let amount_out_min = ratio * sim_amount_out;
-
-            swap_msgs.push(swap_info.msg_swap_exact_in(
-                contract,
-                &denom,
-                amount_in,
-                amount_out_min,
-            ));
-        }
-    }
-
-    Ok((swap_msgs, simulated_total_receive_amount))
-}
-
-pub fn make_burn_swap_exact_in_msgs_v2(
     deps: &Deps,
     contract: &Addr,
     swap_info: Vec<SwapInfo>,
