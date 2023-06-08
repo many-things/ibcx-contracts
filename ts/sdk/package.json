@@ -1,6 +1,6 @@
 {
   "name": "@many-things/ibcx-contracts-sdk",
-  "version": "0.1.14",
+  "version": "0.1.15-rc0",
   "description": "Typescript SDK for IBCX Contracts",
   "cdn": "dist/index.umd.js",
   "main": "dist/index.js",

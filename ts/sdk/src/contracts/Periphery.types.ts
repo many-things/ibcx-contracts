@@ -70,13 +70,6 @@ export type QueryMsg = {
     swap_info: SwapInfosCompact;
   };
 } | {
-  simulate_burn_exact_amount_in_v2: {
-    core_addr: string;
-    input_amount: Uint128;
-    output_asset: string;
-    swap_info: SwapInfosCompact;
-  };
-} | {
   simulate_burn_exact_amount_out: {
     core_addr: string;
     output_asset: Coin;

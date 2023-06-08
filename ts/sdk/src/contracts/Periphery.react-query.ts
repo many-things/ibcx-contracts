@@ -31,26 +31,6 @@ export function usePeripherySimulateBurnExactAmountOutQuery<TData = SimulateBurn
     swapInfo: args.swapInfo
   }), options);
 }
-export interface PeripherySimulateBurnExactAmountInV2Query<TData> extends PeripheryReactQuery<SimulateBurnExactAmountInResponse, TData> {
-  args: {
-    coreAddr: string;
-    inputAmount: Uint128;
-    outputAsset: string;
-    swapInfo: SwapInfosCompact;
-  };
-}
-export function usePeripherySimulateBurnExactAmountInV2Query<TData = SimulateBurnExactAmountInResponse>({
-  client,
-  args,
-  options
-}: PeripherySimulateBurnExactAmountInV2Query<TData>) {
-  return useQuery<SimulateBurnExactAmountInResponse, Error, TData>(["peripherySimulateBurnExactAmountInV2", client.contractAddress, JSON.stringify(args)], () => client.simulateBurnExactAmountInV2({
-    coreAddr: args.coreAddr,
-    inputAmount: args.inputAmount,
-    outputAsset: args.outputAsset,
-    swapInfo: args.swapInfo
-  }), options);
-}
 export interface PeripherySimulateBurnExactAmountInQuery<TData> extends PeripheryReactQuery<SimulateBurnExactAmountInResponse, TData> {
   args: {
     coreAddr: string;

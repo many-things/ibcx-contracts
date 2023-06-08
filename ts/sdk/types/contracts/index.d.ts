@@ -46,10 +46,9 @@ export declare namespace contracts {
     };
     const Periphery: {
         usePeripherySimulateBurnExactAmountOutQuery<TData = _8.SimulateBurnExactAmountOutResponse>({ client, args, options }: _11.PeripherySimulateBurnExactAmountOutQuery<TData>): import("@tanstack/react-query").UseQueryResult<TData, Error>;
-        usePeripherySimulateBurnExactAmountInV2Query<TData_1 = _8.SimulateBurnExactAmountInResponse>({ client, args, options }: _11.PeripherySimulateBurnExactAmountInV2Query<TData_1>): import("@tanstack/react-query").UseQueryResult<TData_1, Error>;
-        usePeripherySimulateBurnExactAmountInQuery<TData_2 = _8.SimulateBurnExactAmountInResponse>({ client, args, options }: _11.PeripherySimulateBurnExactAmountInQuery<TData_2>): import("@tanstack/react-query").UseQueryResult<TData_2, Error>;
-        usePeripherySimulateMintExactAmountOutQuery<TData_3 = _8.SimulateMintExactAmountOutResponse>({ client, args, options }: _11.PeripherySimulateMintExactAmountOutQuery<TData_3>): import("@tanstack/react-query").UseQueryResult<TData_3, Error>;
-        usePeripherySimulateMintExactAmountInQuery<TData_4 = _8.SimulateMintExactAmountInResponse>({ client, args, options }: _11.PeripherySimulateMintExactAmountInQuery<TData_4>): import("@tanstack/react-query").UseQueryResult<TData_4, Error>;
+        usePeripherySimulateBurnExactAmountInQuery<TData_1 = _8.SimulateBurnExactAmountInResponse>({ client, args, options }: _11.PeripherySimulateBurnExactAmountInQuery<TData_1>): import("@tanstack/react-query").UseQueryResult<TData_1, Error>;
+        usePeripherySimulateMintExactAmountOutQuery<TData_2 = _8.SimulateMintExactAmountOutResponse>({ client, args, options }: _11.PeripherySimulateMintExactAmountOutQuery<TData_2>): import("@tanstack/react-query").UseQueryResult<TData_2, Error>;
+        usePeripherySimulateMintExactAmountInQuery<TData_3 = _8.SimulateMintExactAmountInResponse>({ client, args, options }: _11.PeripherySimulateMintExactAmountInQuery<TData_3>): import("@tanstack/react-query").UseQueryResult<TData_3, Error>;
         PeripheryMessageComposer: typeof _10.PeripheryMessageComposer;
         PeripheryQueryClient: typeof _9.PeripheryQueryClient;
         PeripheryClient: typeof _9.PeripheryClient;

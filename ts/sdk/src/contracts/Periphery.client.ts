@@ -40,17 +40,6 @@ export interface PeripheryReadOnlyInterface {
     outputAsset: string;
     swapInfo: SwapInfosCompact;
   }) => Promise<SimulateBurnExactAmountInResponse>;
-  simulateBurnExactAmountInV2: ({
-    coreAddr,
-    inputAmount,
-    outputAsset,
-    swapInfo
-  }: {
-    coreAddr: string;
-    inputAmount: Uint128;
-    outputAsset: string;
-    swapInfo: SwapInfosCompact;
-  }) => Promise<SimulateBurnExactAmountInResponse>;
   simulateBurnExactAmountOut: ({
     coreAddr,
     outputAsset,
@@ -71,7 +60,6 @@ export class PeripheryQueryClient implements PeripheryReadOnlyInterface {
     this.simulateMintExactAmountIn = this.simulateMintExactAmountIn.bind(this);
     this.simulateMintExactAmountOut = this.simulateMintExactAmountOut.bind(this);
     this.simulateBurnExactAmountIn = this.simulateBurnExactAmountIn.bind(this);
-    this.simulateBurnExactAmountInV2 = this.simulateBurnExactAmountInV2.bind(this);
     this.simulateBurnExactAmountOut = this.simulateBurnExactAmountOut.bind(this);
   }
 
@@ -125,26 +113,6 @@ export class PeripheryQueryClient implements PeripheryReadOnlyInterface {
   }): Promise<SimulateBurnExactAmountInResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
       simulate_burn_exact_amount_in: {
-        core_addr: coreAddr,
-        input_amount: inputAmount,
-        output_asset: outputAsset,
-        swap_info: swapInfo
-      }
-    });
-  };
-  simulateBurnExactAmountInV2 = async ({
-    coreAddr,
-    inputAmount,
-    outputAsset,
-    swapInfo
-  }: {
-    coreAddr: string;
-    inputAmount: Uint128;
-    outputAsset: string;
-    swapInfo: SwapInfosCompact;
-  }): Promise<SimulateBurnExactAmountInResponse> => {
-    return this.client.queryContractSmart(this.contractAddress, {
-      simulate_burn_exact_amount_in_v2: {
         core_addr: coreAddr,
         input_amount: inputAmount,
         output_asset: outputAsset,
