@@ -3,12 +3,12 @@ name: testing
 on:
   push:
     paths:
-      - 'contracts/**'
+      - "contracts/**"
     branches:
       - main
   pull_request:
     paths:
-      - 'contracts/**'
+      - "contracts/**"
     branches:
       - main
 
@@ -39,6 +39,7 @@ jobs:
           toolchain: stable
       - run: cargo fetch --verbose
       - run: cargo build
+      - run: cargo wasm
       - run: cargo test --verbose --all
 
   coverage:
@@ -61,6 +62,8 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - run: cargo wasm
 
       - name: Generate code coverage
         run: |

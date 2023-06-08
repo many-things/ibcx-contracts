@@ -1,6 +1,6 @@
 mod setup;
 
-use cosmwasm_std::{coin, Decimal, Uint128};
+use cosmwasm_std::{coin, Uint128};
 use ibcx_interface::{
     core,
     periphery::{
