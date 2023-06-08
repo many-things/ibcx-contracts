@@ -1,14 +1,10 @@
 use cosmwasm_schema::serde::Serialize;
-use cosmwasm_std::{attr, entry_point, Env, MessageInfo, QueryResponse, Reply, WasmMsg};
+use cosmwasm_std::{attr, entry_point, Env, MessageInfo, QueryResponse};
 use cosmwasm_std::{Deps, DepsMut, Response};
 use ibcx_interface::periphery::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
-use crate::state::{Context, CONTEXT};
-use crate::{
-    error::ContractError, execute, msgs::make_burn_swap_exact_in_msgs, CONTRACT_NAME,
-    CONTRACT_VERSION,
-};
-use crate::{query, REPLY_ID_BURN_EXACT_AMOUNT_IN};
+use crate::query;
+use crate::{error::ContractError, execute, CONTRACT_NAME, CONTRACT_VERSION};
 
 #[entry_point]
 pub fn instantiate(
@@ -92,56 +88,6 @@ pub fn execute(
             refund_to,
             refund_asset,
         } => execute::finish_operation(deps, env, info, refund_to, refund_asset),
-    }
-}
-
-#[entry_point]
-pub fn reply(deps: DepsMut, env: Env, reply: Reply) -> Result<Response, ContractError> {
-    match reply.id {
-        REPLY_ID_BURN_EXACT_AMOUNT_IN => {
-            let context = CONTEXT.load(deps.storage)?;
-            CONTEXT.remove(deps.storage);
-
-            match context {
-                Context::Burn {
-                    sender,
-                    min_output,
-                    redeem_amounts,
-                    swap_info,
-                    ..
-                } => {
-                    let (swap_msgs, refunds) = make_burn_swap_exact_in_msgs(
-                        &deps.as_ref(),
-                        &env.contract.address,
-                        swap_info,
-                        redeem_amounts,
-                        &min_output,
-                    )?;
-
-                    let finish_msg = WasmMsg::Execute {
-                        contract_addr: env.contract.address.to_string(),
-                        msg: cosmwasm_std::to_binary(&ExecuteMsg::FinishOperation {
-                            refund_to: sender.to_string(),
-                            refund_asset: min_output.denom,
-                        })?,
-                        funds: vec![],
-                    };
-
-                    let resp = Response::new()
-                        .add_messages(swap_msgs)
-                        .add_message(finish_msg)
-                        .add_attributes(vec![
-                            attr("method", "reply::burn_exact_amount_in"),
-                            attr("executor", sender),
-                            attr("refunds", refunds),
-                        ]);
-
-                    Ok(resp)
-                }
-                _ => Err(ContractError::InvalidContextType(context.kind())),
-            }
-        }
-        _ => Err(ContractError::InvalidReplyId(reply.id)),
     }
 }
 

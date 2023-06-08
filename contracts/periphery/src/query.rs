@@ -1,4 +1,4 @@
-use cosmwasm_std::{coin, Coin, Decimal, Deps, Env, Uint128};
+use cosmwasm_std::{coin, Coin, Deps, Env, Uint128};
 use ibcx_interface::{
     helpers::IbcCore,
     periphery::{
@@ -8,10 +8,8 @@ use ibcx_interface::{
 };
 
 use crate::{
-    error::ContractError,
-    msgs::{make_burn_swap_exact_in_msgs, make_mint_swap_exact_out_msgs},
-    pool::query_pools,
-    sim::search_efficient,
+    deduct_fee, error::ContractError, expand_fee, make_unit_converter, pool::query_pools,
+    sim::Simulator,
 };
 
 pub fn simulate_mint_exact_amount_in(
@@ -22,93 +20,96 @@ pub fn simulate_mint_exact_amount_in(
     swap_info: Vec<SwapInfo>,
 ) -> Result<SimulateMintExactAmountOutResponse, ContractError> {
     let core = IbcCore(deps.api.addr_validate(&core_addr)?);
+    let core_fee = core.get_fee(&deps.querier, None)?;
     let core_portfolio = core.get_portfolio(&deps.querier, None)?;
 
     let pool_ids = extract_pool_ids(swap_info.clone());
     let pools = query_pools(&deps, pool_ids)?;
 
-    let (token_in, token_out, _) = search_efficient(
-        &deps,
-        &core_portfolio.units,
-        input_asset.clone(),
-        None,
-        &pools,
-        &swap_info,
-    )?;
+    let sim = Simulator::new(&deps, &pools, &swap_info, &core_portfolio.units);
+    let sim_res = sim
+        .estimate_index_for_input(input_asset.clone(), None, None, None)?
+        .max;
+
+    // apply mint fee
+    let mint_amount = sim_res.est_min_token_out * expand_fee(core_fee.mint_fee)?;
+
+    let conv = make_unit_converter(mint_amount);
+    let mut mint_spend_amount: Vec<_> = core_portfolio.units.into_iter().map(conv).collect();
+    mint_spend_amount.sort_by(|a, b| a.denom.cmp(&b.denom));
 
     Ok(SimulateMintExactAmountOutResponse {
-        mint_amount: token_out,
-        mint_spend_amount: core_portfolio
-            .units
-            .into_iter()
-            .map(|(denom, unit)| coin((token_out * unit).u128(), denom))
-            .collect(),
-        swap_result_amount: coin(token_in.u128(), input_asset.denom),
+        mint_amount,
+        mint_spend_amount,
+        swap_result_amount: coin(sim_res.max_token_in.u128(), input_asset.denom),
     })
 }
 
 pub fn simulate_mint_exact_amount_out(
     deps: Deps,
-    env: Env,
+    _env: Env,
     core_addr: String,
-    output_amount: Uint128,
+    index_amount: Uint128,
     input_asset: String,
     swap_info: Vec<SwapInfo>,
 ) -> Result<SimulateMintExactAmountOutResponse, ContractError> {
     // query to core contract
     let core = IbcCore(deps.api.addr_validate(&core_addr)?);
-    let core_config = core.get_config(&deps.querier, None)?;
+    let core_fee = core.get_fee(&deps.querier, None)?;
+    let core_portfolio = core.get_portfolio(&deps.querier, None)?;
 
-    // input & output
-    let output = coin(output_amount.u128(), core_config.index_denom);
+    let pool_ids = extract_pool_ids(swap_info.clone());
+    let pools = query_pools(&deps, pool_ids)?;
 
-    let sim_resp = core.simulate_mint(&deps.querier, output.amount, None, None)?;
-    let sim_amount_desired = sim_resp.fund_spent;
+    // apply mint fee
+    let mint_amount = index_amount * deduct_fee(core_fee.mint_fee)?;
 
-    let (_, refund) = make_mint_swap_exact_out_msgs(
-        &deps,
-        &env.contract.address,
-        swap_info,
-        sim_amount_desired.clone(),
-        &coin(u64::MAX as u128, &input_asset),
-    )?;
+    let conv = make_unit_converter(mint_amount);
+    let mut mint_spend_amount: Vec<_> =
+        core_portfolio.units.clone().into_iter().map(conv).collect();
+    mint_spend_amount.sort_by(|a, b| a.denom.cmp(&b.denom));
+
+    let sim = Simulator::new(&deps, &pools, &swap_info, &core_portfolio.units);
+    let sim_res = sim.estimate_input_for_index(&input_asset, mint_amount)?;
 
     Ok(SimulateMintExactAmountOutResponse {
-        mint_amount: output.amount,
-        mint_spend_amount: sim_amount_desired,
-        swap_result_amount: coin(
-            Uint128::from(u64::MAX).checked_sub(refund)?.u128(),
-            input_asset,
-        ),
+        mint_amount,
+        mint_spend_amount,
+        swap_result_amount: coin(sim_res.total_input.u128(), input_asset),
     })
 }
 
 pub fn simulate_burn_exact_amount_in(
     deps: Deps,
-    env: Env,
+    _env: Env,
     core_addr: String,
-    input_amount: Uint128,
+    index_amount: Uint128,
     output_asset: String,
     swap_info: Vec<SwapInfo>,
 ) -> Result<SimulateBurnExactAmountInResponse, ContractError> {
     // query to core contract
     let core = IbcCore(deps.api.addr_validate(&core_addr)?);
+    let core_fee = core.get_fee(&deps.querier, None)?;
+    let core_portfolio = core.get_portfolio(&deps.querier, None)?;
 
-    let sim_resp = core.simulate_burn(&deps.querier, input_amount, None)?;
-    let expected = sim_resp.redeem_amount.clone();
+    let pool_ids = extract_pool_ids(swap_info.clone());
+    let pools = query_pools(&deps, pool_ids)?;
 
-    let (_, receive) = make_burn_swap_exact_in_msgs(
-        &deps,
-        &env.contract.address,
-        swap_info,
-        expected,
-        &coin(Uint128::zero().u128(), &output_asset),
-    )?;
+    // apply burn fee before simulating
+    let burn_amount = index_amount * deduct_fee(core_fee.burn_fee)?;
+
+    let conv = make_unit_converter(burn_amount);
+    let mut burn_redeem_amount: Vec<_> =
+        core_portfolio.units.clone().into_iter().map(conv).collect();
+    burn_redeem_amount.sort_by(|a, b| a.denom.cmp(&b.denom));
+
+    let sim = Simulator::new(&deps, &pools, &swap_info, &core_portfolio.units);
+    let sim_res = sim.estimate_output_for_index(burn_amount, &output_asset)?;
 
     Ok(SimulateBurnExactAmountInResponse {
-        burn_amount: sim_resp.burn_amount,
-        burn_redeem_amount: sim_resp.redeem_amount,
-        swap_result_amount: coin(receive.u128(), &output_asset),
+        burn_amount,
+        burn_redeem_amount,
+        swap_result_amount: coin(sim_res.total_output.u128(), &output_asset),
     })
 }
 
@@ -119,6 +120,7 @@ pub fn simulate_burn_exact_amount_out(
     output_asset: Coin,
     swap_info: Vec<SwapInfo>,
 ) -> Result<SimulateBurnExactAmountOutResponse, ContractError> {
+    // query to core contract
     let core = IbcCore(deps.api.addr_validate(&core_addr)?);
     let core_fee = core.get_fee(&deps.querier, None)?;
     let core_portfolio = core.get_portfolio(&deps.querier, None)?;
@@ -126,30 +128,22 @@ pub fn simulate_burn_exact_amount_out(
     let pool_ids = extract_pool_ids(swap_info.clone());
     let pools = query_pools(&deps, pool_ids)?;
 
-    let (token_in, token_out, _) = search_efficient(
-        &deps,
-        &core_portfolio.units,
-        output_asset.clone(),
-        None,
-        &pools,
-        &swap_info,
-    )?;
+    let sim = Simulator::new(&deps, &pools, &swap_info, &core_portfolio.units);
+    let sim_res = sim
+        .estimate_index_for_output(output_asset.clone(), None, None, None)?
+        .min;
 
-    let invert = Decimal::one().checked_div(
-        core_fee
-            .burn_fee
-            .map(|v| Decimal::one() - v)
-            .unwrap_or(Decimal::one()),
-    )?;
+    // apply burn fee after simulation
+    let burn_amount = sim_res.est_min_token_in * expand_fee(core_fee.burn_fee)?;
+
+    let conv = make_unit_converter(burn_amount);
+    let mut burn_redeem_amount: Vec<_> = core_portfolio.units.into_iter().map(conv).collect();
+    burn_redeem_amount.sort_by(|a, b| a.denom.cmp(&b.denom));
 
     Ok(SimulateBurnExactAmountOutResponse {
-        burn_amount: token_out * invert,
-        burn_redeem_amount: core_portfolio
-            .units
-            .into_iter()
-            .map(|(denom, unit)| coin((token_out * unit).u128(), denom))
-            .collect(),
-        swap_result_amount: coin(token_in.u128(), output_asset.denom),
+        burn_amount,
+        burn_redeem_amount,
+        swap_result_amount: coin(sim_res.max_token_out.u128(), output_asset.denom),
     })
 }
 
