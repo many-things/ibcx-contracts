@@ -6,3 +6,8 @@ config.*.yaml
 !config.example.yaml
 
 999_*.ts
+
+!.vscode
+.yarn/*
+!.yarn/releases
+.pnp*
