@@ -24,6 +24,9 @@ pub enum ContractError {
     #[error("{0}")]
     CheckedFromRatioError(#[from] cosmwasm_std::CheckedFromRatioError),
 
+    #[error("{0}")]
+    RustDecimalError(#[from] rust_decimal::Error),
+
     #[error("Paused")]
     Paused {},
 
@@ -45,6 +48,9 @@ pub enum ContractError {
     #[error("Swap route not found. from:{from:?}, to:{to:?}")]
     SwapRouteNotFound { from: String, to: String },
 
+    #[error("Pool not found. pool_id:{0}")]
+    PoolNotFound(u64),
+
     #[error(
         "Simulate query error. err:{err:?}, input:{input:?}, output:{output:?}, amount:{amount:?}"
     )]
@@ -54,4 +60,13 @@ pub enum ContractError {
         output: String,
         amount: Uint128,
     },
+
+    #[error("Unsupported pool type")]
+    UnsupportedPoolType,
+
+    #[error("Max loop exceeded")]
+    MaxLoopExceeded,
+
+    #[error("Invalid index amount range")]
+    InvalidIndexAmountRange,
 }

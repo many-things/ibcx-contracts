@@ -22,9 +22,11 @@ cw-utils = "0.16.0"
 cw2 = "1.0.0"
 thiserror = { version = "1.0.37" }
 
-osmosis-std = "0.15.2"
+osmosis-std = { version = "0.15.3" }
 ibcx-utils = { path = "../../packages/utils" }
 ibcx-interface = { path = "../../packages/interface" }
+rust_decimal = { version = "1.29.1", features = ["maths"] }
+rust_decimal_macros = "1.29.1"
 
 [dev-dependencies]
 cw-multi-test = "0.16.1"

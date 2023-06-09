@@ -1,59 +1,151 @@
-use cosmwasm_std::{attr, coin, to_binary, BankMsg, Env, MessageInfo, SubMsg, Uint128, WasmMsg};
+use cosmwasm_std::{
+    attr, coin, to_binary, BankMsg, Coin, CosmosMsg, Env, MessageInfo, Uint128, WasmMsg,
+};
 use cosmwasm_std::{DepsMut, Response};
-use ibcx_interface::periphery::{ExecuteMsg, SwapInfo};
+use ibcx_interface::periphery::{extract_pool_ids, ExecuteMsg, SwapInfo};
 use ibcx_interface::{core, helpers::IbcCore};
 
-use crate::state::{Context, CONTEXT};
-use crate::REPLY_ID_BURN_EXACT_AMOUNT_IN;
-use crate::{error::ContractError, msgs::make_mint_swap_exact_out_msgs};
+use crate::error::ContractError;
+use crate::pool::query_pools;
+use crate::sim::Simulator;
+use crate::{coin_sorter, deduct_fee, expand_fee, make_unit_converter};
 
-pub fn mint_exact_amount_out(
+pub fn mint_exact_amount_in(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
     core_addr: String,
-    output_amount: Uint128,
-    input_asset: String,
+    desired_asset: String,
+    min_index_amount: Uint128,
     swap_info: Vec<SwapInfo>,
 ) -> Result<Response, ContractError> {
     // query to core contract
     let core = IbcCore(deps.api.addr_validate(&core_addr)?);
+    let core_fee = core.get_fee(&deps.querier, None)?;
     let core_config = core.get_config(&deps.querier, None)?;
+    let core_portfolio = core.get_portfolio(&deps.querier, None)?;
 
-    // input & output
-    let max_input_amount = cw_utils::must_pay(&info, &input_asset)?;
-    let max_input = coin(max_input_amount.u128(), &input_asset);
-    let output = coin(output_amount.u128(), core_config.index_denom);
+    let desired_input =
+        cw_utils::must_pay(&info, &desired_asset).map(|v| coin(v.u128(), &desired_asset))?;
 
-    let sim_resp = core.simulate_mint(&deps.querier, output.amount, None, None)?;
-    let mut sim_amount_desired = sim_resp.fund_spent;
-    sim_amount_desired.sort_by(|a, b| a.denom.cmp(&b.denom));
+    let pool_ids = extract_pool_ids(swap_info.clone());
+    let pools = query_pools(&deps.as_ref(), pool_ids)?;
 
-    let (swap_msgs, refund) = make_mint_swap_exact_out_msgs(
-        &deps.querier,
+    let deps_ref = deps.as_ref();
+    let sim = Simulator::new(&deps_ref, &pools, &swap_info, &core_portfolio.units);
+    let sim_res = sim
+        .estimate_index_for_input(
+            desired_input,
+            Some(min_index_amount),
+            Some(min_index_amount),
+            None,
+        )?
+        .est
+        .unwrap();
+
+    let swap_msgs = sim_res.sim_routes.to_msgs(
         &env.contract.address,
-        swap_info,
-        sim_amount_desired.clone(),
-        &max_input,
+        sim_res.max_token_in + Uint128::new(10000),
     )?;
 
     let finish_msg = WasmMsg::Execute {
         contract_addr: env.contract.address.to_string(),
         msg: to_binary(&ExecuteMsg::FinishOperation {
             refund_to: info.sender.to_string(),
-            refund_asset: input_asset,
+            refund_asset: desired_asset.clone(),
         })?,
         funds: vec![],
     };
 
+    let mut mint_msg_funds = core_portfolio
+        .units
+        .into_iter()
+        .map(|(denom, unit)| coin((sim_res.est_min_token_out * unit).u128(), denom))
+        .collect::<Vec<_>>();
+    mint_msg_funds.sort_by(coin_sorter);
+
     let mint_msg = core.call_with_funds(
         core::ExecuteMsg::Mint {
-            amount: output.amount,
+            amount: sim_res.est_min_token_out,
             receiver: Some(info.sender.to_string()),
             refund_to: Some(info.sender.to_string()),
         },
-        sim_amount_desired,
+        mint_msg_funds,
     )?;
+
+    let act_mint_amount = sim_res.est_min_token_out * deduct_fee(core_fee.mint_fee)?;
+    let act_mint_asset = coin(act_mint_amount.u128(), core_config.index_denom);
+
+    let resp = Response::new()
+        .add_messages(swap_msgs)
+        .add_message(mint_msg)
+        .add_message(finish_msg)
+        .add_attributes(vec![
+            attr("method", "mint_exact_amount_in"),
+            attr("executor", info.sender),
+            attr("input", desired_asset),
+            attr("min_output", act_mint_asset.to_string()),
+        ]);
+
+    Ok(resp)
+}
+
+pub fn mint_exact_amount_out(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    core_addr: String,
+    index_amount: Uint128,
+    input_denom: String,
+    swap_info: Vec<SwapInfo>,
+) -> Result<Response, ContractError> {
+    // query to core contract
+    let core = IbcCore(deps.api.addr_validate(&core_addr)?);
+    let core_fee = core.get_fee(&deps.querier, None)?;
+    let core_config = core.get_config(&deps.querier, None)?;
+    let core_portfolio = core.get_portfolio(&deps.querier, None)?;
+
+    // input & output
+    let input_asset =
+        cw_utils::must_pay(&info, &input_denom).map(|v| coin(v.u128(), &input_denom))?;
+    let index_asset = coin(index_amount.u128(), &core_config.index_denom);
+
+    let pool_ids = extract_pool_ids(swap_info.clone());
+    let pools = query_pools(&deps.as_ref(), pool_ids)?;
+
+    let deps_ref = deps.as_ref();
+    let sim = Simulator::new(&deps_ref, &pools, &swap_info, &core_portfolio.units);
+    let sim_res = sim.estimate_input_for_index(&input_asset.denom, index_asset.amount)?;
+    let sim_refund = input_asset.amount.checked_sub(sim_res.total_input)?;
+
+    let swap_msgs = sim_res
+        .sim_routes
+        .to_msgs(&env.contract.address, input_asset.amount)?;
+
+    let conv = make_unit_converter(sim_res.index_out);
+    let mut mint_msg_funds: Vec<_> = core_portfolio.units.into_iter().map(conv).collect();
+    mint_msg_funds.sort_by(coin_sorter);
+
+    let mint_msg = core.call_with_funds(
+        core::ExecuteMsg::Mint {
+            amount: index_asset.amount,
+            receiver: Some(info.sender.to_string()),
+            refund_to: Some(info.sender.to_string()),
+        },
+        mint_msg_funds,
+    )?;
+
+    let finish_msg = WasmMsg::Execute {
+        contract_addr: env.contract.address.to_string(),
+        msg: to_binary(&ExecuteMsg::FinishOperation {
+            refund_to: info.sender.to_string(),
+            refund_asset: input_asset.denom.clone(),
+        })?,
+        funds: vec![],
+    };
+
+    let act_mint_amount = index_asset.amount * deduct_fee(core_fee.mint_fee)?;
+    let act_mint_asset = coin(act_mint_amount.u128(), &core_config.index_denom);
 
     let resp = Response::new()
         .add_messages(swap_msgs)
@@ -62,9 +154,9 @@ pub fn mint_exact_amount_out(
         .add_attributes(vec![
             attr("method", "mint_exact_amount_out"),
             attr("executor", info.sender),
-            attr("max_input", max_input.to_string()),
-            attr("output", output.to_string()),
-            attr("refund", refund.to_string()),
+            attr("max_input", input_asset.to_string()),
+            attr("output", act_mint_asset.to_string()),
+            attr("refund", sim_refund.to_string()),
         ]);
 
     Ok(resp)
@@ -72,54 +164,143 @@ pub fn mint_exact_amount_out(
 
 pub fn burn_exact_amount_in(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     core_addr: String,
-    output_asset: String,
+    output_denom: String,
     min_output_amount: Uint128,
     swap_info: Vec<SwapInfo>,
 ) -> Result<Response, ContractError> {
     // query to core contract
     let core = IbcCore(deps.api.addr_validate(&core_addr)?);
+    let core_fee = core.get_fee(&deps.querier, None)?;
     let core_config = core.get_config(&deps.querier, None)?;
+    let core_portfolio = core.get_portfolio(&deps.querier, None)?;
 
     // input & output
-    let input_amount = cw_utils::must_pay(&info, &core_config.index_denom)?;
-    let input = coin(input_amount.u128(), &core_config.index_denom);
-    let min_output = coin(min_output_amount.u128(), output_asset);
+    let index_asset = cw_utils::must_pay(&info, &core_config.index_denom)
+        .map(|v| coin(v.u128(), &core_config.index_denom))?;
+    let output_asset = coin(min_output_amount.u128(), output_denom);
 
-    let expected = core
-        .simulate_burn(&deps.querier, input.amount, None)?
-        .redeem_amount;
+    let pool_ids = extract_pool_ids(swap_info.clone());
+    let pools = query_pools(&deps.as_ref(), pool_ids)?;
+
+    let act_burn_amount = index_asset.amount * deduct_fee(core_fee.burn_fee)?;
+
+    let deps_ref = deps.as_ref();
+    let sim = Simulator::new(&deps_ref, &pools, &swap_info, &core_portfolio.units);
+    let sim_res = sim.estimate_output_for_index(act_burn_amount, &output_asset.denom)?;
 
     let burn_msg = core.call_with_funds(
         core::ExecuteMsg::Burn { redeem_to: None },
-        vec![coin(input.amount.u128(), &core_config.index_denom)],
+        vec![index_asset.clone()],
     )?;
 
-    // save to context
-    CONTEXT.save(
-        deps.storage,
-        &Context::Burn {
-            core: core.addr(),
-            sender: info.sender.clone(),
-            input: input.clone(),
-            min_output: min_output.clone(),
-            redeem_amounts: expected,
-            swap_info,
-        },
-    )?;
+    let swap_msgs = sim_res
+        .sim_routes
+        .to_msgs(&env.contract.address, sim_res.total_output)?;
+
+    let finish_msg = WasmMsg::Execute {
+        contract_addr: env.contract.address.to_string(),
+        msg: cosmwasm_std::to_binary(&ExecuteMsg::FinishOperation {
+            refund_to: info.sender.to_string(),
+            refund_asset: output_asset.denom.clone(),
+        })?,
+        funds: vec![],
+    };
 
     let resp = Response::new()
-        .add_submessage(SubMsg::reply_on_success(
-            burn_msg,
-            REPLY_ID_BURN_EXACT_AMOUNT_IN,
-        ))
+        .add_message(burn_msg)
+        .add_messages(swap_msgs)
+        .add_message(finish_msg)
         .add_attributes(vec![
             attr("method", "burn_exact_amount_in"),
             attr("executor", info.sender),
-            attr("input_amount", input.to_string()),
-            attr("min_output_amount", min_output.to_string()),
+            attr("input_amount", index_asset.to_string()),
+            attr("min_output_amount", output_asset.to_string()),
+        ]);
+
+    Ok(resp)
+}
+
+pub fn burn_exact_amount_out(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    core_addr: String,
+    desired_output: Coin,
+    swap_info: Vec<SwapInfo>,
+) -> Result<Response, ContractError> {
+    // query to core contract
+    let core = IbcCore(deps.api.addr_validate(&core_addr)?);
+    let core_fee = core.get_fee(&deps.querier, None)?;
+    let core_config = core.get_config(&deps.querier, None)?;
+    let core_portfolio = core.get_portfolio(&deps.querier, None)?;
+
+    let index_asset = cw_utils::must_pay(&info, &core_config.index_denom)
+        .map(|v| coin(v.u128(), &core_config.index_denom))?;
+
+    let pool_ids = extract_pool_ids(swap_info.clone());
+    let pools = query_pools(&deps.as_ref(), pool_ids)?;
+
+    let deps_ref = deps.as_ref();
+    let sim = Simulator::new(&deps_ref, &pools, &swap_info, &core_portfolio.units);
+    let sim_res = sim.estimate_index_for_output(
+        desired_output.clone(),
+        Some(index_asset.amount),
+        Some(index_asset.amount),
+        None,
+    )?;
+
+    let burn_amount =
+        sim_res.min.est_min_token_in * expand_fee(core_fee.burn_fee)? - Uint128::new(1);
+    if index_asset.amount < burn_amount {
+        return Err(ContractError::TradeAmountExceeded {});
+    }
+
+    let burn_msg = core.call_with_funds(
+        core::ExecuteMsg::Burn { redeem_to: None },
+        vec![coin(burn_amount.u128(), &core_config.index_denom)],
+    )?;
+
+    let act_burn_amount = burn_amount * deduct_fee(core_fee.burn_fee)?;
+
+    let sim_res = sim.estimate_output_for_index(act_burn_amount, &desired_output.denom)?;
+
+    let swap_msgs = sim_res
+        .sim_routes
+        .to_msgs(&env.contract.address, sim_res.total_output)?;
+
+    let finish_msgs: Vec<CosmosMsg> = vec![
+        WasmMsg::Execute {
+            contract_addr: env.contract.address.to_string(),
+            msg: to_binary(&ExecuteMsg::FinishOperation {
+                refund_to: info.sender.to_string(),
+                refund_asset: core_config.index_denom,
+            })?,
+            funds: vec![],
+        }
+        .into(),
+        WasmMsg::Execute {
+            contract_addr: env.contract.address.to_string(),
+            msg: to_binary(&ExecuteMsg::FinishOperation {
+                refund_to: info.sender.to_string(),
+                refund_asset: desired_output.denom.clone(),
+            })?,
+            funds: vec![],
+        }
+        .into(),
+    ];
+
+    let resp = Response::new()
+        .add_message(burn_msg)
+        .add_messages(swap_msgs)
+        .add_messages(finish_msgs)
+        .add_attributes(vec![
+            attr("method", "burn_exact_amount_out"),
+            attr("executor", info.sender),
+            attr("max_input", index_asset.to_string()),
+            attr("output", desired_output.to_string()),
         ]);
 
     Ok(resp)
@@ -138,9 +319,6 @@ pub fn finish_operation(
     let balance = deps
         .querier
         .query_balance(env.contract.address, &refund_asset)?;
-
-    deps.api
-        .debug(format!("finish balance {balance:?}").as_str());
 
     let resp = Response::new()
         .add_attributes(vec![

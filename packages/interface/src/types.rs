@@ -2,10 +2,10 @@ use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    coin, from_binary, to_vec, Addr, Coin, ContractResult, Empty, HexBinary, Order, QueryRequest,
-    StdError, StdResult, SystemResult, Uint128,
+    coin, from_binary, Addr, Coin, Empty, HexBinary, Order, StdError, StdResult, Uint128,
 };
 use cosmwasm_std::{CosmosMsg, QuerierWrapper};
+use ibcx_utils::raw_query_bin;
 use osmosis_std::types::osmosis::poolmanager::v1beta1::{
     EstimateSwapExactAmountOutRequest, EstimateSwapExactAmountOutResponse, MsgSwapExactAmountIn,
     MsgSwapExactAmountOut, PoolmanagerQuerier, SwapAmountInRoute, SwapAmountOutRoute,
@@ -81,13 +81,11 @@ impl SwapRoutes {
     pub fn sim_swap_exact_in(
         &self,
         querier: &QuerierWrapper,
-        sender: &Addr,
         token_in: Coin,
     ) -> StdResult<Uint128> {
         let client = PoolmanagerQuerier::new(querier);
 
         let resp = client.estimate_swap_exact_amount_in(
-            sender.to_string(),
             self.0.first().unwrap().pool_id,
             token_in.to_string(),
             self.clone().into(),
@@ -96,16 +94,15 @@ impl SwapRoutes {
         Uint128::from_str(&resp.token_out_amount)
     }
 
-    // TODO: not to use double encoding after fix
+    // FIXME: not to use double encoding after fix
     pub fn sim_swap_exact_out(
         &self,
         querier: &QuerierWrapper,
-        sender: &Addr,
         token_out: Coin,
     ) -> StdResult<Uint128> {
-        let req = to_vec::<QueryRequest<Empty>>(
+        let raw_res = raw_query_bin::<Empty>(
+            querier,
             &EstimateSwapExactAmountOutRequest {
-                sender: sender.to_string(),
                 pool_id: self.0.first().unwrap().pool_id,
                 routes: self.clone().into(),
                 token_out: token_out.to_string(),
@@ -113,32 +110,30 @@ impl SwapRoutes {
             .into(),
         )?;
 
-        match querier.raw_query(&req) {
-            SystemResult::Err(system_err) => Err(StdError::generic_err(format!(
-                "Querier system error: {}",
-                system_err
-            ))),
-            SystemResult::Ok(ContractResult::Err(contract_err)) => Err(StdError::generic_err(
-                format!("Querier contract error: {}", contract_err),
-            )),
-            SystemResult::Ok(ContractResult::Ok(value)) => {
-                let enc_a = from_binary::<EstimateSwapExactAmountOutRequest>(&value);
-                let enc_b = from_binary::<EstimateSwapExactAmountOutResponse>(&value);
-
-                match (enc_a, enc_b) {
-                    (Ok(v), Err(_)) => Uint128::from_str(&v.sender),
-                    (Err(_), Ok(v)) => Uint128::from_str(&v.token_in_amount),
-                    (Err(e1), Err(e2)) => Err(StdError::generic_err(format!(
-                        "decoding error. l:{e1:?} r:{e2:?} raw:{}",
-                        HexBinary::from(value)
-                    ))),
-                    _ => Err(StdError::generic_err(format!(
-                        "decoding error - both result is Ok. raw:{}",
-                        HexBinary::from(value),
-                    ))),
-                }
-            }
+        #[cw_serde]
+        struct ExpectedResp {
+            pub pool_id: String,
+            pub routes: Vec<SwapAmountOutRoute>,
+            pub token_out: String,
         }
+
+        let enc_a = from_binary::<ExpectedResp>(&raw_res);
+        let enc_b = from_binary::<EstimateSwapExactAmountOutResponse>(&raw_res);
+
+        if let Ok(v) = enc_a {
+            return Uint128::from_str(&v.pool_id);
+        }
+
+        if let Ok(v) = enc_b {
+            return Uint128::from_str(&v.token_in_amount);
+        }
+
+        Err(StdError::generic_err(format!(
+            "decoding error. l:{:?} r:{:?} raw:{}",
+            enc_a.unwrap_err(),
+            enc_b.unwrap_err(),
+            HexBinary::from(raw_res)
+        )))
     }
 
     pub fn msg_swap_exact_in(

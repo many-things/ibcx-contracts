@@ -6,9 +6,18 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { StdFee } from "@cosmjs/amino";
-import { InstantiateMsg, ExecuteMsg, Uint128, SwapInfosCompact, SwapInfoCompact, QueryMsg, MigrateMsg, SimulateBurnExactAmountInResponse, Coin, SimulateMintExactAmountOutResponse } from "./Periphery.types";
+import { InstantiateMsg, ExecuteMsg, Uint128, SwapInfosCompact, SwapInfoCompact, Coin, QueryMsg, MigrateMsg, SimulateBurnExactAmountInResponse, SimulateBurnExactAmountOutResponse, SimulateMintExactAmountInResponse, SimulateMintExactAmountOutResponse } from "./Periphery.types";
 export interface PeripheryReadOnlyInterface {
   contractAddress: string;
+  simulateMintExactAmountIn: ({
+    coreAddr,
+    inputAsset,
+    swapInfo
+  }: {
+    coreAddr: string;
+    inputAsset: Coin;
+    swapInfo: SwapInfosCompact;
+  }) => Promise<SimulateMintExactAmountInResponse>;
   simulateMintExactAmountOut: ({
     coreAddr,
     inputAsset,
@@ -31,6 +40,15 @@ export interface PeripheryReadOnlyInterface {
     outputAsset: string;
     swapInfo: SwapInfosCompact;
   }) => Promise<SimulateBurnExactAmountInResponse>;
+  simulateBurnExactAmountOut: ({
+    coreAddr,
+    outputAsset,
+    swapInfo
+  }: {
+    coreAddr: string;
+    outputAsset: Coin;
+    swapInfo: SwapInfosCompact;
+  }) => Promise<SimulateBurnExactAmountOutResponse>;
 }
 export class PeripheryQueryClient implements PeripheryReadOnlyInterface {
   client: CosmWasmClient;
@@ -39,10 +57,29 @@ export class PeripheryQueryClient implements PeripheryReadOnlyInterface {
   constructor(client: CosmWasmClient, contractAddress: string) {
     this.client = client;
     this.contractAddress = contractAddress;
+    this.simulateMintExactAmountIn = this.simulateMintExactAmountIn.bind(this);
     this.simulateMintExactAmountOut = this.simulateMintExactAmountOut.bind(this);
     this.simulateBurnExactAmountIn = this.simulateBurnExactAmountIn.bind(this);
+    this.simulateBurnExactAmountOut = this.simulateBurnExactAmountOut.bind(this);
   }
 
+  simulateMintExactAmountIn = async ({
+    coreAddr,
+    inputAsset,
+    swapInfo
+  }: {
+    coreAddr: string;
+    inputAsset: Coin;
+    swapInfo: SwapInfosCompact;
+  }): Promise<SimulateMintExactAmountInResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      simulate_mint_exact_amount_in: {
+        core_addr: coreAddr,
+        input_asset: inputAsset,
+        swap_info: swapInfo
+      }
+    });
+  };
   simulateMintExactAmountOut = async ({
     coreAddr,
     inputAsset,
@@ -83,10 +120,38 @@ export class PeripheryQueryClient implements PeripheryReadOnlyInterface {
       }
     });
   };
+  simulateBurnExactAmountOut = async ({
+    coreAddr,
+    outputAsset,
+    swapInfo
+  }: {
+    coreAddr: string;
+    outputAsset: Coin;
+    swapInfo: SwapInfosCompact;
+  }): Promise<SimulateBurnExactAmountOutResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      simulate_burn_exact_amount_out: {
+        core_addr: coreAddr,
+        output_asset: outputAsset,
+        swap_info: swapInfo
+      }
+    });
+  };
 }
 export interface PeripheryInterface extends PeripheryReadOnlyInterface {
   contractAddress: string;
   sender: string;
+  mintExactAmountIn: ({
+    coreAddr,
+    inputAsset,
+    minOutputAmount,
+    swapInfo
+  }: {
+    coreAddr: string;
+    inputAsset: string;
+    minOutputAmount: Uint128;
+    swapInfo: SwapInfosCompact;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
   mintExactAmountOut: ({
     coreAddr,
     inputAsset,
@@ -109,6 +174,22 @@ export interface PeripheryInterface extends PeripheryReadOnlyInterface {
     outputAsset: string;
     swapInfo: SwapInfosCompact;
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  burnExactAmountOut: ({
+    coreAddr,
+    outputAsset,
+    swapInfo
+  }: {
+    coreAddr: string;
+    outputAsset: Coin;
+    swapInfo: SwapInfosCompact;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  finishOperation: ({
+    refundAsset,
+    refundTo
+  }: {
+    refundAsset: string;
+    refundTo: string;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
 export class PeripheryClient extends PeripheryQueryClient implements PeripheryInterface {
   client: SigningCosmWasmClient;
@@ -120,10 +201,33 @@ export class PeripheryClient extends PeripheryQueryClient implements PeripheryIn
     this.client = client;
     this.sender = sender;
     this.contractAddress = contractAddress;
+    this.mintExactAmountIn = this.mintExactAmountIn.bind(this);
     this.mintExactAmountOut = this.mintExactAmountOut.bind(this);
     this.burnExactAmountIn = this.burnExactAmountIn.bind(this);
+    this.burnExactAmountOut = this.burnExactAmountOut.bind(this);
+    this.finishOperation = this.finishOperation.bind(this);
   }
 
+  mintExactAmountIn = async ({
+    coreAddr,
+    inputAsset,
+    minOutputAmount,
+    swapInfo
+  }: {
+    coreAddr: string;
+    inputAsset: string;
+    minOutputAmount: Uint128;
+    swapInfo: SwapInfosCompact;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      mint_exact_amount_in: {
+        core_addr: coreAddr,
+        input_asset: inputAsset,
+        min_output_amount: minOutputAmount,
+        swap_info: swapInfo
+      }
+    }, fee, memo, funds);
+  };
   mintExactAmountOut = async ({
     coreAddr,
     inputAsset,
@@ -161,6 +265,37 @@ export class PeripheryClient extends PeripheryQueryClient implements PeripheryIn
         min_output_amount: minOutputAmount,
         output_asset: outputAsset,
         swap_info: swapInfo
+      }
+    }, fee, memo, funds);
+  };
+  burnExactAmountOut = async ({
+    coreAddr,
+    outputAsset,
+    swapInfo
+  }: {
+    coreAddr: string;
+    outputAsset: Coin;
+    swapInfo: SwapInfosCompact;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      burn_exact_amount_out: {
+        core_addr: coreAddr,
+        output_asset: outputAsset,
+        swap_info: swapInfo
+      }
+    }, fee, memo, funds);
+  };
+  finishOperation = async ({
+    refundAsset,
+    refundTo
+  }: {
+    refundAsset: string;
+    refundTo: string;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      finish_operation: {
+        refund_asset: refundAsset,
+        refund_to: refundTo
       }
     }, fee, memo, funds);
   };

@@ -29,7 +29,7 @@ pub fn realize_streaming_fee(deps: DepsMut, info: MessageInfo) -> StdResult<Resp
     let mut msgs: Vec<CosmosMsg> = vec![];
 
     // collect streaming fee
-    if let Some(mut streaming_fee) = fee.streaming_fee.as_mut() {
+    if let Some(streaming_fee) = fee.streaming_fee.as_mut() {
         msgs.push(
             BankMsg::Send {
                 to_address: fee.collector.to_string(),

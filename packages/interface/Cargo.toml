@@ -20,8 +20,9 @@ cosmwasm-schema = "1.1.9"
 cw-storage-plus = "1.0.1"
 cw2 = "1.0.0"
 thiserror = { version = "1.0.37" }
+ibcx-utils = { path = "../utils" }
 
-osmosis-std = "0.15.2"
+osmosis-std = { version = "0.15.3" }
 
 [dev-dependencies]
 cw-multi-test = "0.16.1"

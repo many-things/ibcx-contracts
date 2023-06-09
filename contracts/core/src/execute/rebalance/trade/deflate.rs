@@ -108,7 +108,6 @@ pub fn deflate(
     // simulate how many tokens required
     let sim_amount_in = trade_info.routes.sim_swap_exact_out(
         &deps.querier,
-        &env.contract.address,
         coin(amount_out.u128(), &config.reserve_denom),
     )?;
 

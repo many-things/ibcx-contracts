@@ -70,8 +70,9 @@ pub fn mint(
 
     // mint 100
     let mint_msg = MsgMint {
-        sender: env.contract.address.into_string(),
+        sender: env.contract.address.to_string(),
         amount: Some(coin(amount.u128(), &config.index_denom).into()),
+        mint_to_address: env.contract.address.into_string(),
     };
 
     // send fee to collector
@@ -158,8 +159,9 @@ pub fn burn(
 
     // burn 100 - fee
     let burn_msg = MsgBurn {
-        sender: env.contract.address.into_string(),
+        sender: env.contract.address.to_string(),
         amount: Some(coin(burn_amount.u128(), &config.index_denom).into()),
+        burn_from_address: env.contract.address.into_string(),
     };
 
     // send fee to collector
@@ -222,6 +224,7 @@ mod tests {
             MsgMint {
                 sender: mint_amount.0.to_string(),
                 amount: Some(coin(mint_amount.1, "uibcx").into()),
+                mint_to_address: mint_amount.0.to_string(),
             }
             .into(),
         );
@@ -368,6 +371,7 @@ mod tests {
             MsgBurn {
                 sender: burn_amount.0.to_string(),
                 amount: Some(coin(burn_amount.1, "uibcx").into()),
+                burn_from_address: burn_amount.0.to_string(),
             }
             .into(),
         );
