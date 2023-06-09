@@ -32,7 +32,8 @@ pub fn simulate_mint_exact_amount_in(
         .max;
 
     // apply mint fee
-    let mint_amount = sim_res.est_min_token_out * expand_fee(core_fee.mint_fee)?;
+    let mint_amount =
+        (sim_res.est_min_token_out * expand_fee(core_fee.mint_fee)?) - Uint128::new(100); // FIXME: hacky calibration
 
     let conv = make_unit_converter(mint_amount);
     let mut mint_spend_amount: Vec<_> = core_portfolio.units.into_iter().map(conv).collect();

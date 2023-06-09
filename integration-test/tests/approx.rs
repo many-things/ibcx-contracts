@@ -76,7 +76,7 @@ fn execute_mint_exact_amount_in(token_in: Uint128) {
                 core_addr: env.core_addr.clone(),
                 input_asset: uatom.clone(),
                 swap_info,
-                min_output_amount: test_res.mint_amount - Uint128::new(100),
+                min_output_amount: test_res.mint_amount,
             },
             &[coin(test_res.swap_result_amount.amount.u128(), &uatom)],
             owner,
@@ -253,6 +253,7 @@ fn execute_burn_exact_amount_out(token_out: Uint128) {
 #[test]
 fn test_mint() {
     for token_in in [
+        Uint128::new(1),
         Uint128::new(100000),
         Uint128::new(200000),
         Uint128::new(400000),
@@ -266,6 +267,7 @@ fn test_mint() {
 #[test]
 fn test_burn() {
     for token_out in [
+        Uint128::new(1),
         Uint128::new(100000),
         Uint128::new(200000),
         Uint128::new(400000),
