@@ -15,7 +15,7 @@ pub fn mint_exact_amount_in(
     env: Env,
     info: MessageInfo,
     core_addr: String,
-    desired_asset: String,
+    desired_denom: String,
     min_index_amount: Uint128,
     swap_info: Vec<SwapInfo>,
 ) -> Result<Response, ContractError> {
@@ -25,8 +25,8 @@ pub fn mint_exact_amount_in(
     let core_config = core.get_config(&deps.querier, None)?;
     let core_portfolio = core.get_portfolio(&deps.querier, None)?;
 
-    let desired_input =
-        cw_utils::must_pay(&info, &desired_asset).map(|v| coin(v.u128(), &desired_asset))?;
+    let desired_asset =
+        cw_utils::must_pay(&info, &desired_denom).map(|v| coin(v.u128(), &desired_denom))?;
 
     let pool_ids = extract_pool_ids(swap_info.clone());
     let pools = query_pools(&deps.as_ref(), pool_ids)?;
@@ -35,7 +35,7 @@ pub fn mint_exact_amount_in(
     let sim = Simulator::new(&deps_ref, &pools, &swap_info, &core_portfolio.units);
     let sim_res = sim
         .estimate_index_for_input(
-            desired_input,
+            desired_asset.clone(),
             Some(min_index_amount),
             Some(min_index_amount),
             None,
@@ -52,7 +52,7 @@ pub fn mint_exact_amount_in(
         contract_addr: env.contract.address.to_string(),
         msg: to_binary(&ExecuteMsg::FinishOperation {
             refund_to: info.sender.to_string(),
-            refund_asset: desired_asset.clone(),
+            refund_asset: desired_denom,
         })?,
         funds: vec![],
     };
@@ -83,7 +83,7 @@ pub fn mint_exact_amount_in(
         .add_attributes(vec![
             attr("method", "mint_exact_amount_in"),
             attr("executor", info.sender),
-            attr("input", desired_asset),
+            attr("input", desired_asset.to_string()),
             attr("min_output", act_mint_asset.to_string()),
         ]);
 
