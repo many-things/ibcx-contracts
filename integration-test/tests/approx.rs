@@ -110,6 +110,8 @@ fn execute_mint_exact_amount_in(token_in: Uint128) {
         "test <-> act : error.in  => {}",
         test_res.swap_result_amount.amount.abs_diff(act_token_in),
     );
+
+    println!("===================================================================");
 }
 
 fn execute_burn_exact_amount_out(token_out: Uint128) {
