@@ -35,10 +35,9 @@ impl SimAmountOutRoutes {
         contract: &Addr,
         min_output: Uint128,
     ) -> Result<Vec<CosmosMsg>, ContractError> {
-        let total_receive_amount = self
-            .0
-            .iter()
-            .fold(Uint128::zero(), |acc, v| acc + v.sim_amount_out);
+        let total_receive_amount = self.0.iter().try_fold(Uint128::zero(), |acc, v| {
+            Ok::<_, ContractError>(acc.checked_add(v.sim_amount_out)?)
+        })?;
         if total_receive_amount < min_output {
             return Err(ContractError::TradeAmountExceeded {});
         }
@@ -96,10 +95,9 @@ impl SimAmountInRoutes {
         contract: &Addr,
         max_input: Uint128,
     ) -> Result<Vec<CosmosMsg>, ContractError> {
-        let total_spend_amount = self
-            .0
-            .iter()
-            .fold(Uint128::zero(), |acc, v| acc + v.sim_amount_in);
+        let total_spend_amount = self.0.iter().try_fold(Uint128::zero(), |acc, v| {
+            Ok::<_, ContractError>(acc.checked_add(v.sim_amount_in)?)
+        })?;
         if max_input < total_spend_amount {
             return Err(ContractError::TradeAmountExceeded {});
         }

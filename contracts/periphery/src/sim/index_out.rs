@@ -58,7 +58,7 @@ impl<'a> Simulator<'a> {
             )?;
 
             Ok::<_, ContractError>(coin(
-                amount_in.to_string().parse::<u128>().unwrap(),
+                amount_in.to_string().parse::<u128>()?,
                 &route.token_denom,
             ))
         })?;
@@ -102,7 +102,9 @@ impl<'a> Simulator<'a> {
 
         let total_spent = routes_with_amount
             .iter()
-            .fold(Uint128::zero(), |acc, v| v.sim_amount_in + acc);
+            .try_fold(Uint128::zero(), |acc, v| {
+                Ok::<_, ContractError>(acc.checked_add(v.sim_amount_in)?)
+            })?;
 
         let ret = SimIndexOutResp {
             total_spent,
@@ -171,7 +173,8 @@ impl<'a> Simulator<'a> {
             // ));
 
             if Decimal::one() <= err
-                && desired_input.amount - acc_res.max_token_in < Uint128::from(MAX_ERROR)
+                && desired_input.amount.checked_sub(acc_res.max_token_in)?
+                    < Uint128::from(MAX_ERROR)
             {
                 return Ok(acc_res);
             }

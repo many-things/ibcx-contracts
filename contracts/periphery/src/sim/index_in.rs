@@ -55,7 +55,7 @@ impl<'a> Simulator<'a> {
             )?;
 
             Ok::<_, ContractError>(coin(
-                amount_out.to_string().parse::<u128>().unwrap(),
+                amount_out.to_string().parse::<u128>()?,
                 &route.token_denom,
             ))
         })?;
@@ -100,7 +100,9 @@ impl<'a> Simulator<'a> {
 
         let total_received = routes_with_amount
             .iter()
-            .fold(Uint128::zero(), |acc, v| v.sim_amount_out + acc);
+            .try_fold(Uint128::zero(), |acc, v| {
+                Ok::<_, ContractError>(acc.checked_add(v.sim_amount_out)?)
+            })?;
 
         let ret = SimIndexInResp {
             total_received,

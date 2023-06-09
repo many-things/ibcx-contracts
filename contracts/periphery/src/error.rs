@@ -16,6 +16,9 @@ pub enum ContractError {
     PaymentError(#[from] cw_utils::PaymentError),
 
     #[error("{0}")]
+    ParseIntError(#[from] std::num::ParseIntError),
+
+    #[error("{0}")]
     CheckedMultiplyRatioError(#[from] cosmwasm_std::CheckedMultiplyRatioError),
 
     #[error("{0}")]
