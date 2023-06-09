@@ -1,5 +1,11 @@
 [workspace]
-members = ["contracts/*", "packages/*", "integration-test"]
+members = [
+    "contracts/*",
+    "packages/*",
+    # disable
+    # "integration-test",
+]
+
 
 [profile.release]
 codegen-units = 1

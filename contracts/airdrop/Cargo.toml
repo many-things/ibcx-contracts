@@ -26,7 +26,7 @@ hex = "0.4.3"
 thiserror = { version = "1.0.37" }
 bech32 = "0.9.1"
 
-osmosis-std = { version = "0.15.3" }
+osmosis-std = { version = "=0.15.2" }
 ibcx-utils = { path = "../../packages/utils" }
 ibcx-interface = { path = "../../packages/interface" }
 

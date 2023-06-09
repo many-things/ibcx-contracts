@@ -22,7 +22,7 @@ cw2 = "1.0.0"
 thiserror = { version = "1.0.37" }
 ibcx-utils = { path = "../utils" }
 
-osmosis-std = { version = "0.15.3" }
+osmosis-std = { version = "=0.15.2" }
 
 [dev-dependencies]
 cw-multi-test = "0.16.1"
