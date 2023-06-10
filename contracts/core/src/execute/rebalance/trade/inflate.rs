@@ -70,9 +70,11 @@ pub fn inflate(
         return Err(RebalanceError::trade_error("inflate", "insufficient amount to swap").into());
     }
 
-    let sim_amount_out = trade_info
-        .routes
-        .sim_swap_exact_in(&deps.querier, coin(amount_in.u128(), &config.reserve_denom))?;
+    let sim_amount_out = trade_info.routes.sim_swap_exact_in(
+        &deps.querier,
+        env.contract.address.as_str(),
+        coin(amount_in.u128(), &config.reserve_denom),
+    )?;
     if sim_amount_out < min_amount_out {
         return Err(RebalanceError::trade_error("inflate", "over slippage allowance").into());
     }

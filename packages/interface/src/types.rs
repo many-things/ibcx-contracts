@@ -81,11 +81,13 @@ impl SwapRoutes {
     pub fn sim_swap_exact_in(
         &self,
         querier: &QuerierWrapper,
+        sender: &str,
         token_in: Coin,
     ) -> StdResult<Uint128> {
         let client = PoolmanagerQuerier::new(querier);
 
         let resp = client.estimate_swap_exact_amount_in(
+            sender.to_string(),
             self.0.first().unwrap().pool_id,
             token_in.to_string(),
             self.clone().into(),
@@ -98,6 +100,7 @@ impl SwapRoutes {
     pub fn sim_swap_exact_out(
         &self,
         querier: &QuerierWrapper,
+        sender: &str,
         token_out: Coin,
     ) -> StdResult<Uint128> {
         let raw_res = raw_query_bin::<Empty>(
@@ -106,22 +109,16 @@ impl SwapRoutes {
                 pool_id: self.0.first().unwrap().pool_id,
                 routes: self.clone().into(),
                 token_out: token_out.to_string(),
+                sender: sender.to_string(),
             }
             .into(),
         )?;
 
-        #[cw_serde]
-        struct ExpectedResp {
-            pub pool_id: String,
-            pub routes: Vec<SwapAmountOutRoute>,
-            pub token_out: String,
-        }
-
-        let enc_a = from_binary::<ExpectedResp>(&raw_res);
+        let enc_a = from_binary::<EstimateSwapExactAmountOutRequest>(&raw_res);
         let enc_b = from_binary::<EstimateSwapExactAmountOutResponse>(&raw_res);
 
         if let Ok(v) = enc_a {
-            return Uint128::from_str(&v.pool_id);
+            return Uint128::from_str(&v.sender);
         }
 
         if let Ok(v) = enc_b {

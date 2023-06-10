@@ -366,7 +366,7 @@ impl OsmosisPool for StablePool {
             pool_id: self.get_id(),
             token_denom: output_denom,
         }])
-        .sim_swap_exact_in(&deps.querier, input_amount)?
+        .sim_swap_exact_in(&deps.querier, &self.address, input_amount)?
         .into())
 
         // ============= TODO: use this
@@ -391,7 +391,7 @@ impl OsmosisPool for StablePool {
             pool_id: self.get_id(),
             token_denom: input_denom,
         }])
-        .sim_swap_exact_out(&deps.querier, output_amount)?
+        .sim_swap_exact_out(&deps.querier, &self.address, output_amount)?
         .into())
 
         // ============= TODO: use this
