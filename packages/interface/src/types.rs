@@ -1,9 +1,7 @@
 use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{
-    coin, from_binary, Addr, Coin, Empty, HexBinary, Order, StdError, StdResult, Uint128,
-};
+use cosmwasm_std::{coin, from_binary, Addr, Coin, Empty, Order, StdResult, Uint128};
 use cosmwasm_std::{CosmosMsg, QuerierWrapper};
 use ibcx_utils::raw_query_bin;
 use osmosis_std::types::osmosis::poolmanager::v1beta1::{
@@ -81,13 +79,12 @@ impl SwapRoutes {
     pub fn sim_swap_exact_in(
         &self,
         querier: &QuerierWrapper,
-        sender: &str,
+        _sender: &str,
         token_in: Coin,
     ) -> StdResult<Uint128> {
         let client = PoolmanagerQuerier::new(querier);
 
         let resp = client.estimate_swap_exact_amount_in(
-            sender.to_string(),
             self.0.first().unwrap().pool_id,
             token_in.to_string(),
             self.clone().into(),
@@ -96,11 +93,10 @@ impl SwapRoutes {
         Uint128::from_str(&resp.token_out_amount)
     }
 
-    // FIXME: not to use double encoding after fix
     pub fn sim_swap_exact_out(
         &self,
         querier: &QuerierWrapper,
-        sender: &str,
+        _sender: &str,
         token_out: Coin,
     ) -> StdResult<Uint128> {
         let raw_res = raw_query_bin::<Empty>(
@@ -109,28 +105,13 @@ impl SwapRoutes {
                 pool_id: self.0.first().unwrap().pool_id,
                 routes: self.clone().into(),
                 token_out: token_out.to_string(),
-                sender: sender.to_string(),
             }
             .into(),
         )?;
 
-        let enc_a = from_binary::<EstimateSwapExactAmountOutRequest>(&raw_res);
-        let enc_b = from_binary::<EstimateSwapExactAmountOutResponse>(&raw_res);
+        let res = from_binary::<EstimateSwapExactAmountOutResponse>(&raw_res)?;
 
-        if let Ok(v) = enc_a {
-            return Uint128::from_str(&v.sender);
-        }
-
-        if let Ok(v) = enc_b {
-            return Uint128::from_str(&v.token_in_amount);
-        }
-
-        Err(StdError::generic_err(format!(
-            "decoding error. l:{:?} r:{:?} raw:{}",
-            enc_a.unwrap_err(),
-            enc_b.unwrap_err(),
-            HexBinary::from(raw_res)
-        )))
+        Uint128::from_str(&res.token_in_amount)
     }
 
     pub fn msg_swap_exact_in(

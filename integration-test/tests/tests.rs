@@ -2,43 +2,19 @@ mod setup;
 
 use cosmwasm_std::{coin, Decimal, Uint128};
 
-use osmosis_test_tube::{
-    cosmrs::proto::cosmos::bank::v1beta1::QueryBalanceRequest,
-    fn_query,
-    osmosis_std::types::osmosis::poolmanager::v1beta1::{
+use osmosis_std::types::{
+    cosmos::bank::v1beta1::QueryBalanceRequest,
+    osmosis::poolmanager::v1beta1::{
         EstimateSwapExactAmountInRequest, EstimateSwapExactAmountInResponse,
         EstimateSwapExactAmountOutRequest, EstimateSwapExactAmountOutResponse, SwapAmountInRoute,
         SwapAmountOutRoute,
     },
-    Account, Bank, Module, Runner, Wasm,
 };
+use osmosis_test_tube::{fn_query, Account, Bank, Module, Runner, Wasm};
 
 use ibcx_interface::{core, periphery};
 
 use crate::setup::{setup, unwrap_asset, NORM};
-
-pub struct Querier<'a, R: Runner<'a>> {
-    runner: &'a R,
-}
-
-impl<'a, R: Runner<'a>> Module<'a, R> for Querier<'a, R> {
-    fn new(runner: &'a R) -> Self {
-        Self { runner }
-    }
-}
-
-impl<'a, R> Querier<'a, R>
-where
-    R: Runner<'a>,
-{
-    fn_query! {
-        pub estimate_swap_exact_amount_in["/osmosis.poolmanager.v1beta1.Query/EstimateSwapExactAmountIn"]: EstimateSwapExactAmountInRequest => EstimateSwapExactAmountInResponse
-    }
-
-    fn_query! {
-        pub estimate_swap_exact_amount_out["/osmosis.poolmanager.v1beta1.Query/EstimateSwapExactAmountOut"]: EstimateSwapExactAmountOutRequest => EstimateSwapExactAmountOutResponse
-    }
-}
 
 #[test]
 fn test_integration() {
@@ -107,8 +83,6 @@ fn test_integration() {
     assert_eq!(balance.unwrap().amount, "1500");
 
     // test estimation
-
-    let querier = Querier::new(&env.app);
 
     let estimate_in_resp = querier
         .estimate_swap_exact_amount_in(&EstimateSwapExactAmountInRequest {

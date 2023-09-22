@@ -1,8 +1,8 @@
 [package]
 name = "ibcx-tests"
-version = "0.0.1"
-authors = ["frostornge <hong@byeongsu.dev>"]
-edition = "2021"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -14,14 +14,17 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 
 [dependencies]
-cosmwasm-std = { version = "1.1.9", features = ["stargate"] }
+prost.workspace = true
+anyhow.workspace = true
+cosmwasm-std.workspace = true
 
 [dev_dependencies]
-osmosis-test-tube = { git = "https://github.com/osmosis-labs/test-tube.git", rev = "f9c1e6b" }
-osmosis-std = { version = "=0.15.2" }
-serde_json = { version = "1.0.96" }
-serde-json-wasm = "0.5.1"
-cosmwasm-schema = "1.2.5"
-base64 = "0.21.2"
-ibcx-interface = { path = "../packages/interface" }
-ibcx-periphery = { path = "../contracts/periphery" }
+osmosis-test-tube.workspace = true
+serde_json.workspace = true
+serde-json-wasm.workspace = true
+cosmwasm-schema.workspace = true
+base64.workspace = true
+
+ibcx-interface.workspace = true
+ibcx-periphery.workspace = true
+ibcx-test-msg.workspace = true
