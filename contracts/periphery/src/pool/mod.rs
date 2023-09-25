@@ -88,3 +88,31 @@ pub fn query_pools(
 
     Ok(pools)
 }
+
+#[cfg(test)]
+mod test {
+    use std::{fs, path::PathBuf};
+
+    use cosmwasm_schema::cw_serde;
+
+    use super::*;
+
+    #[cw_serde]
+    #[serde(untagged)]
+    pub enum AllPoolsPool {
+        Stable(StablePool),
+        Weighted(WeightedPool),
+    }
+
+    #[cw_serde]
+    pub struct AllPoolsResponse {
+        pub pools: Vec<AllPoolsPool>,
+    }
+
+    pub fn load_pools(path: PathBuf) -> anyhow::Result<Vec<AllPoolsPool>> {
+        let read = fs::read_to_string(path)?;
+        let AllPoolsResponse { pools } = serde_json::from_str(&read)?;
+
+        Ok(pools)
+    }
+}

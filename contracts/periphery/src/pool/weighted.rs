@@ -77,7 +77,7 @@ pub struct WeightedPool {
 pub struct WeightedPoolParams {
     pub swap_fee: Decimal,
     pub exit_fee: Decimal,
-    pub smooth_weight_change_params: Option<Uint256>,
+    pub smooth_weight_change_params: Option<WeightedPoolSmoothWeightChangeParams>,
 }
 
 #[cw_serde]
@@ -90,6 +90,14 @@ pub struct BigCoin {
 pub struct WeightedPoolAsset {
     pub token: BigCoin,
     pub weight: Uint256,
+}
+
+#[cw_serde]
+pub struct WeightedPoolSmoothWeightChangeParams {
+    pub initial_pool_weights: Vec<WeightedPoolAsset>,
+    pub target_pool_weights: Vec<WeightedPoolAsset>,
+    pub start_time: String,
+    pub duration: String,
 }
 
 struct PoolAssetTuple(pub (String, Uint256, Uint256));
@@ -287,5 +295,26 @@ impl OsmosisPool for WeightedPool {
         )?;
 
         Ok(amount_in)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::pool::test::{load_pools, AllPoolsPool};
+
+    #[test]
+    fn test_simulation() -> anyhow::Result<()> {
+        let pools = load_pools("./test/data/all-pools-after.json".into())?;
+        println!("{:?}", pools);
+
+        let weighted_pools = pools
+            .into_iter()
+            .flat_map(|v| match v {
+                AllPoolsPool::Stable(_) => None,
+                AllPoolsPool::Weighted(p) => Some(p),
+            })
+            .collect::<Vec<_>>();
+
+        Ok(())
     }
 }
