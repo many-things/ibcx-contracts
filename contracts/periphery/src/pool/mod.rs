@@ -91,7 +91,7 @@ pub fn query_pools(
 
 #[cfg(test)]
 mod test {
-    use std::{fs, path::PathBuf};
+    use std::{collections::BTreeMap, fs, path::PathBuf};
 
     use cosmwasm_schema::cw_serde;
 
@@ -109,10 +109,21 @@ mod test {
         pub pools: Vec<AllPoolsPool>,
     }
 
-    pub fn load_pools(path: PathBuf) -> anyhow::Result<Vec<AllPoolsPool>> {
+    pub fn load_pools(path: PathBuf) -> anyhow::Result<BTreeMap<u64, AllPoolsPool>> {
         let read = fs::read_to_string(path)?;
         let AllPoolsResponse { pools } = serde_json::from_str(&read)?;
 
-        Ok(pools)
+        Ok(pools
+            .into_iter()
+            .map(|v| {
+                (
+                    match v.clone() {
+                        AllPoolsPool::Stable(p) => p.get_id(),
+                        AllPoolsPool::Weighted(p) => p.get_id(),
+                    },
+                    v,
+                )
+            })
+            .collect())
     }
 }

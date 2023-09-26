@@ -300,20 +300,67 @@ impl OsmosisPool for WeightedPool {
 
 #[cfg(test)]
 mod test {
-    use crate::pool::test::{load_pools, AllPoolsPool};
+    use std::{collections::BTreeMap, str::FromStr};
+
+    use anyhow::anyhow;
+    use cosmwasm_std::{coin, testing::mock_dependencies, Coin, Deps, Uint256};
+
+    use crate::pool::{
+        test::{load_pools, AllPoolsPool},
+        OsmosisPool,
+    };
+
+    fn calc_out(
+        deps: Deps,
+        pools: &mut BTreeMap<u64, AllPoolsPool>,
+        pool_id: u64,
+        input: Coin,
+        output: &str,
+    ) -> anyhow::Result<Uint256> {
+        if let AllPoolsPool::Weighted(pool) = pools.get_mut(&pool_id).unwrap() {
+            let amount_out = pool.swap_exact_amount_in(
+                &deps,
+                input,
+                output.to_string(),
+                Uint256::from_str("100")?,
+                pool.get_spread_factor()?,
+            )?;
+
+            Ok(amount_out)
+        } else {
+            Err(anyhow!("pool type is not weighted"))
+        }
+    }
 
     #[test]
     fn test_simulation() -> anyhow::Result<()> {
-        let pools = load_pools("./test/data/all-pools-after.json".into())?;
-        println!("{:?}", pools);
+        let deps = mock_dependencies();
+        let mut pools = load_pools("./test/data/all-pools-after.json".into())?;
 
-        let weighted_pools = pools
-            .into_iter()
-            .flat_map(|v| match v {
-                AllPoolsPool::Stable(_) => None,
-                AllPoolsPool::Weighted(p) => Some(p),
-            })
-            .collect::<Vec<_>>();
+        let cases = [
+            (
+                1,
+                coin(100_000_000_000, "uosmo"),
+                "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
+            ),
+            (
+                722,
+                coin(100_000_000_000, "uosmo"),
+                "ibc/6AE98883D4D5D5FF9E50D7130F1305DA2FFA0C652D1DD9C123657C6B4EB2DF8A",
+            ),
+            (
+                584,
+                coin(100_000_000_000, "uosmo"),
+                "ibc/0954E1C28EB7AF5B72D24F3BC2B47BBB2FDF91BDDFD57B74B99E133AED40972A",
+            ),
+            (2, coin(100_000_000_000, "uosmo"), "uion"),
+        ];
+
+        for (pool_id, input, output) in cases {
+            println!("Trying: {} -> {}", input, output);
+            let res = calc_out(deps.as_ref(), &mut pools, pool_id, input.clone(), output)?;
+            println!("=> {}{}\n", res, output);
+        }
 
         Ok(())
     }
