@@ -2,7 +2,7 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Coin, CosmosMsg, Decimal, Uint128};
 use ibcx_interface::types::SwapRoutes;
 
-use crate::error::ContractError;
+use crate::PoolError;
 
 #[cw_serde]
 pub struct SimAmountOutRoute {
@@ -34,12 +34,12 @@ impl SimAmountOutRoutes {
         &self,
         contract: &Addr,
         min_output: Uint128,
-    ) -> Result<Vec<CosmosMsg>, ContractError> {
+    ) -> Result<Vec<CosmosMsg>, PoolError> {
         let total_receive_amount = self.0.iter().try_fold(Uint128::zero(), |acc, v| {
-            Ok::<_, ContractError>(acc.checked_add(v.sim_amount_out)?)
+            Ok::<_, PoolError>(acc.checked_add(v.sim_amount_out)?)
         })?;
         if total_receive_amount < min_output {
-            return Err(ContractError::TradeAmountExceeded {});
+            return Err(PoolError::TradeAmountExceeded);
         }
 
         let amplifier = Decimal::checked_from_ratio(min_output, total_receive_amount)?;
@@ -94,12 +94,12 @@ impl SimAmountInRoutes {
         &self,
         contract: &Addr,
         max_input: Uint128,
-    ) -> Result<Vec<CosmosMsg>, ContractError> {
+    ) -> Result<Vec<CosmosMsg>, PoolError> {
         let total_spend_amount = self.0.iter().try_fold(Uint128::zero(), |acc, v| {
-            Ok::<_, ContractError>(acc.checked_add(v.sim_amount_in)?)
+            Ok::<_, PoolError>(acc.checked_add(v.sim_amount_in)?)
         })?;
         if max_input < total_spend_amount {
-            return Err(ContractError::TradeAmountExceeded {});
+            return Err(PoolError::TradeAmountExceeded {});
         }
 
         let amplifier = Decimal::checked_from_ratio(max_input, total_spend_amount)?;

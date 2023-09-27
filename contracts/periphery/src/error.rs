@@ -28,7 +28,10 @@ pub enum ContractError {
     CheckedFromRatioError(#[from] cosmwasm_std::CheckedFromRatioError),
 
     #[error("{0}")]
-    IBCXMathError(#[from] ibcx_math::MathError),
+    IBCXMath(#[from] ibcx_math::MathError),
+
+    #[error("{0}")]
+    IBCXPool(#[from] ibcx_pool::PoolError),
 
     #[error("Paused")]
     Paused {},

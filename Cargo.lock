@@ -1223,9 +1223,25 @@ dependencies = [
  "cw2",
  "ibcx-interface",
  "ibcx-math",
+ "ibcx-pool",
  "ibcx-utils",
  "osmosis-std",
  "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "ibcx-pool"
+version = "0.1.1"
+dependencies = [
+ "anyhow",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "ibcx-interface",
+ "ibcx-math",
+ "ibcx-utils",
+ "osmosis-std",
  "serde_json",
  "thiserror",
 ]

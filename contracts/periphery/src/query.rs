@@ -6,11 +6,9 @@ use ibcx_interface::{
         SimulateMintExactAmountOutResponse, SwapInfo,
     },
 };
+use ibcx_pool::{query_pools, Simulator};
 
-use crate::{
-    deduct_fee, error::ContractError, expand_fee, make_unit_converter, pool::query_pools,
-    sim::Simulator,
-};
+use crate::{deduct_fee, error::ContractError, expand_fee, make_unit_converter};
 
 pub fn simulate_mint_exact_amount_in(
     deps: Deps,

@@ -1,3 +1,5 @@
+mod error;
+mod sim;
 mod stable;
 mod weighted;
 
@@ -6,11 +8,11 @@ use ibcx_utils::raw_query_bin;
 
 #[allow(deprecated)]
 use osmosis_std::types::osmosis::gamm::v1beta1::QueryPoolRequest;
-// use osmosis_std::types::osmosis::poolmanager::v1beta1::PoolRequest;
+
+pub use error::PoolError;
+pub use sim::Simulator;
 pub use stable::{StablePool, StablePoolResponse};
 pub use weighted::{WeightedPool, WeightedPoolResponse};
-
-use crate::error::ContractError;
 
 pub trait OsmosisPool {
     fn get_id(&self) -> u64;
@@ -30,7 +32,7 @@ pub trait OsmosisPool {
         output_denom: String,
         min_output_amount: Uint256,
         spread_factor: Decimal,
-    ) -> Result<Uint256, ContractError>; // returns simulated amount out
+    ) -> Result<Uint256, PoolError>; // returns simulated amount out
     fn swap_exact_amount_out(
         &mut self,
         deps: &Deps,
@@ -38,7 +40,7 @@ pub trait OsmosisPool {
         max_input_amount: Uint256,
         output_amount: Coin,
         spread_factor: Decimal,
-    ) -> Result<Uint256, ContractError>; // returns simulated amount in
+    ) -> Result<Uint256, PoolError>; // returns simulated amount in
 }
 
 impl Clone for Box<dyn OsmosisPool> {
@@ -57,7 +59,7 @@ pub const PREFIX_STABLE_POOL: &str =
 pub fn query_pools(
     deps: &Deps,
     pool_ids: Vec<u64>,
-) -> Result<Vec<Box<dyn OsmosisPool>>, ContractError> {
+) -> Result<Vec<Box<dyn OsmosisPool>>, PoolError> {
     let raw_pool_resps = pool_ids
         .into_iter()
         .map(|v| {
@@ -73,7 +75,7 @@ pub fn query_pools(
     // FIXME: hackyyy
     let pools = raw_pool_resps
         .into_iter()
-        .map(|v| -> Result<Box<dyn OsmosisPool>, ContractError> {
+        .map(|v| -> Result<Box<dyn OsmosisPool>, PoolError> {
             match v {
                 v if v.starts_with(PREFIX_WEIGHTED_POOL) => Ok(Box::new(
                     WeightedPoolResponse::try_from(Binary::from_base64(&v)?)?.pool,
@@ -81,7 +83,7 @@ pub fn query_pools(
                 v if v.starts_with(PREFIX_STABLE_POOL) => Ok(Box::new(
                     StablePoolResponse::try_from(Binary::from_base64(&v)?)?.pool,
                 )),
-                _ => Err(ContractError::UnsupportedPoolType),
+                _ => Err(PoolError::UnsupportedPoolType),
             }
         })
         .collect::<Result<_, _>>()?;

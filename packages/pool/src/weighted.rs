@@ -5,7 +5,7 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{from_binary, Binary, Decimal256, Deps, StdError};
 use cosmwasm_std::{Coin, Decimal, StdResult, Uint256};
 
-use crate::error::ContractError;
+use crate::PoolError;
 
 use super::OsmosisPool;
 
@@ -15,10 +15,10 @@ pub struct WeightedPoolResponse {
 }
 
 impl TryFrom<Binary> for WeightedPoolResponse {
-    type Error = ContractError;
+    type Error = StdError;
 
     fn try_from(v: Binary) -> Result<Self, Self::Error> {
-        Ok(from_binary(&v)?)
+        from_binary(&v)
     }
 }
 
@@ -77,7 +77,7 @@ impl From<PoolAssetTuple> for WeightedPoolAsset {
 }
 
 impl WeightedPool {
-    fn get_asset(&self, denom: &str) -> Result<WeightedPoolAsset, ContractError> {
+    fn get_asset(&self, denom: &str) -> Result<WeightedPoolAsset, PoolError> {
         Ok(self
             .pool_assets
             .iter()
@@ -92,7 +92,7 @@ impl WeightedPool {
         output_denom: &str,
         input_value: Uint256,
         output_value: Uint256,
-    ) -> Result<(), ContractError> {
+    ) -> Result<(), PoolError> {
         let pool_assets = self.pool_assets.clone();
 
         let before_input = self.get_asset(input_denom)?;
@@ -121,7 +121,7 @@ impl WeightedPool {
         input_amount: &Coin,
         output_denom: &str,
         spread_factor: Decimal,
-    ) -> Result<Uint256, ContractError> {
+    ) -> Result<Uint256, PoolError> {
         let WeightedPoolAsset {
             token: token_out,
             weight: token_out_weight,
@@ -150,7 +150,7 @@ impl WeightedPool {
         input_denom: &str,
         output_amount: &Coin,
         spread_factor: Decimal,
-    ) -> Result<Uint256, ContractError> {
+    ) -> Result<Uint256, PoolError> {
         let WeightedPoolAsset {
             token: token_out,
             weight: token_out_weight,
@@ -202,7 +202,7 @@ impl OsmosisPool for WeightedPool {
         output_denom: String,
         _min_output_amount: Uint256,
         spread_factor: Decimal,
-    ) -> Result<Uint256, ContractError> {
+    ) -> Result<Uint256, PoolError> {
         let amount_out =
             self.calc_out_amount_given_in(&input_amount, &output_denom, spread_factor)?;
 
@@ -223,7 +223,7 @@ impl OsmosisPool for WeightedPool {
         _max_input_amount: Uint256,
         output_amount: Coin,
         spread_factor: Decimal,
-    ) -> Result<Uint256, ContractError> {
+    ) -> Result<Uint256, PoolError> {
         let amount_in =
             self.calc_in_amount_given_out(&input_denom, &output_amount, spread_factor)?;
 
@@ -240,15 +240,14 @@ impl OsmosisPool for WeightedPool {
 
 #[cfg(test)]
 mod test {
+    use super::*;
+
+    use crate::test::{load_pools, AllPoolsPool};
+
     use std::{collections::BTreeMap, str::FromStr};
 
     use anyhow::anyhow;
     use cosmwasm_std::{coin, testing::mock_dependencies, Coin, Deps, Uint256};
-
-    use crate::pool::{
-        test::{load_pools, AllPoolsPool},
-        OsmosisPool,
-    };
 
     fn calc_out(
         deps: Deps,

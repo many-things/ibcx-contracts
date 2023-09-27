@@ -6,58 +6,20 @@ use cosmwasm_std::{
 };
 use ibcx_interface::types::{SwapRoute, SwapRoutes};
 
-use crate::error::ContractError;
+use crate::PoolError;
 
 use super::OsmosisPool;
 
-/*
-{
-   "pool":{
-      "@type":"/osmosis.gamm.poolmodels.stableswap.v1beta1.Pool",
-      "address":"osmo1pjkt93g9lhntcpxk6pn04xwa87gf23wpjghjudql5p7n2exujh7szrdvtc",
-      "id":"5",
-      "pool_params":{
-         "swap_fee":"0.010000000000000000",
-         "exit_fee":"0.000000000000000000"
-      },
-      "future_pool_governor":"osmo1gxygw5gy8yhyuu05qa9fmgadyyane87prwp65g",
-      "total_shares":{
-         "denom":"gamm/pool/5",
-         "amount":"100000000000000000000"
-      },
-      "pool_liquidity":[
-         {
-            "denom":"factory/osmo1gxygw5gy8yhyuu05qa9fmgadyyane87prwp65g/ujpy",
-            "amount":"406560000000000000"
-         },
-         {
-            "denom":"factory/osmo1gxygw5gy8yhyuu05qa9fmgadyyane87prwp65g/ukrw",
-            "amount":"3969800000000000000"
-         },
-         {
-            "denom":"factory/osmo1gxygw5gy8yhyuu05qa9fmgadyyane87prwp65g/uusd",
-            "amount":"296000000000000000"
-         }
-      ],
-      "scaling_factors":[
-         "1",
-         "1",
-         "1"
-      ],
-      "scaling_factor_controller":"osmo1gxygw5gy8yhyuu05qa9fmgadyyane87prwp65g"
-   }
-}
- */
 #[cw_serde]
 pub struct StablePoolResponse {
     pub pool: StablePool,
 }
 
 impl TryFrom<Binary> for StablePoolResponse {
-    type Error = ContractError;
+    type Error = StdError;
 
     fn try_from(v: Binary) -> Result<Self, Self::Error> {
-        Ok(from_binary(&v)?)
+        from_binary(&v)
     }
 }
 
@@ -83,7 +45,7 @@ pub struct StablePoolParams {
 
 impl StablePool {
     #[allow(dead_code)]
-    fn cfmm_constant(x: Decimal256, y: Decimal256) -> Result<Decimal256, ContractError> {
+    fn cfmm_constant(x: Decimal256, y: Decimal256) -> Result<Decimal256, PoolError> {
         Ok(x.checked_mul(y)?
             .checked_mul(x.checked_pow(2)?.checked_add(y.checked_pow(2)?)?)?)
     }
@@ -92,7 +54,7 @@ impl StablePool {
         x_reserve: Decimal256,
         y_reserve: Decimal256,
         w_sum_squares: Decimal256,
-    ) -> Result<Decimal256, ContractError> {
+    ) -> Result<Decimal256, PoolError> {
         Ok(
             Self::cfmm_constant_multi_no_vy(x_reserve, y_reserve, w_sum_squares)?
                 .checked_mul(y_reserve)?,
@@ -103,12 +65,12 @@ impl StablePool {
         x_reserve: Decimal256,
         y_reserve: Decimal256,
         w_sum_squares: Decimal256,
-    ) -> Result<Decimal256, ContractError> {
+    ) -> Result<Decimal256, PoolError> {
         if !x_reserve.gt(&Decimal256::zero())
             || !y_reserve.gt(&Decimal256::zero())
             || w_sum_squares.lt(&Decimal256::zero())
         {
-            return Err(ContractError::Std(StdError::generic_err(
+            return Err(PoolError::Std(StdError::generic_err(
                 "reserves must be greater than zero",
             )));
         }
@@ -125,9 +87,9 @@ impl StablePool {
         y_reserve: Decimal256,
         u: Decimal256,
         v: Decimal256,
-    ) -> Result<Decimal256, ContractError> {
+    ) -> Result<Decimal256, PoolError> {
         if !u.gt(&Decimal256::zero()) {
-            return Err(ContractError::Std(StdError::generic_err(
+            return Err(PoolError::Std(StdError::generic_err(
                 "reserves must be greater than zero",
             )));
         }
@@ -140,11 +102,11 @@ impl StablePool {
         y_reserve: Decimal256,
         rem_reserves: Vec<Decimal256>,
         y_in: (Decimal256, bool),
-    ) -> Result<Decimal256, ContractError> {
+    ) -> Result<Decimal256, PoolError> {
         let w_sum_square = rem_reserves.into_iter().try_fold(
             Decimal256::zero(),
             |w_sum_squares, asset_reserve| {
-                Ok::<_, ContractError>(w_sum_squares.checked_add(asset_reserve.checked_pow(2)?)?)
+                Ok::<_, PoolError>(w_sum_squares.checked_add(asset_reserve.checked_pow(2)?)?)
             },
         )?;
 
@@ -156,7 +118,7 @@ impl StablePool {
         y_reserve: Decimal256,
         w_sum_squares: Decimal256,
         (y_in, is_y_in_neg): (Decimal256, bool),
-    ) -> Result<Decimal256, ContractError> {
+    ) -> Result<Decimal256, PoolError> {
         let const_729 = Decimal256::from_str("729.0")?;
         let const_108 = Decimal256::from_str("108.0")?;
         let const_27 = Decimal256::from_str("27.0")?;
@@ -168,11 +130,11 @@ impl StablePool {
             || w_sum_squares.lt(&Decimal256::zero())
             || !y_in.gt(&Decimal256::zero())
         {
-            return Err(ContractError::Std(StdError::generic_err(
+            return Err(PoolError::Std(StdError::generic_err(
                 "reserves must be greater than zero",
             )));
         } else if !y_in.lt(&y_reserve) {
-            return Err(ContractError::Std(StdError::generic_err(
+            return Err(PoolError::Std(StdError::generic_err(
                 "cannot input more than pool reserves",
             )));
         }
@@ -211,7 +173,7 @@ impl StablePool {
         let x_out = x_reserve.checked_sub(x_new)?;
 
         if !x_out.lt(&x_reserve) {
-            return Err(ContractError::Std(StdError::generic_err(
+            return Err(PoolError::Std(StdError::generic_err(
                 "cannot output more than pool reserves",
             )));
         }
@@ -230,7 +192,7 @@ impl StablePool {
         &self,
         first: &str,
         second: &str,
-    ) -> Result<Vec<Decimal256>, ContractError> {
+    ) -> Result<Vec<Decimal256>, PoolError> {
         let pool_liquidity = self.pool_liquidity.clone();
 
         let mut cur_idx = 2;
@@ -257,7 +219,7 @@ impl StablePool {
             .collect())
     }
 
-    fn scale_coin(&self, Coin { denom, amount }: Coin) -> Result<Decimal256, ContractError> {
+    fn scale_coin(&self, Coin { denom, amount }: Coin) -> Result<Decimal256, PoolError> {
         let found = self.pool_liquidity.iter().position(|c| c.denom == denom);
 
         let scaling_factor = found
@@ -269,7 +231,7 @@ impl StablePool {
         Ok(scaled)
     }
 
-    fn descale_amount(&self, denom: &str, amount: Decimal256) -> Result<Decimal256, ContractError> {
+    fn descale_amount(&self, denom: &str, amount: Decimal256) -> Result<Decimal256, PoolError> {
         let found = self.pool_liquidity.iter().position(|c| c.denom == denom);
 
         let scaling_factor = found.map(|i| self.get_scaling_factor(i)).unwrap_or(1);
@@ -285,7 +247,7 @@ impl StablePool {
         token_in: Coin,
         token_out_denom: String,
         swap_fee: Decimal,
-    ) -> Result<Decimal256, ContractError> {
+    ) -> Result<Decimal256, PoolError> {
         let reserves = self.scaled_sorted_pool_reserves(&token_in.denom, &token_out_denom)?;
 
         let (token_supplies, rem_reserves) = reserves.split_at(2);
@@ -311,7 +273,7 @@ impl StablePool {
         token_out: Coin,
         token_in_denom: String,
         swap_fee: Decimal,
-    ) -> Result<Decimal256, ContractError> {
+    ) -> Result<Decimal256, PoolError> {
         let reserves = self.scaled_sorted_pool_reserves(&token_in_denom, &token_out.denom)?;
 
         let (token_supplies, rem_reserves) = reserves.split_at(2);
@@ -361,7 +323,7 @@ impl OsmosisPool for StablePool {
         output_denom: String,
         _min_output_amount: cosmwasm_std::Uint256,
         _spread_factor: Decimal,
-    ) -> Result<Uint256, ContractError> {
+    ) -> Result<Uint256, PoolError> {
         Ok(SwapRoutes(vec![SwapRoute {
             pool_id: self.get_id(),
             token_denom: output_denom,
@@ -386,7 +348,7 @@ impl OsmosisPool for StablePool {
         _max_input_amount: cosmwasm_std::Uint256,
         output_amount: cosmwasm_std::Coin,
         _spread_factor: Decimal,
-    ) -> Result<Uint256, ContractError> {
+    ) -> Result<Uint256, PoolError> {
         Ok(SwapRoutes(vec![SwapRoute {
             pool_id: self.get_id(),
             token_denom: input_denom,

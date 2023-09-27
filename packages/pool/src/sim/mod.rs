@@ -6,7 +6,7 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Coin, Decimal, Deps, Uint128};
 use ibcx_interface::periphery::SwapInfo;
 
-use crate::{error::ContractError, pool::OsmosisPool};
+use crate::{OsmosisPool, PoolError};
 
 use self::{index_in::SearchAmountForOutputResp, index_out::SearchAmountForInputResp};
 
@@ -67,7 +67,7 @@ impl<'a> Simulator<'a> {
         &self,
         input_denom: &str,
         index_out: Uint128,
-    ) -> Result<EstimateInForIndexResult, ContractError> {
+    ) -> Result<EstimateInForIndexResult, PoolError> {
         let sim_res = self.estimate_token_given_index_out(index_out, input_denom)?;
 
         let ret = EstimateInForIndexResult {
@@ -83,7 +83,7 @@ impl<'a> Simulator<'a> {
         &self,
         index_in: Uint128,
         output_denom: &str,
-    ) -> Result<EstimateOutForIndexResult, ContractError> {
+    ) -> Result<EstimateOutForIndexResult, PoolError> {
         let sim_res = self.estimate_token_given_index_in(index_in, output_denom)?;
 
         let ret = EstimateOutForIndexResult {
@@ -101,7 +101,7 @@ impl<'a> Simulator<'a> {
         init_index_amount: Option<Uint128>,
         min_index_amount: Option<Uint128>,
         err_tolerance: Option<Decimal>,
-    ) -> Result<EstimateIndexForOutResult, ContractError> {
+    ) -> Result<EstimateIndexForOutResult, PoolError> {
         let sim_init_res =
             self.search_efficient_amount_for_input(desired_input.clone(), init_index_amount)?;
         if min_index_amount.is_none() {
@@ -118,7 +118,7 @@ impl<'a> Simulator<'a> {
         //     sim_init_res.max_token_in, sim_init_res.est_min_token_out,
         // ));
         if sim_init_res.est_min_token_out < min_index_amount {
-            return Err(ContractError::TradeAmountExceeded {});
+            return Err(PoolError::TradeAmountExceeded {});
         }
 
         let tol = err_tolerance.unwrap_or_else(|| Decimal::from_ratio(1u64, 3u64));
@@ -150,7 +150,7 @@ impl<'a> Simulator<'a> {
         init_index_amount: Option<Uint128>,
         max_index_amount: Option<Uint128>,
         err_tolerance: Option<Decimal>,
-    ) -> Result<EstimateIndexForInResult, ContractError> {
+    ) -> Result<EstimateIndexForInResult, PoolError> {
         let sim_init_res =
             self.search_efficient_amount_for_output(desired_output.clone(), init_index_amount)?;
         if max_index_amount.is_none() {
@@ -167,7 +167,7 @@ impl<'a> Simulator<'a> {
         //     sim_init_res.est_min_token_in, sim_init_res.max_token_out,
         // ));
         if max_index_amount < sim_init_res.est_min_token_in {
-            return Err(ContractError::TradeAmountExceeded {});
+            return Err(PoolError::TradeAmountExceeded {});
         }
 
         let tol = err_tolerance.unwrap_or_else(|| Decimal::from_ratio(1u64, 3u64));
