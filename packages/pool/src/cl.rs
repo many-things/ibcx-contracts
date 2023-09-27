@@ -1,5 +1,4 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Decimal256, Timestamp, Uint256};
 
 #[cw_serde]
 pub struct Pool {
