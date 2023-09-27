@@ -16,6 +16,10 @@ pub fn pow(base: Decimal256, exp: Decimal256) -> Result<Decimal256, MathError> {
         return Err(MathError::BaseTooLarge);
     }
 
+    if exp == Decimal256::one() {
+        return Ok(base);
+    }
+
     let integer = exp.to_uint_floor();
     let fractional = {
         let x = exp.atomics();

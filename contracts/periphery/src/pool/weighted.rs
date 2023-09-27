@@ -9,42 +9,6 @@ use crate::error::ContractError;
 
 use super::OsmosisPool;
 
-/*
-{
-   "pool":{
-        "@type":"/osmosis.gamm.v1beta1.Pool",
-        "address":"osmo1ad4r3uh5pdn5pgg5hnl6u5utfeqmpwstlvgvg2h2jdztrcnwkqgs3hs85z",
-        "id":"4",
-        "pool_params":{
-            "swap_fee":"0.010000000000000000",
-            "exit_fee":"0.000000000000000000",
-            "smooth_weight_change_params":null
-        },
-        "future_pool_governor":"",
-        "total_shares":{
-            "denom":"gamm/pool/4",
-            "amount":"100000000000000000000"
-        },
-        "pool_assets":[
-            {
-                "token":{
-                    "denom":"factory/osmo1gxygw5gy8yhyuu05qa9fmgadyyane87prwp65g/uatom",
-                    "amount":"2304880000000"
-                },
-                "weight":"1073741824000000"
-            },
-            {
-                "token":{
-                    "denom":"uosmo",
-                    "amount":"40000000000000"
-                },
-                "weight":"1073741824000000"
-            }
-        ],
-        "total_weight":"2147483648000000"
-    }
-}
-*/
 #[cw_serde]
 pub struct WeightedPoolResponse {
     pub pool: WeightedPool,
@@ -239,13 +203,6 @@ impl OsmosisPool for WeightedPool {
         _min_output_amount: Uint256,
         spread_factor: Decimal,
     ) -> Result<Uint256, ContractError> {
-        // deps.api.debug(&format!(
-        //     "{}.swap_exact_amount_in => input: {}, output: {}",
-        //     self.get_type(),
-        //     input_amount,
-        //     output_denom
-        // ));
-
         let amount_out =
             self.calc_out_amount_given_in(&input_amount, &output_denom, spread_factor)?;
 
@@ -267,14 +224,6 @@ impl OsmosisPool for WeightedPool {
         output_amount: Coin,
         spread_factor: Decimal,
     ) -> Result<Uint256, ContractError> {
-        // deps.api.debug(&format!(
-        //     "[{}] {}.swap_exact_amount_out => input: {}, output: {}",
-        //     self.get_id(),
-        //     self.get_type(),
-        //     input_denom,
-        //     output_amount,
-        // ));
-
         let amount_in =
             self.calc_in_amount_given_out(&input_denom, &output_amount, spread_factor)?;
 
