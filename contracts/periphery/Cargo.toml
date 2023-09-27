@@ -28,9 +28,6 @@ ibcx-utils.workspace = true
 ibcx-math.workspace = true
 ibcx-interface.workspace = true
 
-rust_decimal.workspace = true
-rust_decimal_macros.workspace = true
-
 [dev-dependencies]
 serde.workspace = true
 serde_json.workspace = true
