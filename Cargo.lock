@@ -1312,6 +1312,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ibcx-math"
+version = "0.1.1"
+dependencies = [
+ "anyhow",
+ "cosmwasm-std",
+ "thiserror",
+]
+
+[[package]]
 name = "ibcx-periphery"
 version = "0.1.1"
 dependencies = [
@@ -1324,6 +1333,7 @@ dependencies = [
  "cw-utils",
  "cw2",
  "ibcx-interface",
+ "ibcx-math",
  "ibcx-utils",
  "osmosis-std",
  "rust_decimal",

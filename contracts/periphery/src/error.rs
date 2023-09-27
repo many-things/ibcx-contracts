@@ -30,6 +30,9 @@ pub enum ContractError {
     #[error("{0}")]
     RustDecimalError(#[from] rust_decimal::Error),
 
+    #[error("{0}")]
+    IBCXMathError(#[from] ibcx_math::MathError),
+
     #[error("Paused")]
     Paused {},
 

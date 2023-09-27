@@ -4,8 +4,6 @@ use std::str::FromStr;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{from_binary, Binary, Decimal256, Deps, StdError};
 use cosmwasm_std::{Coin, Decimal, StdResult, Uint256};
-use rust_decimal::Decimal as RustDecimal;
-use rust_decimal::MathematicalOps;
 
 use crate::error::ContractError;
 
@@ -179,14 +177,8 @@ impl WeightedPool {
 
         let token_weight_ratio = Decimal256::checked_from_ratio(token_in_weight, token_out_weight)?;
 
-        let rust_token_weight_ratio = RustDecimal::from_str(&token_weight_ratio.to_string())?;
-        let rust_token_sub_in = RustDecimal::from_str(&token_sub_in.to_string())?;
-
-        let calculed_by_rust_decimal =
-            Decimal256::from_str(&rust_token_sub_in.powd(rust_token_weight_ratio).to_string())
-                .unwrap();
-
-        Ok(token_out.amount * (Decimal256::one() - calculed_by_rust_decimal))
+        Ok(token_out.amount
+            * (Decimal256::one() - ibcx_math::pow(token_sub_in, token_weight_ratio)?))
     }
 
     fn calc_in_amount_given_out(
@@ -204,14 +196,13 @@ impl WeightedPool {
             weight: token_in_weight,
         } = self.get_asset(input_denom)?;
 
-        let token_sub_out: Uint256 = token_out.amount.checked_sub(output_amount.amount.into())?;
+        let token_sub_out = Decimal256::checked_from_ratio(
+            token_out.amount.checked_sub(output_amount.amount.into())?,
+            1u64,
+        )?;
         let token_weight_ratio = Decimal256::checked_from_ratio(token_out_weight, token_in_weight)?;
 
-        let rust_token_weight_ratio = RustDecimal::from_str(&token_weight_ratio.to_string())?;
-        let rust_token_sub_out = RustDecimal::from_str(&token_sub_out.to_string())?;
-
-        let calculated_by_rust_decimal =
-            Decimal256::from_str(&rust_token_sub_out.powd(rust_token_weight_ratio).to_string())?;
+        let calculated_by_rust_decimal = ibcx_math::pow(token_sub_out, token_weight_ratio)?;
         let minus_spread_factor = Decimal256::one().checked_sub(spread_factor.into())?;
         let divided_token_out = Decimal256::from_str(&token_out.amount.to_string())?
             .div(calculated_by_rust_decimal)

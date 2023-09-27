@@ -23,8 +23,11 @@ cw2.workspace = true
 thiserror.workspace = true
 
 osmosis-std.workspace = true
+
 ibcx-utils.workspace = true
+ibcx-math.workspace = true
 ibcx-interface.workspace = true
+
 rust_decimal.workspace = true
 rust_decimal_macros.workspace = true
 

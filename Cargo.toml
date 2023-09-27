@@ -3,6 +3,7 @@ members = [
     "contracts/*",
     "packages/interface",
     "packages/utils",
+    "packages/math",
     "packages/testutils/*",
     "integration-test",
 ]
@@ -70,5 +71,6 @@ ibcx-core = { path = "contracts/core" }
 ibcx-periphery = { path = "contracts/periphery" }
 
 ibcx-utils = { path = "packages/utils" }
+ibcx-math = { path = "packages/math" }
 ibcx-interface = { path = "packages/interface" }
 ibcx-test-msg = { path = "packages/testutils/msg" }
