@@ -84,14 +84,14 @@ pub fn query_pools(
 
     let pools = pool_resps
         .into_iter()
-        .flat_map(|v| -> Option<Box<dyn OsmosisPool>> {
+        .map(|v| -> Result<Box<dyn OsmosisPool>, PoolError> {
             match v.pool {
-                Pool::Stable(p) => Some(Box::new(p)),
-                Pool::Weighted(p) => Some(Box::new(p)),
-                _ => None,
+                Pool::Stable(p) => Ok(Box::new(p)),
+                Pool::Weighted(p) => Ok(Box::new(p)),
+                _ => Err(PoolError::UnsupportedPoolType),
             }
         })
-        .collect::<Vec<_>>();
+        .collect::<Result<_, _>>()?;
 
     Ok(pools)
 }
