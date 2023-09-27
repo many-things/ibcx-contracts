@@ -1,18 +1,21 @@
+mod cl;
 mod error;
 mod sim;
 mod stable;
 mod weighted;
 
-use cosmwasm_std::{Binary, Coin, Decimal, Deps, Empty, StdResult, Uint256};
-use ibcx_utils::raw_query_bin;
+use cosmwasm_schema::cw_serde;
+use cosmwasm_std::{Binary, Coin, Decimal, Deps, StdResult, Uint256};
 
 #[allow(deprecated)]
-use osmosis_std::types::osmosis::gamm::v1beta1::QueryPoolRequest;
+use osmosis_std::types::osmosis::poolmanager::v1beta1::PoolRequest;
 
 pub use error::PoolError;
 pub use sim::Simulator;
-pub use stable::{StablePool, StablePoolResponse};
-pub use weighted::{WeightedPool, WeightedPoolResponse};
+
+pub use cl::Pool as CLPool;
+pub use stable::Pool as StablePool;
+pub use weighted::Pool as WeightedPool;
 
 pub trait OsmosisPool {
     fn get_id(&self) -> u64;
@@ -49,44 +52,46 @@ impl Clone for Box<dyn OsmosisPool> {
     }
 }
 
-// base64(`{"pool":{"@type":"/osmosis.gamm.v1beta1.Pool"`)
-pub const PREFIX_WEIGHTED_POOL: &str =
-    "eyJwb29sIjp7IkB0eXBlIjoiL29zbW9zaXMuZ2FtbS52MWJldGExLlBvb2wiL";
-// base64(`{"pool":{"@type":"/osmosis.gamm.poolmodels.stableswap.v1beta1.Pool"`)
-pub const PREFIX_STABLE_POOL: &str =
-    "eyJwb29sIjp7IkB0eXBlIjoiL29zbW9zaXMuZ2FtbS5wb29sbW9kZWxzLnN0YWJsZXN3YXAudjFiZXRhMS5Qb29sIi";
+#[cw_serde]
+#[serde(untagged)]
+pub enum Pool {
+    CL(CLPool),
+    CW {
+        #[serde(rename = "@type")]
+        type_url: String,
+        contract_address: String,
+        pool_id: String,
+        code_id: String,
+        instantiate_msg: Binary,
+    },
+    Stable(StablePool),
+    Weighted(WeightedPool),
+}
 
 pub fn query_pools(
     deps: &Deps,
     pool_ids: Vec<u64>,
 ) -> Result<Vec<Box<dyn OsmosisPool>>, PoolError> {
-    let raw_pool_resps = pool_ids
-        .into_iter()
-        .map(|v| {
-            Ok(raw_query_bin::<Empty>(
-                &deps.querier,
-                #[allow(deprecated)]
-                &QueryPoolRequest { pool_id: v }.into(),
-            )?
-            .to_base64())
-        })
-        .collect::<StdResult<Vec<_>>>()?;
+    #[cw_serde]
+    pub struct PoolResponse {
+        pub pool: Pool,
+    }
 
-    // FIXME: hackyyy
-    let pools = raw_pool_resps
+    let pool_resps = pool_ids
         .into_iter()
-        .map(|v| -> Result<Box<dyn OsmosisPool>, PoolError> {
-            match v {
-                v if v.starts_with(PREFIX_WEIGHTED_POOL) => Ok(Box::new(
-                    WeightedPoolResponse::try_from(Binary::from_base64(&v)?)?.pool,
-                )),
-                v if v.starts_with(PREFIX_STABLE_POOL) => Ok(Box::new(
-                    StablePoolResponse::try_from(Binary::from_base64(&v)?)?.pool,
-                )),
-                _ => Err(PoolError::UnsupportedPoolType),
+        .map(|v| deps.querier.query(&PoolRequest { pool_id: v }.into()))
+        .collect::<StdResult<Vec<PoolResponse>>>()?;
+
+    let pools = pool_resps
+        .into_iter()
+        .flat_map(|v| -> Option<Box<dyn OsmosisPool>> {
+            match v.pool {
+                Pool::Stable(p) => Some(Box::new(p)),
+                Pool::Weighted(p) => Some(Box::new(p)),
+                _ => None,
             }
         })
-        .collect::<Result<_, _>>()?;
+        .collect::<Vec<_>>();
 
     Ok(pools)
 }
@@ -100,31 +105,20 @@ mod test {
     use super::*;
 
     #[cw_serde]
-    #[serde(untagged)]
-    pub enum AllPoolsPool {
-        Stable(StablePool),
-        Weighted(WeightedPool),
+    pub struct PoolsResponse {
+        pub pools: Vec<Pool>,
     }
 
-    #[cw_serde]
-    pub struct AllPoolsResponse {
-        pub pools: Vec<AllPoolsPool>,
-    }
-
-    pub fn load_pools(path: PathBuf) -> anyhow::Result<BTreeMap<u64, AllPoolsPool>> {
+    pub fn load_pools(path: PathBuf) -> anyhow::Result<BTreeMap<u64, Pool>> {
         let read = fs::read_to_string(path)?;
-        let AllPoolsResponse { pools } = serde_json::from_str(&read)?;
+        let PoolsResponse { pools } = serde_json::from_str(&read)?;
 
         Ok(pools
             .into_iter()
-            .map(|v| {
-                (
-                    match v.clone() {
-                        AllPoolsPool::Stable(p) => p.get_id(),
-                        AllPoolsPool::Weighted(p) => p.get_id(),
-                    },
-                    v,
-                )
+            .flat_map(|v| match v.clone() {
+                Pool::Stable(p) => Some((p.get_id(), v)),
+                Pool::Weighted(p) => Some((p.get_id(), v)),
+                _ => None,
             })
             .collect())
     }

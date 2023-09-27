@@ -2,44 +2,31 @@ use std::ops::Div;
 use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{from_binary, Binary, Decimal256, Deps, StdError};
 use cosmwasm_std::{Coin, Decimal, StdResult, Uint256};
+use cosmwasm_std::{Decimal256, Deps, StdError};
 
 use crate::PoolError;
 
 use super::OsmosisPool;
 
 #[cw_serde]
-pub struct WeightedPoolResponse {
-    pub pool: WeightedPool,
-}
-
-impl TryFrom<Binary> for WeightedPoolResponse {
-    type Error = StdError;
-
-    fn try_from(v: Binary) -> Result<Self, Self::Error> {
-        from_binary(&v)
-    }
-}
-
-#[cw_serde]
-pub struct WeightedPool {
+pub struct Pool {
     #[serde(rename = "@type")]
     pub type_url: String,
     pub address: String,
     pub id: String,
     pub future_pool_governor: String,
-    pub pool_params: WeightedPoolParams,
-    pub pool_assets: Vec<WeightedPoolAsset>,
+    pub pool_params: PoolParams,
+    pub pool_assets: Vec<PoolAsset>,
     pub total_shares: Coin,
     pub total_weight: Uint256,
 }
 
 #[cw_serde]
-pub struct WeightedPoolParams {
+pub struct PoolParams {
     pub swap_fee: Decimal,
     pub exit_fee: Decimal,
-    pub smooth_weight_change_params: Option<WeightedPoolSmoothWeightChangeParams>,
+    pub smooth_weight_change_params: Option<PoolSmoothWeightChangeParams>,
 }
 
 #[cw_serde]
@@ -49,22 +36,22 @@ pub struct BigCoin {
 }
 
 #[cw_serde]
-pub struct WeightedPoolAsset {
+pub struct PoolAsset {
     pub token: BigCoin,
     pub weight: Uint256,
 }
 
 #[cw_serde]
-pub struct WeightedPoolSmoothWeightChangeParams {
-    pub initial_pool_weights: Vec<WeightedPoolAsset>,
-    pub target_pool_weights: Vec<WeightedPoolAsset>,
+pub struct PoolSmoothWeightChangeParams {
+    pub initial_pool_weights: Vec<PoolAsset>,
+    pub target_pool_weights: Vec<PoolAsset>,
     pub start_time: String,
     pub duration: String,
 }
 
 struct PoolAssetTuple(pub (String, Uint256, Uint256));
 
-impl From<PoolAssetTuple> for WeightedPoolAsset {
+impl From<PoolAssetTuple> for PoolAsset {
     fn from(v: PoolAssetTuple) -> Self {
         Self {
             token: BigCoin {
@@ -76,8 +63,8 @@ impl From<PoolAssetTuple> for WeightedPoolAsset {
     }
 }
 
-impl WeightedPool {
-    fn get_asset(&self, denom: &str) -> Result<WeightedPoolAsset, PoolError> {
+impl Pool {
+    fn get_asset(&self, denom: &str) -> Result<PoolAsset, PoolError> {
         Ok(self
             .pool_assets
             .iter()
@@ -122,11 +109,11 @@ impl WeightedPool {
         output_denom: &str,
         spread_factor: Decimal,
     ) -> Result<Uint256, PoolError> {
-        let WeightedPoolAsset {
+        let PoolAsset {
             token: token_out,
             weight: token_out_weight,
         } = self.get_asset(output_denom)?;
-        let WeightedPoolAsset {
+        let PoolAsset {
             token: token_in,
             weight: token_in_weight,
         } = self.get_asset(&input_amount.denom)?;
@@ -151,11 +138,11 @@ impl WeightedPool {
         output_amount: &Coin,
         spread_factor: Decimal,
     ) -> Result<Uint256, PoolError> {
-        let WeightedPoolAsset {
+        let PoolAsset {
             token: token_out,
             weight: token_out_weight,
         } = self.get_asset(&output_amount.denom)?;
-        let WeightedPoolAsset {
+        let PoolAsset {
             token: token_in,
             weight: token_in_weight,
         } = self.get_asset(input_denom)?;
@@ -177,7 +164,7 @@ impl WeightedPool {
     }
 }
 
-impl OsmosisPool for WeightedPool {
+impl OsmosisPool for Pool {
     fn get_id(&self) -> u64 {
         self.id.parse::<u64>().unwrap()
     }
@@ -240,9 +227,8 @@ impl OsmosisPool for WeightedPool {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
-    use crate::test::{load_pools, AllPoolsPool};
+    use crate::Pool;
+    use crate::{test::load_pools, OsmosisPool};
 
     use std::{collections::BTreeMap, str::FromStr};
 
@@ -251,12 +237,12 @@ mod test {
 
     fn calc_out(
         deps: Deps,
-        pools: &mut BTreeMap<u64, AllPoolsPool>,
+        pools: &mut BTreeMap<u64, Pool>,
         pool_id: u64,
         input: Coin,
         output: &str,
     ) -> anyhow::Result<Uint256> {
-        if let AllPoolsPool::Weighted(pool) = pools.get_mut(&pool_id).unwrap() {
+        if let Pool::Weighted(pool) = pools.get_mut(&pool_id).unwrap() {
             let amount_out = pool.swap_exact_amount_in(
                 &deps,
                 input,

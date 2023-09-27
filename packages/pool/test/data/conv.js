@@ -6,9 +6,9 @@ const POOL_TYPE_STABLE = "/osmosis.gamm.poolmodels.stableswap.v1beta1.Pool";
 
 const after = {
   pools: pools
-    .filter((pool) =>
-      [POOL_TYPE_WEIGHT, POOL_TYPE_STABLE].includes(pool["@type"])
-    )
+    // .filter((pool) =>
+    //   [POOL_TYPE_WEIGHT, POOL_TYPE_STABLE].includes(pool["@type"])
+    // )
     .map((pool) => {
       // no mutation
       if (pool["@type"] !== POOL_TYPE_STABLE) {

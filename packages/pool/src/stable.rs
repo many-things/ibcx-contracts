@@ -1,9 +1,7 @@
 use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{
-    from_binary, Binary, Coin, Decimal, Decimal256, Deps, StdError, StdResult, Uint256,
-};
+use cosmwasm_std::{Coin, Decimal, Decimal256, Deps, StdError, StdResult, Uint256};
 use ibcx_interface::types::{SwapRoute, SwapRoutes};
 
 use crate::PoolError;
@@ -11,26 +9,15 @@ use crate::PoolError;
 use super::OsmosisPool;
 
 #[cw_serde]
-pub struct StablePoolResponse {
-    pub pool: StablePool,
-}
-
-impl TryFrom<Binary> for StablePoolResponse {
-    type Error = StdError;
-
-    fn try_from(v: Binary) -> Result<Self, Self::Error> {
-        from_binary(&v)
-    }
-}
-
-#[cw_serde]
-pub struct StablePool {
+pub struct Pool {
     #[serde(rename = "@type")]
     pub type_url: String,
     pub address: String,
     pub id: String,
-    pub pool_params: StablePoolParams,
+
+    pub pool_params: PoolParams,
     pub pool_liquidity: Vec<Coin>,
+
     pub scaling_factors: Vec<u64>,
     pub scaling_factor_controller: String,
     pub total_shares: Coin,
@@ -38,12 +25,12 @@ pub struct StablePool {
 }
 
 #[cw_serde]
-pub struct StablePoolParams {
+pub struct PoolParams {
     pub swap_fee: Decimal,
     pub exit_fee: Decimal,
 }
 
-impl StablePool {
+impl Pool {
     #[allow(dead_code)]
     fn cfmm_constant(x: Decimal256, y: Decimal256) -> Result<Decimal256, PoolError> {
         Ok(x.checked_mul(y)?
@@ -183,7 +170,7 @@ impl StablePool {
 }
 
 #[allow(dead_code)]
-impl StablePool {
+impl Pool {
     fn get_scaling_factor(&self, idx: usize) -> u64 {
         self.scaling_factors[idx]
     }
@@ -295,7 +282,7 @@ impl StablePool {
     }
 }
 
-impl OsmosisPool for StablePool {
+impl OsmosisPool for Pool {
     fn get_id(&self) -> u64 {
         self.id.parse::<u64>().unwrap()
     }
