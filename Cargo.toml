@@ -47,7 +47,7 @@ prost = { version = "0.12.1" }
 
 # osmosis
 osmosis-std = { version = "0.19.0" }
-osmosis-test-tube = { git = "https://github.com/osmosis-labs/test-tube.git", branch = "main" }
+osmosis-test-tube = { git = "https://github.com/byeongsu-hong/test-tube.git", branch = "hong-main" }
 
 # helpers
 semver = { version = "1.0.18" }

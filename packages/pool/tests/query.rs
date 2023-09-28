@@ -1,6 +1,13 @@
 mod constants;
 mod pool;
+mod querier;
 
+use std::marker::PhantomData;
+
+use cosmwasm_std::{
+    testing::{MockApi, MockStorage},
+    Empty, OwnedDeps,
+};
 use osmosis_std::{
     shim::Any,
     types::osmosis::concentratedliquidity::{self},
@@ -9,6 +16,7 @@ use osmosis_test_tube::{cosmrs::proto::traits::Message, OsmosisTestApp};
 
 use ibcx_pool::{OsmosisPool, PoolError};
 use pool::load_pools_from_file;
+use querier::TestTubeQuerier;
 
 #[test]
 fn test_query_pools() -> anyhow::Result<()> {
@@ -42,6 +50,13 @@ fn test_query_pools() -> anyhow::Result<()> {
             }
         })
         .collect::<anyhow::Result<Vec<_>>>()?;
+
+    let mut deps = OwnedDeps {
+        storage: MockStorage::default(),
+        api: MockApi::default(),
+        querier: TestTubeQuerier::new(&app),
+        custom_query_type: PhantomData::<Empty>,
+    };
 
     Ok(())
 }
