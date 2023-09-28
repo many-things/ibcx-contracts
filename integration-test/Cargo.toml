@@ -27,4 +27,3 @@ base64.workspace = true
 
 ibcx-interface.workspace = true
 ibcx-periphery.workspace = true
-ibcx-test-msg.workspace = true
