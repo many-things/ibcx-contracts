@@ -1248,6 +1248,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "ibcx-test-querier"
+version = "0.1.1"
+dependencies = [
+ "anyhow",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw-utils",
+ "cw2",
+ "ibcx-interface",
+ "ibcx-math",
+ "ibcx-pool",
+ "ibcx-utils",
+ "osmosis-std",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "ibcx-tests"
 version = "0.1.1"
 dependencies = [

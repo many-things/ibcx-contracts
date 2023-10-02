@@ -1,27 +1,55 @@
 mod bank;
 mod wasm;
 
+use std::{env, fs, path::PathBuf};
+
 use cosmwasm_std::{
-    from_slice, ContractResult, Empty, Querier, QuerierResult, QueryRequest, SystemError,
-    SystemResult,
+    coin, from_slice, to_binary, ContractResult, Empty, Querier, QuerierResult, QueryRequest,
+    SystemError, SystemResult,
 };
 
-use osmosis_test_tube::{Module, OsmosisTestApp, Runner};
-
-use self::{bank::BankHandler, wasm::WasmHandler};
+use osmosis_std::types::cosmwasm::wasm::v1::{
+    QuerySmartContractStateRequest, QuerySmartContractStateResponse,
+};
+use osmosis_test_tube::{Module, OsmosisTestApp, Runner, Wasm};
 
 pub struct TestTubeQuerier<'a> {
     pub app: &'a OsmosisTestApp,
-    pub bank: BankHandler<'a, OsmosisTestApp>,
-    pub wasm: WasmHandler<'a, OsmosisTestApp>,
+    pub wasm_querier: String,
 }
 
 impl<'a> TestTubeQuerier<'a> {
-    pub fn new(app: &'a OsmosisTestApp) -> Self {
+    pub fn new(app: &'a OsmosisTestApp, querier_code_path: Option<PathBuf>) -> Self {
+        let deployer = app.init_account(&[coin(100_000_000_000, "uosmo")]).unwrap();
+
+        let wasm = Wasm::new(app);
+
+        let store_resp = wasm
+            .store_code(
+                &fs::read(
+                    querier_code_path
+                        .unwrap_or("../../artifacts/ibcx_test_querier-aarch64.wasm".into()),
+                )
+                .unwrap(),
+                None,
+                &deployer,
+            )
+            .unwrap();
+
+        let init_resp = wasm
+            .instantiate(
+                store_resp.data.code_id,
+                &Empty {},
+                None,
+                None,
+                &[],
+                &deployer,
+            )
+            .unwrap();
+
         Self {
             app,
-            bank: BankHandler::new(app),
-            wasm: WasmHandler::new(app),
+            wasm_querier: init_resp.data.address,
         }
     }
 }
@@ -38,24 +66,17 @@ impl Querier for TestTubeQuerier<'_> {
             }
         };
 
-        match request {
-            QueryRequest::Bank(query) => self.bank.handle(query),
-            QueryRequest::Wasm(query) => self.wasm.handle(query),
-            QueryRequest::Stargate { path, data } => {
-                match self.app.raw_query(&path, data.to_vec()).map_err(|e| {
-                    SystemError::InvalidRequest {
-                        error: e.to_string(),
-                        request: data,
-                    }
-                }) {
-                    Ok(res) => SystemResult::Ok(ContractResult::Ok(res.into())),
-                    Err(err) => SystemResult::Err(err),
-                }
-            }
+        let res = self
+            .app
+            .query::<QuerySmartContractStateRequest, QuerySmartContractStateResponse>(
+                "/cosmwasm.wasm.v1.Query/SmartContractState",
+                &QuerySmartContractStateRequest {
+                    address: self.wasm_querier.to_owned(),
+                    query_data: to_binary(&request).unwrap().to_vec(),
+                },
+            )
+            .unwrap();
 
-            _ => SystemResult::Err(SystemError::UnsupportedRequest {
-                kind: format!("{:?}", request),
-            }),
-        }
+        SystemResult::Ok(ContractResult::Ok(res.data.into()))
     }
 }

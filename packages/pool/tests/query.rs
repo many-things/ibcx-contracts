@@ -14,7 +14,7 @@ use osmosis_std::{
 };
 use osmosis_test_tube::{cosmrs::proto::traits::Message, OsmosisTestApp};
 
-use ibcx_pool::{OsmosisPool, PoolError};
+use ibcx_pool::{query_pools, OsmosisPool, PoolError};
 use pool::load_pools_from_file;
 use querier::TestTubeQuerier;
 
@@ -39,24 +39,32 @@ fn test_query_pools() -> anyhow::Result<()> {
         },
     )?;
 
-    let pools = load_pools_from_file(&app, None)?;
-    let pools = pools
-        .into_iter()
-        .map(|v| -> anyhow::Result<Box<dyn OsmosisPool>> {
-            match v {
-                ibcx_pool::Pool::Stable(p) => Ok(Box::new(p)),
-                ibcx_pool::Pool::Weighted(p) => Ok(Box::new(p)),
-                _ => Err(PoolError::UnsupportedPoolType.into()),
-            }
-        })
-        .collect::<anyhow::Result<Vec<_>>>()?;
+    let _ = load_pools_from_file(&app, None)?;
 
-    let mut deps = OwnedDeps {
+    // let pools = load_pools_from_file(&app, None)?;
+    // let pools = pools
+    //     .into_iter()
+    //     .map(|v| -> anyhow::Result<Box<dyn OsmosisPool>> {
+    //         match v {
+    //             ibcx_pool::Pool::Stable(p) => Ok(Box::new(p)),
+    //             ibcx_pool::Pool::Weighted(p) => Ok(Box::new(p)),
+    //             _ => Err(PoolError::UnsupportedPoolType.into()),
+    //         }
+    //     })
+    //     .collect::<anyhow::Result<Vec<_>>>()?;
+
+    let deps = OwnedDeps {
         storage: MockStorage::default(),
         api: MockApi::default(),
-        querier: TestTubeQuerier::new(&app),
+        querier: TestTubeQuerier::new(&app, None),
         custom_query_type: PhantomData::<Empty>,
     };
+
+    let pools = query_pools(&deps.as_ref(), vec![1, 2, 3, 4, 5])?;
+    println!(
+        "{:?}",
+        pools.into_iter().map(|v| v.get_id()).collect::<Vec<_>>()
+    );
 
     Ok(())
 }
