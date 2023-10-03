@@ -102,10 +102,7 @@ impl PoolInfo {
 const DEFAULT_SWAP_FEE: u128 = 10_000_000_000_000_000; // 0.01
 const DEFAULT_EXIT_FEE: u128 = 0;
 
-pub fn load_pools_from_file(
-    app: &OsmosisTestApp,
-    path: Option<PathBuf>,
-) -> anyhow::Result<Vec<ibcx_pool::Pool>> {
+pub fn load_pools_from_file(app: &OsmosisTestApp, path: Option<PathBuf>) -> anyhow::Result<()> {
     let pool = Pool::new(app);
 
     let file_dat =
@@ -143,7 +140,7 @@ pub fn load_pools_from_file(
 
     app.execute_cosmos_msgs::<MsgCreateBalancerPoolResponse>(&msgs, &account)?;
 
-    Ok(pools)
+    Ok(())
 }
 
 pub struct Pool<'a, R: Runner<'a>> {

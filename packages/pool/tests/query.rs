@@ -14,7 +14,7 @@ use osmosis_std::{
 };
 use osmosis_test_tube::{cosmrs::proto::traits::Message, OsmosisTestApp};
 
-use ibcx_pool::{query_pools, OsmosisPool, PoolError};
+use ibcx_pool::query_pools;
 use pool::load_pools_from_file;
 use querier::TestTubeQuerier;
 
@@ -39,19 +39,7 @@ fn test_query_pools() -> anyhow::Result<()> {
         },
     )?;
 
-    let _ = load_pools_from_file(&app, None)?;
-
-    // let pools = load_pools_from_file(&app, None)?;
-    // let pools = pools
-    //     .into_iter()
-    //     .map(|v| -> anyhow::Result<Box<dyn OsmosisPool>> {
-    //         match v {
-    //             ibcx_pool::Pool::Stable(p) => Ok(Box::new(p)),
-    //             ibcx_pool::Pool::Weighted(p) => Ok(Box::new(p)),
-    //             _ => Err(PoolError::UnsupportedPoolType.into()),
-    //         }
-    //     })
-    //     .collect::<anyhow::Result<Vec<_>>>()?;
+    load_pools_from_file(&app, None)?;
 
     let deps = OwnedDeps {
         storage: MockStorage::default(),

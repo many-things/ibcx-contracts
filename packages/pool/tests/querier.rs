@@ -1,7 +1,4 @@
-mod bank;
-mod wasm;
-
-use std::{env, fs, path::PathBuf};
+use std::{fs, path::PathBuf};
 
 use cosmwasm_std::{
     coin, from_slice, to_binary, ContractResult, Empty, Querier, QuerierResult, QueryRequest,
