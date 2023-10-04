@@ -24,8 +24,7 @@ impl<'a> TestTubeQuerier<'a> {
         let store_resp = wasm
             .store_code(
                 &fs::read(
-                    querier_code_path
-                        .unwrap_or("../../artifacts/ibcx_test_querier-aarch64.wasm".into()),
+                    querier_code_path.unwrap_or("../../artifacts/ibcx_test_querier.wasm".into()),
                 )
                 .unwrap(),
                 None,
