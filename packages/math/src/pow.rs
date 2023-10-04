@@ -78,7 +78,7 @@ fn pow_approx(
     }
 
     let a = exp;
-    let (x, x_neg) = abs_with_sign(base, Decimal256::one());
+    let (x, x_neg) = abs_diff_with_sign(base, Decimal256::one());
 
     let mut term = Decimal256::one();
     let mut sum = Decimal256::one();
@@ -92,7 +92,7 @@ fn pow_approx(
         }
 
         let big_k = Decimal256::one() * Decimal256::from_ratio(i, 1u64);
-        let (c, c_neg) = abs_with_sign(a, big_k - Decimal256::one());
+        let (c, c_neg) = abs_diff_with_sign(a, big_k - Decimal256::one());
 
         term *= c * x;
         term /= big_k;
@@ -121,7 +121,7 @@ fn pow_approx(
     Ok(sum)
 }
 
-fn abs_with_sign(x: Decimal256, y: Decimal256) -> (Decimal256, bool) {
+pub fn abs_diff_with_sign(x: Decimal256, y: Decimal256) -> (Decimal256, bool) {
     (x.abs_diff(y), x > y)
 }
 

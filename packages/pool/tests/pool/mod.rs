@@ -77,6 +77,8 @@ impl From<ibcx_pool::Pool> for PoolInfo {
                         .collect(),
                 }
             }
+            // TODO: make CL pool simulation work
+            // TODO: make CW pool simulation work
             _ => Self::Balancer {
                 swap_fee: None,
                 exit_fee: None,

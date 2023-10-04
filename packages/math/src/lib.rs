@@ -2,4 +2,4 @@ mod error;
 mod pow;
 
 pub use error::MathError;
-pub use pow::pow;
+pub use pow::{abs_diff_with_sign, pow};

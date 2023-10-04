@@ -33,6 +33,15 @@ pub struct SwapInfoCompact {
     pub routes: Vec<String>,
 }
 
+impl SwapInfoCompact {
+    pub fn new(key: &str, routes: &[&str]) -> Self {
+        Self {
+            key: key.to_string(),
+            routes: routes.iter().map(|v| v.to_string()).collect(),
+        }
+    }
+}
+
 impl From<SwapInfoCompact> for SwapInfo {
     fn from(v: SwapInfoCompact) -> Self {
         let keys: Vec<_> = v.key.split(',').collect();
@@ -62,6 +71,17 @@ impl From<SwapInfoCompact> for SwapInfo {
 
 #[cw_serde]
 pub struct SwapInfosCompact(pub Vec<SwapInfoCompact>);
+
+impl SwapInfosCompact {
+    pub fn new(infos: &[(&str, &[&str])]) -> Self {
+        Self(
+            infos
+                .iter()
+                .map(|(key, routes)| SwapInfoCompact::new(key, routes))
+                .collect(),
+        )
+    }
+}
 
 impl From<SwapInfosCompact> for Vec<SwapInfo> {
     fn from(vs: SwapInfosCompact) -> Self {

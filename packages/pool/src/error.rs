@@ -18,6 +18,9 @@ pub enum PoolError {
     #[error("{0}")]
     ParseIntError(#[from] std::num::ParseIntError),
 
+    #[error("{0}")]
+    Decimal256RangeExceeded(#[from] cosmwasm_std::Decimal256RangeExceeded),
+
     //================ ibcx ================//
     #[error("{0}")]
     IBCXMath(#[from] ibcx_math::MathError),
@@ -37,4 +40,13 @@ pub enum PoolError {
 
     #[error("trade amount exceeded")]
     TradeAmountExceeded,
+
+    #[error("invalid math approximation. err: {0}")]
+    InvalidMathApprox(String),
+}
+
+impl PoolError {
+    pub fn invalid_math_approx(err: &str) -> Self {
+        Self::InvalidMathApprox(err.to_string())
+    }
 }

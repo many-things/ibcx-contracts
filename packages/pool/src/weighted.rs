@@ -1,13 +1,35 @@
-use std::ops::Div;
-use std::str::FromStr;
-
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Coin, Decimal, StdResult, Uint256};
 use cosmwasm_std::{Decimal256, Deps, StdError};
+use ibcx_math::MathError;
 
 use crate::PoolError;
 
 use super::OsmosisPool;
+
+fn to_dec(v: Uint256) -> Result<Decimal256, PoolError> {
+    Ok(Decimal256::from_atomics(v, 0)?)
+}
+
+fn solve_constant_function_invariants(
+    token_balance_fixed_before: Decimal256,
+    token_balance_fixed_after: Decimal256,
+    token_weight_fixed: Decimal256,
+    token_balance_unknown_before: Decimal256,
+    token_weight_unknown: Decimal256,
+) -> Result<(Decimal256, bool), MathError> {
+    let weight_ratio = token_weight_fixed / token_weight_unknown;
+
+    let y = token_balance_fixed_before / token_balance_fixed_after;
+
+    let y_to_weight_ratio = ibcx_math::pow(y, weight_ratio)?;
+
+    let (paranthetical, neg) = ibcx_math::abs_diff_with_sign(Decimal256::one(), y_to_weight_ratio);
+
+    let amount_y = token_balance_unknown_before * paranthetical;
+
+    Ok((amount_y, neg))
+}
 
 #[cw_serde]
 pub struct Pool {
@@ -103,12 +125,14 @@ impl Pool {
         Ok(())
     }
 
+    /// tokenBalanceOut * [1 - { tokenBalanceIn / (tokenBalanceIn + (1 - spreadFactor) * tokenAmountIn)} ^ (tokenWeightIn / tokenWeightOut)]
     fn calc_out_amount_given_in(
         &self,
         input_amount: &Coin,
         output_denom: &str,
         spread_factor: Decimal,
     ) -> Result<Uint256, PoolError> {
+        // parse pool assets
         let PoolAsset {
             token: token_out,
             weight: token_out_weight,
@@ -118,26 +142,37 @@ impl Pool {
             weight: token_in_weight,
         } = self.get_asset(&input_amount.denom)?;
 
-        let minus_spread_factor = Decimal256::one().checked_sub(spread_factor.into())?;
-        let token_sub_in = Decimal256::checked_from_ratio(
-            token_in.amount,
-            token_in
-                .amount
-                .checked_add(Uint256::from(input_amount.amount) * minus_spread_factor)?,
+        let token_amount_in_after_fee = Uint256::from_uint128(input_amount.amount)
+            * Decimal256::one().checked_sub(spread_factor.into())?;
+
+        let pool_token_in_balance = token_in.amount;
+        let pool_post_swap_in_balance = pool_token_in_balance + token_amount_in_after_fee;
+
+        let (token_amount_out, neg) = solve_constant_function_invariants(
+            to_dec(pool_token_in_balance)?,
+            to_dec(pool_post_swap_in_balance)?,
+            to_dec(token_in_weight)?,
+            to_dec(token_out.amount)?,
+            to_dec(token_out_weight)?,
         )?;
 
-        let token_weight_ratio = Decimal256::checked_from_ratio(token_in_weight, token_out_weight)?;
+        if !neg {
+            return Err(PoolError::invalid_math_approx(
+                "token amount must be negative",
+            ));
+        }
 
-        Ok(token_out.amount
-            * (Decimal256::one() - ibcx_math::pow(token_sub_in, token_weight_ratio)?))
+        Ok(token_amount_out.to_uint_floor())
     }
 
+    /// tokenBalanceIn * [{tokenBalanceOut / (tokenBalanceOut - tokenAmountOut)} ^ (tokenWeightOut / tokenWeightIn) -1] / tokenAmountIn
     fn calc_in_amount_given_out(
         &self,
         input_denom: &str,
         output_amount: &Coin,
         spread_factor: Decimal,
     ) -> Result<Uint256, PoolError> {
+        // parse pool assets
         let PoolAsset {
             token: token_out,
             weight: token_out_weight,
@@ -147,20 +182,30 @@ impl Pool {
             weight: token_in_weight,
         } = self.get_asset(input_denom)?;
 
-        let token_sub_out = Decimal256::checked_from_ratio(
-            token_out.amount.checked_sub(output_amount.amount.into())?,
-            1u64,
+        let pool_token_out_balance = token_out.amount;
+        let pool_post_swap_out_balance =
+            pool_token_out_balance - Uint256::from_uint128(output_amount.amount);
+
+        let (token_amount_in, neg) = solve_constant_function_invariants(
+            to_dec(pool_token_out_balance)?,
+            to_dec(pool_post_swap_out_balance)?,
+            to_dec(token_out_weight)?,
+            to_dec(token_in.amount)?,
+            to_dec(token_in_weight)?,
         )?;
-        let token_weight_ratio = Decimal256::checked_from_ratio(token_out_weight, token_in_weight)?;
 
-        let calculated_by_rust_decimal = ibcx_math::pow(token_sub_out, token_weight_ratio)?;
-        let minus_spread_factor = Decimal256::one().checked_sub(spread_factor.into())?;
-        let divided_token_out = Decimal256::from_str(&token_out.amount.to_string())?
-            .div(calculated_by_rust_decimal)
-            - Decimal256::one();
-        let divded_minus_spread_factor = divided_token_out.div(minus_spread_factor);
+        let token_amount_in_before_fee =
+            token_amount_in / (Decimal256::one().checked_sub(spread_factor.into())?);
 
-        Ok(token_in.amount * divded_minus_spread_factor)
+        let token_in_amount = token_amount_in_before_fee.to_uint_ceil();
+
+        if neg {
+            return Err(PoolError::invalid_math_approx(
+                "token amount must be positive",
+            ));
+        }
+
+        Ok(token_in_amount)
     }
 }
 
@@ -257,10 +302,32 @@ mod test {
         }
     }
 
+    fn calc_in(
+        deps: Deps,
+        pools: &mut BTreeMap<u64, Pool>,
+        pool_id: u64,
+        input: &str,
+        output: Coin,
+    ) -> anyhow::Result<Uint256> {
+        if let Pool::Weighted(pool) = pools.get_mut(&pool_id).unwrap() {
+            let amount_in = pool.swap_exact_amount_out(
+                &deps,
+                input.to_string(),
+                Uint256::from_str("100")?,
+                output,
+                pool.get_spread_factor()?,
+            )?;
+
+            Ok(amount_in)
+        } else {
+            Err(anyhow!("pool type is not weighted"))
+        }
+    }
+
     #[test]
-    fn test_simulation() -> anyhow::Result<()> {
+    fn test_sim_in() -> anyhow::Result<()> {
         let deps = mock_dependencies();
-        let mut pools = load_pools("./test/data/all-pools-after.json".into())?;
+        let mut pools = load_pools("./tests/testdata/all-pools-after.json".into())?;
 
         let cases = [
             (
@@ -278,13 +345,62 @@ mod test {
                 coin(100_000_000_000, "uosmo"),
                 "ibc/0954E1C28EB7AF5B72D24F3BC2B47BBB2FDF91BDDFD57B74B99E133AED40972A",
             ),
-            (2, coin(100_000_000_000, "uosmo"), "uion"),
+            (2, coin(100_000_000, "uosmo"), "uion"),
+            (
+                3,
+                coin(
+                    4_946_633,
+                    "ibc/1480B8FD20AD5FCAE81EA87584D269547DD4D436843C1D20F15E00EB64743EF4",
+                ),
+                "uosmo",
+            ),
         ];
 
         for (pool_id, input, output) in cases {
             println!("Trying: {} -> {}", input, output);
             let res = calc_out(deps.as_ref(), &mut pools, pool_id, input.clone(), output)?;
             println!("=> {}{}\n", res, output);
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_sim_out() -> anyhow::Result<()> {
+        let deps = mock_dependencies();
+        let mut pools = load_pools("./tests/testdata/all-pools-after.json".into())?;
+
+        let cases = [
+            (
+                1,
+                coin(100_000_000_000, "uosmo"),
+                "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
+            ),
+            (
+                722,
+                coin(100_000_000_000, "uosmo"),
+                "ibc/6AE98883D4D5D5FF9E50D7130F1305DA2FFA0C652D1DD9C123657C6B4EB2DF8A",
+            ),
+            (
+                584,
+                coin(100_000_000_000, "uosmo"),
+                "ibc/0954E1C28EB7AF5B72D24F3BC2B47BBB2FDF91BDDFD57B74B99E133AED40972A",
+            ),
+            (2, coin(100_000_000, "uosmo"), "uion"),
+            (
+                3,
+                coin(
+                    4_946_633,
+                    "ibc/1480B8FD20AD5FCAE81EA87584D269547DD4D436843C1D20F15E00EB64743EF4",
+                ),
+                "uosmo",
+            ),
+        ];
+
+        for (pool_id, output, input) in cases {
+            println!("Trying: {} -> {}", input, output);
+            let res = calc_in(deps.as_ref(), &mut pools, pool_id, input, output.clone())?;
+            println!("=> {}{}\n", res, input);
         }
 
         Ok(())
