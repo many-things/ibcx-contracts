@@ -31,3 +31,4 @@ target
 .DS_Store
 
 packages/pool/tests/testdata/all-pools-after.json
+packages/pool/tests/testdata/all-pools.json
