@@ -29,3 +29,5 @@ target
 .idea
 .vscode
 .DS_Store
+
+packages/pool/tests/testdata/all-pools-after.json

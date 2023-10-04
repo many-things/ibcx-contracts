@@ -22,4 +22,8 @@ const after = {
     }),
 };
 
-fs.writeFileSync("./all-pools-after.json", JSON.stringify(after, null, 2));
+fs.writeFileSync(
+  process.env.OUT_FILE ||
+    `${process.cwd()}/tests/testdata/all-pools-after.json`,
+  JSON.stringify(after, null, 2)
+);
