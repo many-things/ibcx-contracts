@@ -213,14 +213,13 @@ impl OsmosisPool for Pool {
     fn get_id(&self) -> u64 {
         self.id.parse::<u64>().unwrap()
     }
+
     fn get_type(&self) -> &str {
         "weighted_pool"
     }
+
     fn get_spread_factor(&self) -> StdResult<Decimal> {
         Ok(self.pool_params.swap_fee)
-    }
-    fn get_exit_fee(&self) -> StdResult<Decimal> {
-        Ok(self.pool_params.exit_fee)
     }
 
     fn clone_box(&self) -> Box<dyn OsmosisPool> {

@@ -1,4 +1,4 @@
-mod cl;
+mod concentrated;
 mod error;
 mod sim;
 mod stable;
@@ -13,7 +13,7 @@ use osmosis_std::types::osmosis::poolmanager::v1beta1::PoolRequest;
 pub use error::PoolError;
 pub use sim::Simulator;
 
-pub use cl::Pool as CLPool;
+pub use concentrated::Pool as ConcentratedPool;
 pub use stable::Pool as StablePool;
 pub use weighted::Pool as WeightedPool;
 
@@ -23,8 +23,6 @@ pub trait OsmosisPool {
     fn get_type(&self) -> &str;
 
     fn get_spread_factor(&self) -> StdResult<Decimal>;
-
-    fn get_exit_fee(&self) -> StdResult<Decimal>;
 
     fn clone_box(&self) -> Box<dyn OsmosisPool>;
 
@@ -55,7 +53,6 @@ impl Clone for Box<dyn OsmosisPool> {
 #[cw_serde]
 #[serde(untagged)]
 pub enum Pool {
-    CL(CLPool),
     CW {
         #[serde(rename = "@type")]
         type_url: String,
@@ -66,6 +63,7 @@ pub enum Pool {
     },
     Stable(StablePool),
     Weighted(WeightedPool),
+    Concentrated(ConcentratedPool),
 }
 
 impl Pool {
@@ -99,6 +97,7 @@ pub fn query_pools(
             match v.pool {
                 Pool::Stable(p) => Ok(Box::new(p)),
                 Pool::Weighted(p) => Ok(Box::new(p)),
+                Pool::Concentrated(p) => Ok(Box::new(p)),
                 _ => Err(PoolError::UnsupportedPoolType),
             }
         })

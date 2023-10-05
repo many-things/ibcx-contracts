@@ -295,10 +295,6 @@ impl OsmosisPool for Pool {
         Ok(self.pool_params.swap_fee)
     }
 
-    fn get_exit_fee(&self) -> StdResult<Decimal> {
-        Ok(self.pool_params.exit_fee)
-    }
-
     fn clone_box(&self) -> Box<dyn OsmosisPool> {
         Box::new(self.clone())
     }
