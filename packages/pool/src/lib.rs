@@ -98,7 +98,7 @@ pub fn query_pools(
                 Pool::Stable(p) => Ok(Box::new(p)),
                 Pool::Weighted(p) => Ok(Box::new(p)),
                 Pool::Concentrated(p) => Ok(Box::new(p)),
-                _ => Err(PoolError::UnsupportedPoolType),
+                Pool::CW { .. } => Err(PoolError::UnsupportedPoolType),
             }
         })
         .collect::<Result<_, _>>()?;

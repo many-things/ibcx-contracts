@@ -5,7 +5,7 @@ pub enum MathError {
     #[error("base must be greater than 0")]
     NegativeBase,
 
-    #[error("base must be lesser than two")]
+    #[error("base must be less than two")]
     BaseTooLarge,
 
     #[error("{0}")]
