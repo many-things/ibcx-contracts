@@ -1,6 +1,5 @@
 mod constants;
 mod pool;
-mod querier;
 
 use std::{marker::PhantomData, str::FromStr};
 
@@ -18,19 +17,18 @@ use osmosis_test_tube::{cosmrs::proto::traits::Message, OsmosisTestApp};
 
 use ibcx_pool::{query_pools, Simulator};
 use pool::load_pools_from_file;
-use querier::TestTubeQuerier;
 
 #[test]
 fn test_query_pools() -> anyhow::Result<()> {
-    let app = OsmosisTestApp::new();
+    let mut app = ibcx_test_utils::App::default();
 
     // make CL pool creation premissionless
-    let cl_param: concentratedliquidity::Params = app.get_param_set(
+    let cl_param: concentratedliquidity::Params = app.inner().get_param_set(
         "concentratedliquidity",
         concentratedliquidity::Params::TYPE_URL,
     )?;
 
-    app.set_param_set(
+    app.inner().set_param_set(
         "concentratedliquidity",
         Any {
             type_url: concentratedliquidity::Params::TYPE_URL.to_string(),
@@ -43,15 +41,7 @@ fn test_query_pools() -> anyhow::Result<()> {
     )?;
 
     // apply pool state to test-tube chain
-    load_pools_from_file(&app, None)?;
-
-    // make deps
-    let deps = OwnedDeps {
-        storage: MockStorage::default(),
-        api: MockApi::default(),
-        querier: TestTubeQuerier::new(&app, None),
-        custom_query_type: PhantomData::<Empty>,
-    };
+    load_pools_from_file(app.inner(), None)?;
 
     let swap_info: Vec<SwapInfo> = SwapInfosCompact::new(&[
         (
@@ -149,6 +139,7 @@ fn test_query_pools() -> anyhow::Result<()> {
         ),
     ];
 
+    let deps = app.deps();
     let deps_ref = deps.as_ref();
     let pools = query_pools(&deps.as_ref(), extract_pool_ids(swap_info.clone()))?;
     let simulator = Simulator::new(&deps_ref, &pools, &swap_info, &index_units);

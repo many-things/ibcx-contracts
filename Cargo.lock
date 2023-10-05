@@ -1303,6 +1303,7 @@ dependencies = [
  "cosmwasm-std",
  "ibcx-interface",
  "ibcx-math",
+ "ibcx-test-utils",
  "ibcx-utils",
  "osmosis-std",
  "osmosis-test-tube",
@@ -1331,6 +1332,17 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+]
+
+[[package]]
+name = "ibcx-test-utils"
+version = "0.1.1"
+dependencies = [
+ "anyhow",
+ "cosmwasm-std",
+ "osmosis-std",
+ "osmosis-test-tube",
+ "serde_json",
 ]
 
 [[package]]
