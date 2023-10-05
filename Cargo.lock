@@ -1229,6 +1229,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "ibcx-cw-pool"
+version = "0.1.1"
+dependencies = [
+ "anyhow",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw-utils",
+ "cw2",
+ "ibcx-interface",
+ "ibcx-utils",
+ "osmosis-std",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "ibcx-interface"
 version = "0.1.1"
 dependencies = [

@@ -2,6 +2,7 @@ pub mod helpers;
 
 pub mod airdrop;
 pub mod core;
+pub mod cw_pool;
 pub mod periphery;
 pub mod types;
 

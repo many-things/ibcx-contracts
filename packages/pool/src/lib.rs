@@ -69,10 +69,10 @@ pub enum Pool {
 impl Pool {
     pub fn get_id(&self) -> u64 {
         match self {
-            Pool::CL(p) => p.id.parse().unwrap(),
             Pool::CW { pool_id, .. } => pool_id.parse().unwrap(),
             Pool::Stable(p) => p.id.parse().unwrap(),
             Pool::Weighted(p) => p.id.parse().unwrap(),
+            Pool::Concentrated(p) => p.id.parse().unwrap(),
         }
     }
 }

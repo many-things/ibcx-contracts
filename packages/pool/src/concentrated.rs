@@ -1,7 +1,6 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Coin, Decimal, Deps, Uint256};
-use ibcx_interface::types::SwapRoute;
-use {Decimal, StdResult};
+use cosmwasm_std::{Coin, Decimal, Deps, StdResult, Uint256};
+use ibcx_interface::types::{SwapRoute, SwapRoutes};
 
 use crate::{OsmosisPool, PoolError};
 
