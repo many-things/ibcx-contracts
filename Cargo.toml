@@ -47,7 +47,7 @@ prost = { version = "0.12.1" }
 
 # osmosis
 osmosis-std = { version = "0.19.2" }
-osmosis-test-tube = { git = "https://github.com/byeongsu-hong/test-tube.git", branch = "hong-main" }
+osmosis-test-tube = { version = "19.2.0" }
 
 # helpers
 reqwest = { version = "0.11", features = ["blocking", "json"] }
