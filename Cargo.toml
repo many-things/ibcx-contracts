@@ -61,6 +61,7 @@ ibcx-core = { path = "contracts/core" }
 ibcx-periphery = { path = "contracts/periphery" }
 
 ibcx-utils = { path = "packages/utils" }
+ibcx-test-utils = { path = "packages/test-utils" }
 ibcx-math = { path = "packages/math" }
 ibcx-pool = { path = "packages/pool" }
 ibcx-interface = { path = "packages/interface" }

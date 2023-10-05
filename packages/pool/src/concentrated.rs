@@ -1,7 +1,6 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Coin, Decimal, Deps, Uint256};
-use ibcx_interface::types::SwapRoute;
-use {Decimal, StdResult};
+use cosmwasm_std::{Coin, Decimal, Deps, StdResult, Uint256};
+use ibcx_interface::types::{SwapRoute, SwapRoutes};
 
 use crate::{OsmosisPool, PoolError};
 
@@ -50,8 +49,8 @@ impl OsmosisPool for Pool {
         deps: &Deps,
         input_amount: Coin,
         output_denom: String,
-        min_output_amount: Uint256,
-        spread_factor: Decimal,
+        _min_output_amount: Uint256,
+        _spread_factor: Decimal,
     ) -> Result<Uint256, PoolError> {
         Ok(SwapRoutes(vec![SwapRoute {
             pool_id: self.get_id(),
@@ -65,9 +64,9 @@ impl OsmosisPool for Pool {
         &mut self,
         deps: &Deps,
         input_denom: String,
-        max_input_amount: Uint256,
+        _max_input_amount: Uint256,
         output_amount: Coin,
-        spread_factor: Decimal,
+        _spread_factor: Decimal,
     ) -> Result<Uint256, PoolError> {
         Ok(SwapRoutes(vec![SwapRoute {
             pool_id: self.get_id(),

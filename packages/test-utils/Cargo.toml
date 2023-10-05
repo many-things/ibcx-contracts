@@ -1,5 +1,5 @@
 [package]
-name = "ibcx-pool"
+name = "ibcx-test-utils"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
@@ -13,25 +13,11 @@ backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
 
+
 [dependencies]
-cosmwasm-std.workspace = true
-cosmwasm-schema.workspace = true
-thiserror.workspace = true
-
 osmosis-std.workspace = true
-
-ibcx-math.workspace = true
-ibcx-utils.workspace = true
-ibcx-interface.workspace = true
-
-[dev-dependencies]
 osmosis-test-tube.workspace = true
+cosmwasm-std.workspace = true
 
 serde_json.workspace = true
-anyhow.workspace = true
-
-ibcx-test-utils.workspace = true
-
-[build-dependencies]
-reqwest.workspace = true
 anyhow.workspace = true
