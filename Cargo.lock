@@ -1317,6 +1317,8 @@ dependencies = [
 [[package]]
 name = "ibcx-test-utils"
 version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "295c0a8d709f798fdc8abf60077079e1f57e1a90e60fb4c1dc3fd7b222c7fbe6"
 dependencies = [
  "anyhow",
  "cosmwasm-std",
@@ -1876,7 +1878,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "265baba7fabd416cf5078179f7d2cbeca4ce7a9041111900675ea7c4cb8a4c32"
 dependencies = [
  "anyhow",
- "itertools 0.10.5",
+ "itertools 0.11.0",
  "proc-macro2",
  "quote",
  "syn 2.0.37",

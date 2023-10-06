@@ -55,13 +55,15 @@ semver = { version = "1.0.18" }
 anyhow = { version = "1.0.72" }
 thiserror = { version = "1.0.37" }
 
+# families
+ibcx-test-utils = { version = "0.1.1" }
+
 # local dependencies
 ibcx-airdrop = { path = "contracts/airdrop" }
 ibcx-core = { path = "contracts/core" }
 ibcx-periphery = { path = "contracts/periphery" }
 
 ibcx-utils = { path = "packages/utils" }
-ibcx-test-utils = { path = "packages/test-utils" }
 ibcx-math = { path = "packages/math" }
 ibcx-pool = { path = "packages/pool" }
 ibcx-interface = { path = "packages/interface" }
