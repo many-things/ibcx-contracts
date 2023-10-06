@@ -6,7 +6,8 @@ use cosmwasm_std::{
     Empty, OwnedDeps,
 };
 
-use osmosis_test_tube::{Module, OsmosisTestApp, Wasm};
+use osmosis_std::{shim::Any, types::osmosis::concentratedliquidity};
+use osmosis_test_tube::{cosmrs::proto::traits::Message, Module, OsmosisTestApp, Wasm};
 
 use crate::QUERIER_BIN;
 
@@ -54,6 +55,28 @@ impl App {
 
     pub fn wasm_querier(&self) -> &str {
         &self.wasm_querier
+    }
+
+    pub fn unlock_cl_pool_creation(&self) -> anyhow::Result<()> {
+        // make CL pool creation premissionless
+        let cl_param: concentratedliquidity::Params = self.inner().get_param_set(
+            "concentratedliquidity",
+            concentratedliquidity::Params::TYPE_URL,
+        )?;
+
+        self.inner().set_param_set(
+            "concentratedliquidity",
+            Any {
+                type_url: concentratedliquidity::Params::TYPE_URL.to_string(),
+                value: concentratedliquidity::Params {
+                    is_permissionless_pool_creation_enabled: true,
+                    ..cl_param
+                }
+                .encode_to_vec(),
+            },
+        )?;
+
+        Ok(())
     }
 
     pub fn deps(&self) -> OwnedDeps<MockStorage, MockApi, crate::Querier> {

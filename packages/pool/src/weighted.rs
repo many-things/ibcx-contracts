@@ -271,6 +271,8 @@ impl OsmosisPool for Pool {
 
 #[cfg(test)]
 mod test {
+    use crate::test::pool::load_pools_from_file;
+    use crate::test::testdata;
     use crate::Pool;
     use crate::{test::load_pools, OsmosisPool};
 
@@ -278,19 +280,29 @@ mod test {
 
     use anyhow::anyhow;
     use cosmwasm_std::{coin, testing::mock_dependencies, Coin, Deps, Uint256};
+    use ibcx_test_utils::App;
+    use osmosis_std::types::osmosis::poolmanager::v1beta1::{
+        EstimateSinglePoolSwapExactAmountInRequest, EstimateSinglePoolSwapExactAmountOutRequest,
+    };
+    use osmosis_test_tube::{Module, PoolManager};
+
+    #[derive(Clone, Debug)]
+    struct SimulateOutGivnInCase<'a> {
+        pub pool_id: u64,
+        pub amount_in: &'a Coin,
+        pub amount_out: &'a str,
+    }
 
     fn calc_out(
         deps: Deps,
         pools: &mut BTreeMap<u64, Pool>,
-        pool_id: u64,
-        input: Coin,
-        output: &str,
+        case: SimulateOutGivnInCase,
     ) -> anyhow::Result<Uint256> {
-        if let Pool::Weighted(pool) = pools.get_mut(&pool_id).unwrap() {
+        if let Pool::Weighted(pool) = pools.get_mut(&case.pool_id).unwrap() {
             let amount_out = pool.swap_exact_amount_in(
                 &deps,
-                input,
-                output.to_string(),
+                case.amount_in.clone(),
+                case.amount_out.to_string(),
                 Uint256::from_str("100")?,
                 pool.get_spread_factor()?,
             )?;
@@ -301,19 +313,24 @@ mod test {
         }
     }
 
+    #[derive(Clone, Debug)]
+    struct SimulateInGivenOutCase<'a> {
+        pub pool_id: u64,
+        pub amount_in: &'a str,
+        pub amount_out: &'a Coin,
+    }
+
     fn calc_in(
         deps: Deps,
         pools: &mut BTreeMap<u64, Pool>,
-        pool_id: u64,
-        input: &str,
-        output: Coin,
+        case: SimulateInGivenOutCase,
     ) -> anyhow::Result<Uint256> {
-        if let Pool::Weighted(pool) = pools.get_mut(&pool_id).unwrap() {
+        if let Pool::Weighted(pool) = pools.get_mut(&case.pool_id).unwrap() {
             let amount_in = pool.swap_exact_amount_out(
                 &deps,
-                input.to_string(),
+                case.amount_in.to_string(),
                 Uint256::from_str("100")?,
-                output,
+                case.amount_out.clone(),
                 pool.get_spread_factor()?,
             )?;
 
@@ -325,40 +342,67 @@ mod test {
 
     #[test]
     fn test_sim_in() -> anyhow::Result<()> {
-        let deps = mock_dependencies();
-        let mut pools = load_pools("./tests/testdata/all-pools-after.json".into())?;
+        let amount_in_osmo = coin(100_000_000, "uosmo");
 
         let cases = [
-            (
-                1,
-                coin(100_000_000_000, "uosmo"),
-                "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
-            ),
-            (
-                722,
-                coin(100_000_000_000, "uosmo"),
-                "ibc/6AE98883D4D5D5FF9E50D7130F1305DA2FFA0C652D1DD9C123657C6B4EB2DF8A",
-            ),
-            (
-                584,
-                coin(100_000_000_000, "uosmo"),
-                "ibc/0954E1C28EB7AF5B72D24F3BC2B47BBB2FDF91BDDFD57B74B99E133AED40972A",
-            ),
-            (2, coin(100_000_000, "uosmo"), "uion"),
-            (
-                3,
-                coin(
-                    4_946_633,
-                    "ibc/1480B8FD20AD5FCAE81EA87584D269547DD4D436843C1D20F15E00EB64743EF4",
-                ),
-                "uosmo",
-            ),
+            SimulateOutGivnInCase {
+                pool_id: 1,
+                amount_in: &amount_in_osmo,
+                amount_out: "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
+            },
+            SimulateOutGivnInCase {
+                pool_id: 2,
+                amount_in: &amount_in_osmo,
+                amount_out: "uion",
+            },
+            SimulateOutGivnInCase {
+                pool_id: 3,
+                amount_in: &amount_in_osmo,
+                amount_out: "ibc/1480B8FD20AD5FCAE81EA87584D269547DD4D436843C1D20F15E00EB64743EF4",
+            },
+            SimulateOutGivnInCase {
+                pool_id: 584,
+                amount_in: &amount_in_osmo,
+                amount_out: "ibc/0954E1C28EB7AF5B72D24F3BC2B47BBB2FDF91BDDFD57B74B99E133AED40972A",
+            },
+            SimulateOutGivnInCase {
+                pool_id: 722,
+                amount_in: &amount_in_osmo,
+                amount_out: "ibc/6AE98883D4D5D5FF9E50D7130F1305DA2FFA0C652D1DD9C123657C6B4EB2DF8A",
+            },
         ];
 
-        for (pool_id, input, output) in cases {
-            println!("Trying: {} -> {}", input, output);
-            let res = calc_out(deps.as_ref(), &mut pools, pool_id, input.clone(), output)?;
-            println!("=> {}{}\n", res, output);
+        // ready local pool state
+        let deps = mock_dependencies();
+        let mut pools = load_pools(testdata("all-pools-after.json"))?;
+
+        // ready test tube
+        let app = App::default();
+        let pm = PoolManager::new(app.inner());
+        load_pools_from_file(app.inner(), testdata("all-pools-after.json"))?;
+
+        for case in cases {
+            let expected = calc_out(deps.as_ref(), &mut pools, case.clone())?;
+
+            let actual_res = pm.query_single_pool_swap_exact_amount_in(
+                &EstimateSinglePoolSwapExactAmountInRequest {
+                    pool_id: case.pool_id,
+                    token_in: case.amount_in.to_string(),
+                    token_out_denom: case.amount_out.to_string(),
+                },
+            )?;
+            let actual = Uint256::from_str(&actual_res.token_out_amount)?;
+
+            assert_eq!(
+                expected,
+                actual,
+                "{} -> {}. expected: {}, actual: {}, diff: {}",
+                case.amount_in,
+                case.amount_out,
+                expected,
+                actual,
+                expected.abs_diff(actual),
+            );
         }
 
         Ok(())
@@ -366,40 +410,67 @@ mod test {
 
     #[test]
     fn test_sim_out() -> anyhow::Result<()> {
-        let deps = mock_dependencies();
-        let mut pools = load_pools("./tests/testdata/all-pools-after.json".into())?;
+        let amount_out_osmo = coin(100_000_000, "uosmo");
 
         let cases = [
-            (
-                1,
-                coin(100_000_000_000, "uosmo"),
-                "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
-            ),
-            (
-                722,
-                coin(100_000_000_000, "uosmo"),
-                "ibc/6AE98883D4D5D5FF9E50D7130F1305DA2FFA0C652D1DD9C123657C6B4EB2DF8A",
-            ),
-            (
-                584,
-                coin(100_000_000_000, "uosmo"),
-                "ibc/0954E1C28EB7AF5B72D24F3BC2B47BBB2FDF91BDDFD57B74B99E133AED40972A",
-            ),
-            (2, coin(100_000_000, "uosmo"), "uion"),
-            (
-                3,
-                coin(
-                    4_946_633,
-                    "ibc/1480B8FD20AD5FCAE81EA87584D269547DD4D436843C1D20F15E00EB64743EF4",
-                ),
-                "uosmo",
-            ),
+            SimulateInGivenOutCase {
+                pool_id: 1,
+                amount_in: "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
+                amount_out: &amount_out_osmo,
+            },
+            SimulateInGivenOutCase {
+                pool_id: 2,
+                amount_in: "uion",
+                amount_out: &amount_out_osmo,
+            },
+            SimulateInGivenOutCase {
+                pool_id: 3,
+                amount_in: "ibc/1480B8FD20AD5FCAE81EA87584D269547DD4D436843C1D20F15E00EB64743EF4",
+                amount_out: &amount_out_osmo,
+            },
+            SimulateInGivenOutCase {
+                pool_id: 584,
+                amount_in: "ibc/0954E1C28EB7AF5B72D24F3BC2B47BBB2FDF91BDDFD57B74B99E133AED40972A",
+                amount_out: &amount_out_osmo,
+            },
+            SimulateInGivenOutCase {
+                pool_id: 722,
+                amount_in: "ibc/6AE98883D4D5D5FF9E50D7130F1305DA2FFA0C652D1DD9C123657C6B4EB2DF8A",
+                amount_out: &amount_out_osmo,
+            },
         ];
 
-        for (pool_id, output, input) in cases {
-            println!("Trying: {} -> {}", input, output);
-            let res = calc_in(deps.as_ref(), &mut pools, pool_id, input, output.clone())?;
-            println!("=> {}{}\n", res, input);
+        // ready local pool state
+        let deps = mock_dependencies();
+        let mut pools = load_pools(testdata("all-pools-after.json"))?;
+
+        // ready test tube
+        let app = App::default();
+        let pm = PoolManager::new(app.inner());
+        load_pools_from_file(app.inner(), testdata("all-pools-after.json"))?;
+
+        for case in cases {
+            let expected = calc_in(deps.as_ref(), &mut pools, case.clone())?;
+
+            let actual_res = pm.query_single_pool_swap_exact_amount_out(
+                &EstimateSinglePoolSwapExactAmountOutRequest {
+                    pool_id: case.pool_id,
+                    token_out: case.amount_out.to_string(),
+                    token_in_denom: case.amount_in.to_string(),
+                },
+            )?;
+            let actual = Uint256::from_str(&actual_res.token_in_amount)?;
+
+            assert_eq!(
+                expected,
+                actual,
+                "{} -> {}. expected: {}, actual: {}, diff: {}",
+                case.amount_in,
+                case.amount_out,
+                expected,
+                actual,
+                expected.abs_diff(actual),
+            );
         }
 
         Ok(())

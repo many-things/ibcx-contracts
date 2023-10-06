@@ -191,3 +191,42 @@ impl<'a> Simulator<'a> {
         Ok(ret)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use cosmwasm_std::coin;
+    use ibcx_interface::periphery::extract_pool_ids;
+
+    use crate::{
+        query_pools,
+        test::{load_index_units, load_swap_info, pool::load_pools_from_file, testdata},
+        Simulator,
+    };
+
+    #[test]
+    fn test_query_pools() -> anyhow::Result<()> {
+        let app = ibcx_test_utils::App::default();
+
+        // set cl pool permission
+        app.unlock_cl_pool_creation()?;
+
+        // apply pool state to test-tube chain
+        load_pools_from_file(app.inner(), testdata("all-pools-after.json"))?;
+
+        let swap_info = load_swap_info(testdata("swap-info_osmo-to-asset.json"))?;
+        let index_units = load_index_units(testdata("index-units.json"))?;
+
+        let deps = app.deps();
+        let deps_ref = deps.as_ref();
+
+        let pools = query_pools(&deps.as_ref(), extract_pool_ids(swap_info.clone()))?;
+        let simulator = Simulator::new(&deps_ref, &pools, &swap_info, &index_units);
+
+        let sim_out =
+            simulator.search_efficient_amount_for_input(coin(1_000_000, "uosmo"), None)?;
+
+        println!("{}", serde_json::to_string_pretty(&sim_out)?);
+
+        Ok(())
+    }
+}

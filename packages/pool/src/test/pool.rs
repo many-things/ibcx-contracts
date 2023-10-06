@@ -20,8 +20,6 @@ use osmosis_test_tube::{
     Account, Module, OsmosisTestApp, Runner, SigningAccount,
 };
 
-use crate::constants::{DENOM_ION, DENOM_OSMO};
-
 pub enum PoolInfo {
     Stable {
         swap_fee: Option<Decimal>,
@@ -42,16 +40,16 @@ pub enum PoolInfo {
     },
 }
 
-impl From<ibcx_pool::Pool> for PoolInfo {
-    fn from(v: ibcx_pool::Pool) -> Self {
+impl From<crate::Pool> for PoolInfo {
+    fn from(v: crate::Pool) -> Self {
         match v {
-            ibcx_pool::Pool::Stable(p) => Self::Stable {
+            crate::Pool::Stable(p) => Self::Stable {
                 swap_fee: Some(p.pool_params.swap_fee),
                 exit_fee: None,
                 assets: p.pool_liquidity,
                 scaling_factors: p.scaling_factors,
             },
-            ibcx_pool::Pool::Weighted(p) => {
+            crate::Pool::Weighted(p) => {
                 let pool_assets = p
                     .pool_assets
                     .into_iter()
@@ -82,10 +80,7 @@ impl From<ibcx_pool::Pool> for PoolInfo {
             _ => Self::Balancer {
                 swap_fee: None,
                 exit_fee: None,
-                assets: vec![
-                    (coin(1, DENOM_OSMO), 100_000),
-                    (coin(1, DENOM_ION), 100_000),
-                ],
+                assets: vec![(coin(1, "uosmo"), 100_000), (coin(1, "uion"), 100_000)],
             },
         }
     }
@@ -104,15 +99,14 @@ impl PoolInfo {
 const DEFAULT_SWAP_FEE: u128 = 10_000_000_000_000_000; // 0.01
 const DEFAULT_EXIT_FEE: u128 = 0;
 
-pub fn load_pools_from_file(app: &OsmosisTestApp, path: Option<PathBuf>) -> anyhow::Result<()> {
-    let pool = Pool::new(app);
+pub fn load_pools_from_file(app: &OsmosisTestApp, path: PathBuf) -> anyhow::Result<()> {
+    let pool = PoolManager::new(app);
 
-    let file_dat =
-        fs::read_to_string(path.unwrap_or("tests/testdata/all-pools-after.json".into()))?;
+    let file_dat = fs::read_to_string(path)?;
 
     #[cw_serde]
     pub struct PoolsResponse {
-        pub pools: Vec<ibcx_pool::Pool>,
+        pub pools: Vec<crate::Pool>,
     }
 
     let PoolsResponse { pools } = serde_json::from_str(&file_dat)?;
@@ -145,17 +139,17 @@ pub fn load_pools_from_file(app: &OsmosisTestApp, path: Option<PathBuf>) -> anyh
     Ok(())
 }
 
-pub struct Pool<'a, R: Runner<'a>> {
+pub struct PoolManager<'a, R: Runner<'a>> {
     runner: &'a R,
 }
 
-impl<'a, R: Runner<'a>> Module<'a, R> for Pool<'a, R> {
+impl<'a, R: Runner<'a>> Module<'a, R> for PoolManager<'a, R> {
     fn new(runner: &'a R) -> Self {
         Self { runner }
     }
 }
 
-impl<'a, R> Pool<'a, R>
+impl<'a, R> PoolManager<'a, R>
 where
     R: Runner<'a>,
 {

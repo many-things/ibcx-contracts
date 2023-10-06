@@ -30,5 +30,5 @@ target
 .vscode
 .DS_Store
 
-packages/pool/tests/testdata/all-pools-after.json
-packages/pool/tests/testdata/all-pools.json
+packages/pool/src/testdata/all-pools-after.json
+packages/pool/src/testdata/all-pools.json
