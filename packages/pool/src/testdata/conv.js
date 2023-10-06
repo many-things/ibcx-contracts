@@ -23,7 +23,6 @@ const after = {
 };
 
 fs.writeFileSync(
-  process.env.OUT_FILE ||
-    `${process.cwd()}/tests/testdata/all-pools-after.json`,
+  process.env.OUT_FILE || "./src/testdata/all-pools-after.json",
   JSON.stringify(after, null, 2)
 );
