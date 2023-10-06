@@ -107,4 +107,4 @@ pub fn query_pools(
 }
 
 #[cfg(test)]
-pub mod test;
+mod test;
