@@ -56,7 +56,7 @@ fn pow_int(mut base: Decimal256, power: Uint256) -> Decimal256 {
             break;
         }
 
-        if !i % Uint256::from(2u64) == Uint256::zero() {
+        if i % Uint256::from(2u64) != Uint256::zero() {
             tmp *= base;
         }
 
