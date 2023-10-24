@@ -102,25 +102,20 @@ impl Pool {
         input_value: Uint256,
         output_value: Uint256,
     ) -> Result<(), PoolError> {
-        let pool_assets = self.pool_assets.clone();
-
         let before_input = self.get_asset(input_denom)?;
         let before_output = self.get_asset(output_denom)?;
 
         let after_input_amount = before_input.token.amount.checked_add(input_value)?;
         let after_output_amount = before_output.token.amount.checked_sub(output_value)?;
 
-        let new_pool_assets = pool_assets
-            .into_iter()
-            .map(|v| match v.token.denom {
-                d if d == input_denom => (d, after_input_amount, v.weight),
-                d if d == output_denom => (d, after_output_amount, v.weight),
-                d => (d, v.token.amount, v.weight),
+        for (i, asset) in self.pool_assets.clone().into_iter().enumerate() {
+            self.pool_assets[i] = PoolAssetTuple(match asset.token.denom {
+                d if d == input_denom => (d, after_input_amount, asset.weight),
+                d if d == output_denom => (d, after_output_amount, asset.weight),
+                d => (d, asset.token.amount, asset.weight),
             })
-            .map(|v| PoolAssetTuple(v).into())
-            .collect::<Vec<_>>();
-
-        self.pool_assets = new_pool_assets;
+            .into();
+        }
 
         Ok(())
     }

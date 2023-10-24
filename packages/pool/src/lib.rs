@@ -4,6 +4,8 @@ mod sim;
 mod stable;
 mod weighted;
 
+use std::num::ParseIntError;
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Binary, Coin, Decimal, Deps, StdResult, Uint256};
 
@@ -67,12 +69,12 @@ pub enum Pool {
 }
 
 impl Pool {
-    pub fn get_id(&self) -> u64 {
+    pub fn get_id(&self) -> Result<u64, ParseIntError> {
         match self {
-            Pool::CW { pool_id, .. } => pool_id.parse().unwrap(),
-            Pool::Stable(p) => p.id.parse().unwrap(),
-            Pool::Weighted(p) => p.id.parse().unwrap(),
-            Pool::Concentrated(p) => p.id.parse().unwrap(),
+            Pool::CW { pool_id, .. } => pool_id.parse(),
+            Pool::Stable(p) => p.id.parse(),
+            Pool::Weighted(p) => p.id.parse(),
+            Pool::Concentrated(p) => p.id.parse(),
         }
     }
 }
