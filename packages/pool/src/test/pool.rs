@@ -1,7 +1,7 @@
 use std::{collections::BTreeSet, fs, path::PathBuf};
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{coin, Coin, CosmosMsg, Decimal};
+use cosmwasm_std::{coin, Binary, Coin, CosmosMsg, Decimal};
 use osmosis_std::types::osmosis::gamm::{self, poolmodels::stableswap};
 use osmosis_test_tube::{
     fn_execute,
@@ -19,6 +19,24 @@ use osmosis_test_tube::{
     },
     Account, Module, OsmosisTestApp, Runner, SigningAccount,
 };
+
+use crate::{ConcentratedPool, StablePool, WeightedPool};
+
+#[cw_serde]
+#[serde(untagged)]
+pub enum Pool {
+    CW {
+        #[serde(rename = "@type")]
+        type_url: String,
+        contract_address: String,
+        pool_id: String,
+        code_id: String,
+        instantiate_msg: Binary,
+    },
+    Stable(StablePool),
+    Weighted(WeightedPool),
+    Concentrated(ConcentratedPool),
+}
 
 pub enum PoolInfo {
     Stable {
@@ -40,16 +58,20 @@ pub enum PoolInfo {
     },
 }
 
-impl From<crate::Pool> for PoolInfo {
-    fn from(v: crate::Pool) -> Self {
+impl From<Pool> for PoolInfo {
+    fn from(v: Pool) -> Self {
         match v {
-            crate::Pool::Stable(p) => Self::Stable {
+            Pool::Stable(p) => Self::Stable {
                 swap_fee: Some(p.pool_params.swap_fee),
                 exit_fee: None,
                 assets: p.pool_liquidity,
-                scaling_factors: p.scaling_factors,
+                scaling_factors: p
+                    .scaling_factors
+                    .into_iter()
+                    .map(|v| v.parse().unwrap())
+                    .collect(),
             },
-            crate::Pool::Weighted(p) => {
+            Pool::Weighted(p) => {
                 let pool_assets = p
                     .pool_assets
                     .into_iter()
@@ -106,7 +128,7 @@ pub fn load_pools_from_file(app: &OsmosisTestApp, path: PathBuf) -> anyhow::Resu
 
     #[cw_serde]
     pub struct PoolsResponse {
-        pub pools: Vec<crate::Pool>,
+        pub pools: Vec<Pool>,
     }
 
     let PoolsResponse { pools } = serde_json::from_str(&file_dat)?;

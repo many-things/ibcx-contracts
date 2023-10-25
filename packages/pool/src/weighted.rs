@@ -280,6 +280,7 @@ mod test {
         EstimateSinglePoolSwapExactAmountInRequest, EstimateSinglePoolSwapExactAmountOutRequest,
     };
     use osmosis_test_tube::{Module, PoolManager};
+    use rstest::rstest;
 
     #[derive(Clone, Debug)]
     struct SimulateOutGivnInCase<'a> {
@@ -335,139 +336,125 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_sim_in() -> anyhow::Result<()> {
-        let amount_in_osmo = coin(100_000_000, "uosmo");
-
-        let cases = [
-            SimulateOutGivnInCase {
-                pool_id: 1,
-                amount_in: &amount_in_osmo,
-                amount_out: "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
-            },
-            SimulateOutGivnInCase {
-                pool_id: 2,
-                amount_in: &amount_in_osmo,
-                amount_out: "uion",
-            },
-            SimulateOutGivnInCase {
-                pool_id: 3,
-                amount_in: &amount_in_osmo,
-                amount_out: "ibc/1480B8FD20AD5FCAE81EA87584D269547DD4D436843C1D20F15E00EB64743EF4",
-            },
-            SimulateOutGivnInCase {
-                pool_id: 584,
-                amount_in: &amount_in_osmo,
-                amount_out: "ibc/0954E1C28EB7AF5B72D24F3BC2B47BBB2FDF91BDDFD57B74B99E133AED40972A",
-            },
-            SimulateOutGivnInCase {
-                pool_id: 722,
-                amount_in: &amount_in_osmo,
-                amount_out: "ibc/6AE98883D4D5D5FF9E50D7130F1305DA2FFA0C652D1DD9C123657C6B4EB2DF8A",
-            },
-        ];
+    #[rstest]
+    #[case(
+        1,
+        coin(100_000_000, "uosmo"),
+        "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2"
+    )]
+    #[case(2, coin(100_000_000, "uosmo"), "uion")]
+    #[case(
+        3,
+        coin(100_000_000, "uosmo"),
+        "ibc/1480B8FD20AD5FCAE81EA87584D269547DD4D436843C1D20F15E00EB64743EF4"
+    )]
+    #[case(
+        584,
+        coin(100_000_000, "uosmo"),
+        "ibc/0954E1C28EB7AF5B72D24F3BC2B47BBB2FDF91BDDFD57B74B99E133AED40972A"
+    )]
+    #[case(
+        722,
+        coin(100_000_000, "uosmo"),
+        "ibc/6AE98883D4D5D5FF9E50D7130F1305DA2FFA0C652D1DD9C123657C6B4EB2DF8A"
+    )]
+    fn test_sim_in(#[case] pool_id: u64, #[case] amount_in_osmo: Coin, #[case] amount_out: &str) {
+        let case = SimulateOutGivnInCase {
+            pool_id,
+            amount_in: &amount_in_osmo,
+            amount_out,
+        };
 
         // ready local pool state
         let deps = mock_dependencies();
-        let mut pools = load_pools(testdata("all-pools-after.json"))?;
+        let mut pools = load_pools(testdata("all-pools-after.json")).unwrap();
 
         // ready test tube
         let app = App::default();
         let pm = PoolManager::new(app.inner());
-        load_pools_from_file(app.inner(), testdata("all-pools-after.json"))?;
+        load_pools_from_file(app.inner(), testdata("all-pools-after.json")).unwrap();
 
-        for case in cases {
-            let expected = calc_out(deps.as_ref(), &mut pools, case.clone())?;
+        let expected = calc_out(deps.as_ref(), &mut pools, case.clone()).unwrap();
 
-            let actual_res = pm.query_single_pool_swap_exact_amount_in(
-                &EstimateSinglePoolSwapExactAmountInRequest {
-                    pool_id: case.pool_id,
-                    token_in: case.amount_in.to_string(),
-                    token_out_denom: case.amount_out.to_string(),
-                },
-            )?;
-            let actual = Uint256::from_str(&actual_res.token_out_amount)?;
+        let actual_res = pm
+            .query_single_pool_swap_exact_amount_in(&EstimateSinglePoolSwapExactAmountInRequest {
+                pool_id: case.pool_id,
+                token_in: case.amount_in.to_string(),
+                token_out_denom: case.amount_out.to_string(),
+            })
+            .unwrap();
+        let actual = Uint256::from_str(&actual_res.token_out_amount).unwrap();
 
-            assert_eq!(
-                expected,
-                actual,
-                "{} -> {}. expected: {}, actual: {}, diff: {}",
-                case.amount_in,
-                case.amount_out,
-                expected,
-                actual,
-                expected.abs_diff(actual),
-            );
-        }
-
-        Ok(())
+        assert_eq!(
+            expected,
+            actual,
+            "{} -> {}. expected: {}, actual: {}, diff: {}",
+            case.amount_in,
+            case.amount_out,
+            expected,
+            actual,
+            expected.abs_diff(actual),
+        );
     }
 
-    #[test]
-    fn test_sim_out() -> anyhow::Result<()> {
-        let amount_out_osmo = coin(100_000_000, "uosmo");
-
-        let cases = [
-            SimulateInGivenOutCase {
-                pool_id: 1,
-                amount_in: "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
-                amount_out: &amount_out_osmo,
-            },
-            SimulateInGivenOutCase {
-                pool_id: 2,
-                amount_in: "uion",
-                amount_out: &amount_out_osmo,
-            },
-            SimulateInGivenOutCase {
-                pool_id: 3,
-                amount_in: "ibc/1480B8FD20AD5FCAE81EA87584D269547DD4D436843C1D20F15E00EB64743EF4",
-                amount_out: &amount_out_osmo,
-            },
-            SimulateInGivenOutCase {
-                pool_id: 584,
-                amount_in: "ibc/0954E1C28EB7AF5B72D24F3BC2B47BBB2FDF91BDDFD57B74B99E133AED40972A",
-                amount_out: &amount_out_osmo,
-            },
-            SimulateInGivenOutCase {
-                pool_id: 722,
-                amount_in: "ibc/6AE98883D4D5D5FF9E50D7130F1305DA2FFA0C652D1DD9C123657C6B4EB2DF8A",
-                amount_out: &amount_out_osmo,
-            },
-        ];
+    #[rstest]
+    #[case(
+        1,
+        "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
+        coin(100_000_000, "uosmo")
+    )]
+    #[case(2, "uion", coin(100_000_000, "uosmo"))]
+    #[case(
+        3,
+        "ibc/1480B8FD20AD5FCAE81EA87584D269547DD4D436843C1D20F15E00EB64743EF4",
+        coin(100_000_000, "uosmo")
+    )]
+    #[case(
+        584,
+        "ibc/0954E1C28EB7AF5B72D24F3BC2B47BBB2FDF91BDDFD57B74B99E133AED40972A",
+        coin(100_000_000, "uosmo")
+    )]
+    #[case(
+        722,
+        "ibc/6AE98883D4D5D5FF9E50D7130F1305DA2FFA0C652D1DD9C123657C6B4EB2DF8A",
+        coin(100_000_000, "uosmo")
+    )]
+    fn test_sim_out(#[case] pool_id: u64, #[case] amount_in: &str, #[case] amount_out_osmo: Coin) {
+        let case = SimulateInGivenOutCase {
+            pool_id,
+            amount_in,
+            amount_out: &amount_out_osmo,
+        };
 
         // ready local pool state
         let deps = mock_dependencies();
-        let mut pools = load_pools(testdata("all-pools-after.json"))?;
+        let mut pools = load_pools(testdata("all-pools-after.json")).unwrap();
 
         // ready test tube
         let app = App::default();
         let pm = PoolManager::new(app.inner());
-        load_pools_from_file(app.inner(), testdata("all-pools-after.json"))?;
+        load_pools_from_file(app.inner(), testdata("all-pools-after.json")).unwrap();
 
-        for case in cases {
-            let expected = calc_in(deps.as_ref(), &mut pools, case.clone())?;
+        let expected = calc_in(deps.as_ref(), &mut pools, case.clone()).unwrap();
 
-            let actual_res = pm.query_single_pool_swap_exact_amount_out(
-                &EstimateSinglePoolSwapExactAmountOutRequest {
-                    pool_id: case.pool_id,
-                    token_out: case.amount_out.to_string(),
-                    token_in_denom: case.amount_in.to_string(),
-                },
-            )?;
-            let actual = Uint256::from_str(&actual_res.token_in_amount)?;
+        let actual_res = pm
+            .query_single_pool_swap_exact_amount_out(&EstimateSinglePoolSwapExactAmountOutRequest {
+                pool_id: case.pool_id,
+                token_out: case.amount_out.to_string(),
+                token_in_denom: case.amount_in.to_string(),
+            })
+            .unwrap();
+        let actual = Uint256::from_str(&actual_res.token_in_amount).unwrap();
 
-            assert_eq!(
-                expected,
-                actual,
-                "{} -> {}. expected: {}, actual: {}, diff: {}",
-                case.amount_in,
-                case.amount_out,
-                expected,
-                actual,
-                expected.abs_diff(actual),
-            );
-        }
-
-        Ok(())
+        assert_eq!(
+            expected,
+            actual,
+            "{} -> {}. expected: {}, actual: {}, diff: {}",
+            case.amount_in,
+            case.amount_out,
+            expected,
+            actual,
+            expected.abs_diff(actual),
+        );
     }
 }

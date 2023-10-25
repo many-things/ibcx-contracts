@@ -18,7 +18,7 @@ pub struct Pool {
     pub pool_params: PoolParams,
     pub pool_liquidity: Vec<Coin>,
 
-    pub scaling_factors: Vec<u64>,
+    pub scaling_factors: Vec<String>,
     pub scaling_factor_controller: String,
     pub total_shares: Coin,
     pub future_pool_governor: String,
@@ -172,7 +172,7 @@ impl Pool {
 #[allow(dead_code)]
 impl Pool {
     fn get_scaling_factor(&self, idx: usize) -> u64 {
-        self.scaling_factors[idx]
+        self.scaling_factors[idx].parse().unwrap()
     }
 
     fn scaled_sorted_pool_reserves(

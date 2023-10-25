@@ -27,7 +27,9 @@ ibcx-interface.workspace = true
 [dev-dependencies]
 osmosis-test-tube.workspace = true
 
+rstest.workspace = true
 serde_json.workspace = true
+serde-json-wasm.workspace = true
 anyhow.workspace = true
 
 ibcx-test-utils.workspace = true
