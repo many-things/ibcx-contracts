@@ -31,7 +31,3 @@ serde_json.workspace = true
 anyhow.workspace = true
 
 ibcx-test-utils.workspace = true
-
-[build-dependencies]
-reqwest.workspace = true
-anyhow.workspace = true
