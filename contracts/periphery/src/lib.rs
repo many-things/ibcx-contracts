@@ -7,9 +7,7 @@ use error::ContractError;
 pub mod contract;
 pub mod error;
 pub mod execute;
-pub mod pool;
 pub mod query;
-pub mod sim;
 
 pub const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");

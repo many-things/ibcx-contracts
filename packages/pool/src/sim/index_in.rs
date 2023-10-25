@@ -4,7 +4,7 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{coin, Coin, Decimal, Uint128, Uint256};
 use ibcx_interface::periphery::{RouteKey, SwapInfo};
 
-use crate::{error::ContractError, pool::OsmosisPool};
+use crate::{OsmosisPool, PoolError};
 
 use super::{
     route::{SimAmountOutRoute, SimAmountOutRoutes},
@@ -30,12 +30,12 @@ impl<'a> Simulator<'a> {
         token_in: Coin,
         token_out: &str,
         pools: &mut BTreeMap<u64, Box<dyn OsmosisPool>>,
-    ) -> Result<SimAmountOutRoute, ContractError> {
+    ) -> Result<SimAmountOutRoute, PoolError> {
         let SwapInfo((_, routes)) = self
             .swap_info
             .iter()
             .find(|SwapInfo((RouteKey((from, to)), _))| from == &token_in.denom && to == token_out)
-            .ok_or(ContractError::SwapRouteNotFound {
+            .ok_or(PoolError::SwapRouteNotFound {
                 from: token_in.denom.clone(),
                 to: token_out.to_string(),
             })?;
@@ -43,7 +43,7 @@ impl<'a> Simulator<'a> {
         let ret = routes.0.iter().try_fold(token_in.clone(), |acc, route| {
             let pool = pools
                 .get_mut(&route.pool_id)
-                .ok_or(ContractError::PoolNotFound(route.pool_id))?;
+                .ok_or(PoolError::PoolNotFound(route.pool_id))?;
 
             let spread_factor = pool.get_spread_factor()?;
             let amount_out = pool.swap_exact_amount_in(
@@ -54,7 +54,7 @@ impl<'a> Simulator<'a> {
                 spread_factor,
             )?;
 
-            Ok::<_, ContractError>(coin(
+            Ok::<_, PoolError>(coin(
                 amount_out.to_string().parse::<u128>()?,
                 &route.token_denom,
             ))
@@ -71,7 +71,7 @@ impl<'a> Simulator<'a> {
         &self,
         token_in: Uint128,
         output_asset: &str,
-    ) -> Result<SimIndexInResp, ContractError> {
+    ) -> Result<SimIndexInResp, PoolError> {
         let mut pools_map = self
             .pools
             .iter()
@@ -96,12 +96,12 @@ impl<'a> Simulator<'a> {
                     self.estimate_out_given_in(token_in, output_asset, &mut pools_map)
                 }
             })
-            .collect::<Result<Vec<_>, ContractError>>()?;
+            .collect::<Result<Vec<_>, PoolError>>()?;
 
         let total_received = routes_with_amount
             .iter()
             .try_fold(Uint128::zero(), |acc, v| {
-                Ok::<_, ContractError>(acc.checked_add(v.sim_amount_out)?)
+                Ok::<_, PoolError>(acc.checked_add(v.sim_amount_out)?)
             })?;
 
         let ret = SimIndexInResp {
@@ -117,7 +117,7 @@ impl<'a> Simulator<'a> {
         desired_output: Coin,
         token_test_out: Uint128,
         token_test_in: Uint128,
-    ) -> Result<SearchAmountForOutputResp, ContractError> {
+    ) -> Result<SearchAmountForOutputResp, PoolError> {
         let est_min_token_in =
             token_test_in * Decimal::checked_from_ratio(desired_output.amount, token_test_out)?;
 
@@ -136,7 +136,7 @@ impl<'a> Simulator<'a> {
         &self,
         desired_output: Coin,
         init_input_amount: Option<Uint128>,
-    ) -> Result<SearchAmountForOutputResp, ContractError> {
+    ) -> Result<SearchAmountForOutputResp, PoolError> {
         let mut acc_res = {
             let token_in = init_input_amount.unwrap_or(Uint128::new(1000000));
             let est_res = self.estimate_token_given_index_in(token_in, &desired_output.denom)?;
@@ -151,7 +151,7 @@ impl<'a> Simulator<'a> {
         let mut loop_count = 0;
         loop {
             if loop_count >= MAX_LOOP {
-                return Err(ContractError::MaxLoopExceeded);
+                return Err(PoolError::MaxLoopExceeded);
             }
 
             acc_res = self.search_efficient_amount_for_output_f(

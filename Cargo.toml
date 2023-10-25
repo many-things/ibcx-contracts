@@ -1,11 +1,5 @@
 [workspace]
-members = [
-    "contracts/*",
-    "packages/interface",
-    "packages/utils",
-    "packages/testutils/*",
-    "integration-test",
-]
+members = ["contracts/*", "packages/*", "integration-test"]
 
 [profile.release]
 codegen-units = 1
@@ -20,11 +14,11 @@ overflow-checks = true
 
 [workspace.package]
 version = "0.1.1"
-authors = ["frostornge <frostornge@gmail.com>"]
+authors = ["ByeongSu Hong <hong@byeongsu.dev>"]
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/many-things/ibcx-contracts"
-keywords = ["ion", "dao", "cosmos", "cosmwasm"]
+keywords = ["ion", "ibcx", "dao", "cosmos", "cosmwasm", "index"]
 
 [workspace.dependencies]
 # cosmwasm
@@ -36,7 +30,7 @@ cosmwasm-schema = "1.4.0"
 cw-storage-plus = "1.1.0"
 cw-utils = "1.0.1"
 cw2 = "1.1.0"
-cw-multi-test = "0.16.5"
+cw-multi-test = "0.17.0"
 
 # cryptography
 sha2 = { version = "0.10.7", default-features = false }
@@ -46,22 +40,24 @@ ripemd = { version = "0.1.3" }
 base64 = "0.21.2"
 bech32 = "0.9.1"
 hex = "0.4.3"
-serde_json = { version = "1.0.96" }
+serde = { version = "1.0.188" }
+serde_json = { version = "1.0.107" }
 serde-json-wasm = "1.0.0"
 prost = { version = "0.12.1" }
 
-# math
-rust_decimal = { version = "1.29.1", features = ["maths"] }
-rust_decimal_macros = "1.29.1"
-
 # osmosis
-osmosis-std = { version = "0.19.0" }
-osmosis-test-tube = { version = "19.0.0" }
+osmosis-std = { version = "0.19.2" }
+osmosis-test-tube = { version = "19.2.0" }
 
 # helpers
+rstest = { version = "0.18.2" }
+reqwest = { version = "0.11", features = ["blocking", "json"] }
 semver = { version = "1.0.18" }
 anyhow = { version = "1.0.72" }
 thiserror = { version = "1.0.37" }
+
+# families
+ibcx-test-utils = { version = "0.1.1" }
 
 # local dependencies
 ibcx-airdrop = { path = "contracts/airdrop" }
@@ -69,5 +65,6 @@ ibcx-core = { path = "contracts/core" }
 ibcx-periphery = { path = "contracts/periphery" }
 
 ibcx-utils = { path = "packages/utils" }
+ibcx-math = { path = "packages/math" }
+ibcx-pool = { path = "packages/pool" }
 ibcx-interface = { path = "packages/interface" }
-ibcx-test-msg = { path = "packages/testutils/msg" }

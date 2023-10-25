@@ -4,10 +4,9 @@ use cosmwasm_std::{
 use cosmwasm_std::{DepsMut, Response};
 use ibcx_interface::periphery::{extract_pool_ids, ExecuteMsg, SwapInfo};
 use ibcx_interface::{core, helpers::IbcCore};
+use ibcx_pool::{query_pools, Simulator};
 
 use crate::error::ContractError;
-use crate::pool::query_pools;
-use crate::sim::Simulator;
 use crate::{coin_sorter, deduct_fee, expand_fee, make_unit_converter};
 
 pub fn mint_exact_amount_in(
