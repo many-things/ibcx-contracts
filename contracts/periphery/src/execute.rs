@@ -197,7 +197,7 @@ pub fn burn_exact_amount_in(
 
     let swap_msgs = sim_res
         .sim_routes
-        .to_msgs(&env.contract.address, sim_res.total_output)?;
+        .to_msgs(&env.contract.address, min_output_amount)?;
 
     let finish_msg = WasmMsg::Execute {
         contract_addr: env.contract.address.to_string(),
