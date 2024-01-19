@@ -42,7 +42,7 @@ pub fn execute(
 
 fn to_binary<T: Serialize>(res: Result<T, ContractError>) -> Result<QueryResponse, ContractError> {
     match res {
-        Ok(v) => Ok(cosmwasm_std::to_binary(&v)?),
+        Ok(v) => Ok(cosmwasm_std::to_json_binary(&v)?),
         Err(e) => Err(e),
     }
 }

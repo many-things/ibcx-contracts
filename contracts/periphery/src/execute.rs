@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    attr, coin, to_binary, BankMsg, Coin, CosmosMsg, Env, MessageInfo, Uint128, WasmMsg,
+    attr, coin, to_json_binary, BankMsg, Coin, CosmosMsg, Env, MessageInfo, Uint128, WasmMsg,
 };
 use cosmwasm_std::{DepsMut, Response};
 use ibcx_interface::periphery::{extract_pool_ids, ExecuteMsg, SwapInfo};
@@ -49,7 +49,7 @@ pub fn mint_exact_amount_in(
 
     let finish_msg = WasmMsg::Execute {
         contract_addr: env.contract.address.to_string(),
-        msg: to_binary(&ExecuteMsg::FinishOperation {
+        msg: to_json_binary(&ExecuteMsg::FinishOperation {
             refund_to: info.sender.to_string(),
             refund_asset: desired_denom,
         })?,
@@ -136,7 +136,7 @@ pub fn mint_exact_amount_out(
 
     let finish_msg = WasmMsg::Execute {
         contract_addr: env.contract.address.to_string(),
-        msg: to_binary(&ExecuteMsg::FinishOperation {
+        msg: to_json_binary(&ExecuteMsg::FinishOperation {
             refund_to: info.sender.to_string(),
             refund_asset: input_asset.denom.clone(),
         })?,
@@ -201,7 +201,7 @@ pub fn burn_exact_amount_in(
 
     let finish_msg = WasmMsg::Execute {
         contract_addr: env.contract.address.to_string(),
-        msg: cosmwasm_std::to_binary(&ExecuteMsg::FinishOperation {
+        msg: cosmwasm_std::to_json_binary(&ExecuteMsg::FinishOperation {
             refund_to: info.sender.to_string(),
             refund_asset: output_asset.denom.clone(),
         })?,
@@ -273,7 +273,7 @@ pub fn burn_exact_amount_out(
     let finish_msgs: Vec<CosmosMsg> = vec![
         WasmMsg::Execute {
             contract_addr: env.contract.address.to_string(),
-            msg: to_binary(&ExecuteMsg::FinishOperation {
+            msg: to_json_binary(&ExecuteMsg::FinishOperation {
                 refund_to: info.sender.to_string(),
                 refund_asset: core_config.index_denom,
             })?,
@@ -282,7 +282,7 @@ pub fn burn_exact_amount_out(
         .into(),
         WasmMsg::Execute {
             contract_addr: env.contract.address.to_string(),
-            msg: to_binary(&ExecuteMsg::FinishOperation {
+            msg: to_json_binary(&ExecuteMsg::FinishOperation {
                 refund_to: info.sender.to_string(),
                 refund_asset: desired_output.denom.clone(),
             })?,

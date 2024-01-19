@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    from_binary, to_vec, Binary, CustomQuery, Deps, QuerierWrapper, QueryRequest, StdResult,
+    from_json, to_json_vec, Binary, CustomQuery, Deps, QuerierWrapper, QueryRequest, StdResult,
 };
 use osmosis_std::types::osmosis::poolmanager::v1beta1::PoolRequest;
 
@@ -12,7 +12,7 @@ fn raw_query<C: CustomQuery>(
 ) -> StdResult<Binary> {
     use cosmwasm_std::{ContractResult, StdError, SystemResult};
 
-    let raw = to_vec(request).map_err(|serialize_err| {
+    let raw = to_json_vec(request).map_err(|serialize_err| {
         StdError::generic_err(format!("Serializing QueryRequest: {serialize_err}"))
     })?;
     match querier.raw_query(&raw) {
@@ -55,9 +55,9 @@ fn decode_pool(v: Binary) -> Result<Option<Box<dyn OsmosisPool>>, PoolError> {
     }
 
     Ok(Some(match pool_type {
-        PoolType::Weighted => Box::new(from_binary::<PoolResponse<WeightedPool>>(&v)?.pool),
-        PoolType::Stable => Box::new(from_binary::<PoolResponse<StablePool>>(&v)?.pool),
-        PoolType::Concentrated => Box::new(from_binary::<PoolResponse<ConcentratedPool>>(&v)?.pool),
+        PoolType::Weighted => Box::new(from_json::<PoolResponse<WeightedPool>>(&v)?.pool),
+        PoolType::Stable => Box::new(from_json::<PoolResponse<StablePool>>(&v)?.pool),
+        PoolType::Concentrated => Box::new(from_json::<PoolResponse<ConcentratedPool>>(&v)?.pool),
     }))
 }
 

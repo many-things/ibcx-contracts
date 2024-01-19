@@ -1,6 +1,6 @@
 use cosmwasm_schema::serde::de::DeserializeOwned;
 use cosmwasm_std::{
-    from_slice, testing::MockQuerier, CustomQuery, Empty, Querier, QuerierResult, QueryRequest,
+    from_json, testing::MockQuerier, CustomQuery, Empty, Querier, QuerierResult, QueryRequest,
     SystemError, SystemResult,
 };
 
@@ -13,7 +13,7 @@ pub struct CoreQuerier<'a, C: DeserializeOwned = Empty> {
 
 impl<C: CustomQuery + DeserializeOwned> Querier for CoreQuerier<'_, C> {
     fn raw_query(&self, bin_request: &[u8]) -> cosmwasm_std::QuerierResult {
-        let request: QueryRequest<C> = match from_slice(bin_request) {
+        let request: QueryRequest<C> = match from_json(bin_request) {
             Ok(v) => v,
             Err(e) => {
                 return SystemResult::Err(SystemError::InvalidRequest {
