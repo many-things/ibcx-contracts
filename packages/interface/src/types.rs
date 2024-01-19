@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{coin, from_binary, Addr, Coin, Empty, Order, StdResult, Uint128};
+use cosmwasm_std::{coin, from_json, Addr, Coin, Empty, Order, StdResult, Uint128};
 use cosmwasm_std::{CosmosMsg, QuerierWrapper};
 use ibcx_utils::raw_query_bin;
 use osmosis_std::types::osmosis::poolmanager::v1beta1::{
@@ -109,7 +109,7 @@ impl SwapRoutes {
             .into(),
         )?;
 
-        let res = from_binary::<EstimateSwapExactAmountOutResponse>(&raw_res)?;
+        let res = from_json::<EstimateSwapExactAmountOutResponse>(&raw_res)?;
 
         Uint128::from_str(&res.token_in_amount)
     }

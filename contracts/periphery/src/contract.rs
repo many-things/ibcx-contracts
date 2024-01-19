@@ -94,7 +94,7 @@ pub fn execute(
 pub fn to_binary<T: Serialize>(
     r: Result<T, ContractError>,
 ) -> Result<QueryResponse, ContractError> {
-    Ok(r.map(|v| cosmwasm_std::to_binary(&v))??)
+    Ok(r.map(|v| cosmwasm_std::to_json_binary(&v))??)
 }
 
 #[entry_point]

@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Addr, Coin, CosmosMsg, CustomQuery, QuerierWrapper, StdResult, Uint128, WasmMsg,
-    WasmQuery,
+    to_json_binary, Addr, Coin, CosmosMsg, CustomQuery, QuerierWrapper, StdResult, Uint128,
+    WasmMsg, WasmQuery,
 };
 
 use crate::core::{
@@ -20,7 +20,7 @@ impl IbcCore {
     }
 
     pub fn call<CM, T: Into<ExecuteMsg>>(&self, msg: T) -> StdResult<CosmosMsg<CM>> {
-        let msg = to_binary(&msg.into())?;
+        let msg = to_json_binary(&msg.into())?;
         Ok(WasmMsg::Execute {
             contract_addr: self.addr().into(),
             msg,
@@ -34,7 +34,7 @@ impl IbcCore {
         msg: T,
         funds: Vec<Coin>,
     ) -> StdResult<CosmosMsg<CM>> {
-        let msg = to_binary(&msg.into())?;
+        let msg = to_json_binary(&msg.into())?;
         Ok(WasmMsg::Execute {
             contract_addr: self.addr().into(),
             msg,
@@ -56,7 +56,7 @@ impl IbcCore {
         querier.query(
             &WasmQuery::Smart {
                 contract_addr: self.addr().into(),
-                msg: to_binary(&msg)?,
+                msg: to_json_binary(&msg)?,
             }
             .into(),
         )
@@ -75,7 +75,7 @@ impl IbcCore {
         querier.query(
             &WasmQuery::Smart {
                 contract_addr: self.addr().into(),
-                msg: to_binary(&msg)?,
+                msg: to_json_binary(&msg)?,
             }
             .into(),
         )
@@ -94,7 +94,7 @@ impl IbcCore {
         querier.query(
             &WasmQuery::Smart {
                 contract_addr: self.addr().into(),
-                msg: to_binary(&msg)?,
+                msg: to_json_binary(&msg)?,
             }
             .into(),
         )
@@ -119,7 +119,7 @@ impl IbcCore {
         querier.query(
             &WasmQuery::Smart {
                 contract_addr: self.addr().into(),
-                msg: to_binary(&msg)?,
+                msg: to_json_binary(&msg)?,
             }
             .into(),
         )
@@ -139,7 +139,7 @@ impl IbcCore {
         querier.query(
             &WasmQuery::Smart {
                 contract_addr: self.addr().into(),
-                msg: to_binary(&msg)?,
+                msg: to_json_binary(&msg)?,
             }
             .into(),
         )
