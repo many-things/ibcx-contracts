@@ -1,4 +1,8 @@
-use std::{collections::BTreeSet, fs, path::PathBuf};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fs,
+    path::{Path, PathBuf},
+};
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{coin, Binary, Coin, CosmosMsg, Decimal};
@@ -66,11 +70,7 @@ impl From<Pool> for PoolInfo {
                 swap_fee: Some(p.pool_params.swap_fee),
                 exit_fee: None,
                 assets: p.pool_liquidity,
-                scaling_factors: p
-                    .scaling_factors
-                    .into_iter()
-                    .map(|v| v.parse().unwrap())
-                    .collect(),
+                scaling_factors: p.scaling_factors.into_iter().collect(),
             },
             Pool::Weighted(p) => {
                 let pool_assets = p
@@ -109,6 +109,37 @@ impl From<Pool> for PoolInfo {
     }
 }
 
+impl From<Pool> for crate::Pool {
+    fn from(value: Pool) -> crate::Pool {
+        match value {
+            Pool::Stable(pool) => Self::Stable(StablePool {
+                type_url: pool.type_url,
+                address: pool.address,
+                id: pool.id,
+                pool_params: pool.pool_params,
+                pool_liquidity: pool.pool_liquidity,
+                scaling_factors: pool.scaling_factors,
+                scaling_factor_controller: pool.scaling_factor_controller,
+                total_shares: pool.total_shares,
+                future_pool_governor: pool.future_pool_governor,
+            }),
+            Pool::Weighted(pool) => Self::Weighted(WeightedPool {
+                type_url: pool.type_url,
+                address: pool.address,
+                id: pool.id,
+                future_pool_governor: pool.future_pool_governor,
+                pool_params: pool.pool_params,
+                pool_assets: pool.pool_assets,
+                total_shares: pool.total_shares,
+                total_weight: pool.total_weight,
+            }),
+            // TODO: make CL pool simulation work
+            // TODO: make CW pool simulation work
+            _ => unimplemented!(),
+        }
+    }
+}
+
 impl PoolInfo {
     pub fn get_denoms(&self) -> Vec<String> {
         match self {
@@ -121,6 +152,32 @@ impl PoolInfo {
 
 const DEFAULT_SWAP_FEE: u128 = 10_000_000_000_000_000; // 0.01
 const DEFAULT_EXIT_FEE: u128 = 0;
+
+pub fn load_pools<P: AsRef<Path>>(path: P) -> anyhow::Result<BTreeMap<u64, crate::Pool>> {
+    let read = fs::read_to_string(path)?;
+
+    #[cw_serde]
+    pub struct PoolsResponse {
+        pub pools: Vec<Pool>,
+    }
+
+    let PoolsResponse { pools } = serde_json::from_str(&read)?;
+
+    Ok(pools
+        .into_iter()
+        .flat_map(|v| match v.clone() {
+            Pool::Stable(_) => Some(v),
+            Pool::Weighted(_) => Some(v),
+            _ => None,
+        })
+        .map(crate::Pool::from)
+        .flat_map(|v| match v.clone() {
+            crate::Pool::Stable(p) => Some((p.id.parse::<u64>().unwrap(), v)),
+            crate::Pool::Weighted(p) => Some((p.id.parse::<u64>().unwrap(), v)),
+            _ => None,
+        })
+        .collect())
+}
 
 pub fn load_pools_from_file(app: &OsmosisTestApp, path: PathBuf) -> anyhow::Result<()> {
     let pool = PoolManager::new(app);
