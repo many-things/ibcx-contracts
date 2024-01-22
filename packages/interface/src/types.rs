@@ -99,6 +99,7 @@ impl SwapRoutes {
         _sender: &str,
         token_out: Coin,
     ) -> StdResult<Uint128> {
+        #[allow(deprecated)]
         let raw_res = raw_query_bin::<Empty>(
             querier,
             &EstimateSwapExactAmountOutRequest {

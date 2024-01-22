@@ -38,6 +38,7 @@ pub enum Pool {
     Concentrated(ConcentratedPool),
 }
 
+#[allow(unused)]
 pub enum PoolInfo {
     Stable {
         swap_fee: Option<Decimal>,
@@ -161,6 +162,7 @@ pub fn load_pools_from_file(app: &OsmosisTestApp, path: PathBuf) -> anyhow::Resu
     Ok(())
 }
 
+#[allow(unused)]
 pub struct PoolManager<'a, R: Runner<'a>> {
     runner: &'a R,
 }
