@@ -58,7 +58,7 @@ anyhow = { version = "1.0.79" }
 thiserror = { version = "1.0.56" }
 
 # families
-ibcx-test-utils = { version = "0.1.3" }
+ibcx-test-utils = { version = "0.1.4" }
 
 # local dependencies
 ibcx-airdrop = { path = "contracts/airdrop" }
