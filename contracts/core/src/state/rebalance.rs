@@ -71,7 +71,7 @@ impl Rebalance {
                 .deflation
                 .clone()
                 .into_iter()
-                .chain(self.inflation.clone().into_iter())
+                .chain(self.inflation.clone())
                 .collect::<Units>()
                 .check_duplicate();
             if conflict {

@@ -248,14 +248,14 @@ mod tests {
                 token_denom: denom_in,
             }]),
         ));
-        let expected = vec![&expected]
+        let expected = [&expected]
             .repeat(10)
             .into_iter()
             .cloned()
             .collect::<Vec<_>>();
 
         let actual: Vec<_> = SwapInfosCompact(
-            vec![&compact]
+            [&compact]
                 .repeat(10)
                 .into_iter()
                 .cloned()

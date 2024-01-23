@@ -266,10 +266,10 @@ impl OsmosisPool for Pool {
 
 #[cfg(test)]
 mod test {
-    use crate::test::pool::load_pools_from_file;
+    use crate::test::pool::{load_pools, load_pools_from_file};
     use crate::test::testdata;
+    use crate::OsmosisPool;
     use crate::Pool;
-    use crate::{test::load_pools, OsmosisPool};
 
     use std::{collections::BTreeMap, str::FromStr};
 
