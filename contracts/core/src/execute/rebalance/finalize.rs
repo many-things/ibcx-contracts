@@ -48,6 +48,16 @@ pub fn finalize(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
         return Err(RebalanceError::unable_to_finalize("inflation condition did not met").into());
     }
 
+    // prune index units
+    INDEX_UNITS.save(
+        deps.storage,
+        &index_units
+            .into_iter()
+            .filter(|(_, current_unit)| current_unit.is_zero())
+            .collect::<Vec<_>>()
+            .into(),
+    )?;
+
     REBALANCE.remove(deps.storage);
     RESERVE_UNITS.remove(deps.storage);
 
@@ -68,11 +78,13 @@ mod tests {
         testing::{mock_env, mock_info, MockStorage},
         Addr,
     };
+    use rstest::rstest;
 
     use crate::{
         error::{ContractError, RebalanceError},
         state::{Fee, Rebalance, StreamingFee, Units, FEE, INDEX_UNITS, REBALANCE, RESERVE_UNITS},
         test::mock_dependencies,
+        StdResult,
     };
 
     use super::{finalize, unfreeze_streaming_fee};
@@ -113,108 +125,111 @@ mod tests {
         assert_eq!(streaming_fee.last_collected_at, 12345);
     }
 
-    #[test]
-    fn test_finalize() {
+    #[rstest]
+    #[case::not_on_rebalancing(
+        "user",
+        vec![("uatom", "0.89")].into(),
+        vec![("uatom", "0.0")].into(),
+        None,
+        Err(RebalanceError::NotOnRebalancing.into()),
+    )]
+    #[case::manager_none(
+        "user", 
+        vec![("uatom", "0.89")].into(), 
+        vec![("uatom", "0.0")].into(), 
+        Some(Rebalance {
+            manager: None,
+            deflation: vec![("uatom", "0.9")].into(),
+            inflation: Units::default(),
+        }),
+        Ok(()),
+    )]
+    #[case::manager_some_unauthorized(
+        "user",
+        vec![("uatom", "0.89")].into(),
+        vec![("uatom", "0.0")].into(),
+        Some(Rebalance {
+            manager: Some(Addr::unchecked("manager")),
+            deflation: vec![("uatom", "0.9")].into(),
+            inflation: Units::default(),
+        }),
+        Err(ContractError::Unauthorized),
+    )]
+    #[case::manager_some_ok(
+        "manager",
+        vec![("uatom", "0.89")].into(),
+        vec![("uatom", "0.0")].into(),
+        Some(Rebalance {
+            manager: Some(Addr::unchecked("manager")),
+            deflation: vec![("uatom", "0.9")].into(),
+            inflation: Units::default(),
+        }),
+        Ok(()),
+    )]
+    #[case::deflation_fail(
+        "manager",
+        vec![("uatom", "0.91")].into(),
+        vec![("uatom", "0.0")].into(),
+        Some(Rebalance {
+            manager: Some(Addr::unchecked("manager")),
+            deflation: vec![("uatom", "0.9")].into(),
+            inflation: Units::default(),
+        }),
+        Err(RebalanceError::unable_to_finalize("deflation condition did not met").into()),
+    )]
+    #[case::inflation_fail(
+        "manager",
+        vec![("uatom", "0.89")].into(),
+        vec![("uatom", "0.01")].into(),
+        Some(Rebalance {
+            manager: Some(Addr::unchecked("manager")),
+            deflation: vec![("uatom", "0.9")].into(),
+            inflation: Units::default(),
+        }),
+        Err(RebalanceError::unable_to_finalize("inflation condition did not met").into()),
+    )]
+    fn test_finalize(
+        #[case] sender: &str,
+        #[case] index_units: Units,
+        #[case] reserve_units: Units,
+        #[case] rebalance: Option<Rebalance>,
+        #[case] expected: StdResult<()>,
+    ) {
         let env = mock_env();
         let mut deps = mock_dependencies();
 
         FEE.save(deps.as_mut().storage, &Fee::default()).unwrap();
 
-        let cases = [
-            // sender = random, manager = none
-            (
-                "user",
-                vec![("uatom", "0.89")].into(),
-                vec![("uatom", "0.0")].into(),
-                Some(Rebalance {
-                    manager: None,
-                    deflation: vec![("uatom", "0.9")].into(),
-                    inflation: Units::default(),
-                }),
-                Ok(vec![
-                    attr("method", "rebalance::finalize"),
-                    attr("executor", "user"),
-                    attr("finalized_at", env.block.height.to_string()),
-                ]),
-            ),
-            // sender = random, manager = some
-            (
-                "user",
-                vec![("uatom", "0.89")].into(),
-                vec![("uatom", "0.0")].into(),
-                Some(Rebalance {
-                    manager: Some(Addr::unchecked("manager")),
-                    deflation: vec![("uatom", "0.9")].into(),
-                    inflation: Units::default(),
-                }),
-                Err(ContractError::Unauthorized),
-            ),
-            // sender = manager, manager = some
-            (
-                "manager",
-                vec![("uatom", "0.89")].into(),
-                vec![("uatom", "0.0")].into(),
-                Some(Rebalance {
-                    manager: Some(Addr::unchecked("manager")),
-                    deflation: vec![("uatom", "0.9")].into(),
-                    inflation: Units::default(),
-                }),
-                Ok(vec![
-                    attr("method", "rebalance::finalize"),
-                    attr("executor", "manager"),
-                    attr("finalized_at", env.block.height.to_string()),
-                ]),
-            ),
-            // index_unit > deflation
-            (
-                "manager",
-                vec![("uatom", "0.91")].into(),
-                vec![("uatom", "0.0")].into(),
-                Some(Rebalance {
-                    manager: Some(Addr::unchecked("manager")),
-                    deflation: vec![("uatom", "0.9")].into(),
-                    inflation: Units::default(),
-                }),
-                Err(RebalanceError::unable_to_finalize("deflation condition did not met").into()),
-            ),
-            // reserve_units != zero
-            (
-                "manager",
-                vec![("uatom", "0.89")].into(),
-                vec![("uatom", "0.01")].into(),
-                Some(Rebalance {
-                    manager: Some(Addr::unchecked("manager")),
-                    deflation: vec![("uatom", "0.9")].into(),
-                    inflation: Units::default(),
-                }),
-                Err(RebalanceError::unable_to_finalize("inflation condition did not met").into()),
-            ),
-        ];
+        let expected = expected.map(|_| {
+            vec![
+                attr("method", "rebalance::finalize"),
+                attr("executor", sender),
+                attr("finalized_at", env.block.height.to_string()),
+            ]
+        });
 
-        for (sender, index_units, reserve_units, rebalance, expected) in cases {
-            INDEX_UNITS
-                .save(deps.as_mut().storage, &index_units)
-                .unwrap();
+        INDEX_UNITS
+            .save(deps.as_mut().storage, &index_units)
+            .unwrap();
 
-            RESERVE_UNITS
-                .save(deps.as_mut().storage, &reserve_units)
-                .unwrap();
+        RESERVE_UNITS
+            .save(deps.as_mut().storage, &reserve_units)
+            .unwrap();
 
-            REBALANCE.remove(deps.as_mut().storage);
-            if let Some(rebalance) = rebalance {
-                REBALANCE.save(deps.as_mut().storage, &rebalance).unwrap();
-            }
+        REBALANCE.remove(deps.as_mut().storage);
+        if let Some(rebalance) = rebalance {
+            REBALANCE.save(deps.as_mut().storage, &rebalance).unwrap();
+        }
 
-            let res = finalize(deps.as_mut(), env.clone(), mock_info(sender, &[]));
-            assert_eq!(res.map(|v| v.attributes), expected);
+        let res = finalize(deps.as_mut(), env.clone(), mock_info(sender, &[]));
+        assert_eq!(res.map(|v| v.attributes), expected);
 
-            if expected.is_ok() {
-                assert!(REBALANCE.may_load(deps.as_ref().storage).unwrap().is_none());
-                assert!(RESERVE_UNITS
-                    .may_load(deps.as_ref().storage)
-                    .unwrap()
-                    .is_none());
-            }
+        if expected.is_ok() {
+            assert!(REBALANCE.may_load(deps.as_ref().storage).unwrap().is_none());
+            assert!(RESERVE_UNITS
+                .may_load(deps.as_ref().storage)
+                .unwrap()
+                .is_none());
         }
     }
 }

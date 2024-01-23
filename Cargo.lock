@@ -1012,6 +1012,7 @@ dependencies = [
  "ibcx-interface",
  "ibcx-utils",
  "osmosis-std",
+ "rstest",
  "thiserror",
 ]
 
