@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    to_vec, Binary, ContractResult, CustomQuery, QuerierWrapper, QueryRequest, StdError, StdResult,
-    Storage, SystemResult,
+    to_json_vec, Binary, ContractResult, CustomQuery, QuerierWrapper, QueryRequest, StdError,
+    StdResult, Storage, SystemResult,
 };
 use semver::Version;
 
@@ -34,7 +34,7 @@ pub fn raw_query_bin<C: CustomQuery>(
     querier: &QuerierWrapper,
     req: &QueryRequest<C>,
 ) -> StdResult<Binary> {
-    let raw = to_vec(req).map_err(|serialize_err| {
+    let raw = to_json_vec(req).map_err(|serialize_err| {
         StdError::generic_err(format!("Serializing QueryRequest: {serialize_err}"))
     })?;
     match querier.raw_query(&raw) {

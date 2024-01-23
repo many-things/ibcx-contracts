@@ -153,7 +153,7 @@ mod tests {
     #[test]
     fn test_sad() {
         let invert = Decimal::one()
-            .checked_div(Some(Decimal::from_ratio(5u64, 1000u64)).unwrap_or(Decimal::one()))
+            .checked_div(Decimal::from_ratio(5u64, 1000u64))
             .unwrap();
         assert_eq!(invert, Decimal::from_ratio(200u64, 1u64));
     }

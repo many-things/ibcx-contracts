@@ -97,7 +97,10 @@ mod tests {
                 "user",
                 Some(Rebalance::default()),
                 None,
-                Err(StdError::not_found("ibcx_core::state::config::Config").into()), // ok
+                Err(StdError::not_found(
+                    "type: ibcx_core::state::config::Config; key: [63, 6F, 6E, 66, 69, 67]",
+                )
+                .into()), // ok
             ),
             (
                 "user",
@@ -109,7 +112,10 @@ mod tests {
                 "manager",
                 Some(Rebalance::default()),
                 Some("manager"),
-                Err(StdError::not_found("ibcx_core::state::config::Config").into()), // ok
+                Err(StdError::not_found(
+                    "type: ibcx_core::state::config::Config; key: [63, 6F, 6E, 66, 69, 67]",
+                )
+                .into()), // ok
             ),
         ];
 

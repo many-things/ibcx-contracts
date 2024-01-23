@@ -129,7 +129,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
 
 fn to_binary<T: Serialize>(res: StdResult<T>) -> StdResult<QueryResponse> {
     match res {
-        Ok(v) => Ok(cosmwasm_std::to_binary(&v)?),
+        Ok(v) => Ok(cosmwasm_std::to_json_binary(&v)?),
         Err(e) => Err(e),
     }
 }

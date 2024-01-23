@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_vec, ContractResult, Deps, DepsMut, Empty, Env, MessageInfo, QueryRequest, QueryResponse,
-    Response, StdError, StdResult, SystemResult,
+    to_json_vec, ContractResult, Deps, DepsMut, Empty, Env, MessageInfo, QueryRequest,
+    QueryResponse, Response, StdError, StdResult, SystemResult,
 };
 
 pub const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -24,7 +24,7 @@ pub fn instantiate(
 #[cfg(not(feature = "library"))]
 #[entry_point]
 pub fn query(deps: Deps, _env: Env, msg: QueryRequest<Empty>) -> StdResult<QueryResponse> {
-    let req_bin = to_vec(&msg).map_err(|serialize_err| {
+    let req_bin = to_json_vec(&msg).map_err(|serialize_err| {
         StdError::generic_err(format!("Serializing QueryRequest: {serialize_err}"))
     })?;
 
