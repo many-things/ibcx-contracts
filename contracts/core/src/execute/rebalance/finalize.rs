@@ -53,7 +53,7 @@ pub fn finalize(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Respons
         deps.storage,
         &index_units
             .into_iter()
-            .filter(|(_, current_unit)| current_unit.is_zero())
+            .filter(|(_, current_unit)| !current_unit.is_zero())
             .collect::<Vec<_>>()
             .into(),
     )?;
@@ -231,5 +231,61 @@ mod tests {
                 .unwrap()
                 .is_none());
         }
+    }
+
+    #[rstest]
+    #[case(
+        "manager",
+        vec![("uatom", "0.0")].into(),
+        vec![("uatom", "0.0")].into(),
+        Some(Rebalance {
+            manager: Some(Addr::unchecked("manager")),
+            deflation: vec![("uatom", "0")].into(),
+            inflation: Units::default(),
+        }),
+        Units::default(),
+    )]
+    #[case(
+        "manager",
+        vec![("uatom", "0.89")].into(),
+        vec![("uatom", "0.0")].into(),
+        Some(Rebalance {
+            manager: Some(Addr::unchecked("manager")),
+            deflation: vec![("uatom", "0.90")].into(),
+            inflation: Units::default(),
+        }),
+        vec![("uatom", "0.89")].into(),
+    )]
+    fn test_pruning(
+        #[case] sender: &str,
+        #[case] index_units: Units,
+        #[case] reserve_units: Units,
+        #[case] rebalance: Option<Rebalance>,
+        #[case] after_index_units: Units,
+    ) {
+        let env = mock_env();
+        let mut deps = mock_dependencies();
+
+        FEE.save(deps.as_mut().storage, &Fee::default()).unwrap();
+
+        INDEX_UNITS
+            .save(deps.as_mut().storage, &index_units)
+            .unwrap();
+
+        RESERVE_UNITS
+            .save(deps.as_mut().storage, &reserve_units)
+            .unwrap();
+
+        REBALANCE.remove(deps.as_mut().storage);
+        if let Some(rebalance) = rebalance {
+            REBALANCE.save(deps.as_mut().storage, &rebalance).unwrap();
+        }
+
+        finalize(deps.as_mut(), env.clone(), mock_info(sender, &[])).unwrap();
+
+        assert_eq!(
+            INDEX_UNITS.load(deps.as_ref().storage).unwrap(),
+            after_index_units
+        );
     }
 }
