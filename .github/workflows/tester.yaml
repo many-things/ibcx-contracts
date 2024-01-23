@@ -34,7 +34,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install Rust
-        run: rustup default 1.69.0
+        run: rustup default 1.72.0
 
       - name: Install Rust
         run: rustup update nightly
