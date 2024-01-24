@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, str::FromStr};
 
 use cosmwasm_std::{
-    to_binary, Binary, ContractResult, Decimal, QuerierResult, SystemResult, Uint128,
+    to_json_binary, Binary, ContractResult, Decimal, QuerierResult, SystemResult, Uint128,
 };
 use osmosis_std::types::osmosis::poolmanager::v1beta1::{
     EstimateSwapExactAmountInRequest, EstimateSwapExactAmountInResponse,
@@ -42,7 +42,7 @@ impl<'a> StargateQuerier<'a> {
                 let price = Decimal::one() / Decimal::from_str(price).unwrap();
                 let token_out_amount = Uint128::from_str(amount).unwrap();
 
-                to_binary(&EstimateSwapExactAmountOutResponse {
+                to_json_binary(&EstimateSwapExactAmountOutResponse {
                     token_in_amount: (price * token_out_amount).to_string(),
                 })
                 .into()
@@ -65,7 +65,7 @@ impl<'a> StargateQuerier<'a> {
                 let price = Decimal::from_str(price).unwrap();
                 let token_in_amount = Uint128::from_str(amount).unwrap();
 
-                to_binary(&EstimateSwapExactAmountInResponse {
+                to_json_binary(&EstimateSwapExactAmountInResponse {
                     token_out_amount: (price * token_in_amount).to_string(),
                 })
                 .into()

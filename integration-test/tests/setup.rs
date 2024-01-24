@@ -13,7 +13,7 @@ use osmosis_test_tube::{
                 self,
                 v1beta1::{MsgCreateStableswapPool, MsgCreateStableswapPoolResponse},
             },
-            tokenfactory::v1beta1::{MsgCreateDenom, MsgMint, QueryParamsRequest},
+            tokenfactory::v1beta1::{MsgCreateDenom, MsgMint},
         },
     },
     Account, Gamm, Module, OsmosisTestApp, Runner, SigningAccount, TokenFactory, Wasm,
@@ -186,12 +186,6 @@ pub fn setup(initial_fund: &[Coin], signer_count: u64) -> TestEnv<'static, Osmos
     println!("core: {core_code}, perp: {perp_code}");
 
     // instantiate codes
-    let denom_creation_fee = TokenFactory::new(&app)
-        .query_params(&QueryParamsRequest {})
-        .unwrap()
-        .params
-        .unwrap()
-        .denom_creation_fee;
 
     let core_addr = Wasm::new(&app)
         .instantiate(
@@ -214,11 +208,8 @@ pub fn setup(initial_fund: &[Coin], signer_count: u64) -> TestEnv<'static, Osmos
                 reserve_denom: "uosmo".to_string(),
             },
             Some(&owner.address()),
-            None,
-            &[coin(
-                denom_creation_fee[0].amount.parse().unwrap(),
-                &denom_creation_fee[0].denom,
-            )],
+            Some("label"),
+            &[],
             owner,
         )
         .unwrap()
@@ -230,7 +221,7 @@ pub fn setup(initial_fund: &[Coin], signer_count: u64) -> TestEnv<'static, Osmos
             perp_code,
             &periphery::InstantiateMsg {},
             Some(&owner.address()),
-            None,
+            Some("label"),
             &[],
             owner,
         )

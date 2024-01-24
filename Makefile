@@ -12,4 +12,7 @@ deploy-testnet:
 	./scripts/deploy-test.sh
 
 schema:
-	ls ./contracts | xargs -n 1 -t beaker wasm ts-gen
+	ls ./contracts | grep -v "test-querier" | xargs -n 1 -t beaker wasm ts-gen
+
+check:
+	ls -d ./artifacts/*.wasm | xargs -I contract cosmwasm-check contract

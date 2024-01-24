@@ -1,16 +1,17 @@
 mod concentrated;
 mod error;
+mod query;
 mod sim;
 mod stable;
 mod weighted;
 
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Binary, Coin, Decimal, Deps, StdResult, Uint256};
+use std::num::ParseIntError;
 
-#[allow(deprecated)]
-use osmosis_std::types::osmosis::poolmanager::v1beta1::PoolRequest;
+use cosmwasm_schema::cw_serde;
+use cosmwasm_std::{Coin, Decimal, Deps, StdResult, Uint256};
 
 pub use error::PoolError;
+pub use query::query_pools;
 pub use sim::Simulator;
 
 pub use concentrated::Pool as ConcentratedPool;
@@ -51,85 +52,21 @@ impl Clone for Box<dyn OsmosisPool> {
 }
 
 #[cw_serde]
-#[serde(untagged)]
 pub enum Pool {
-    CW {
-        #[serde(rename = "@type")]
-        type_url: String,
-        contract_address: String,
-        pool_id: String,
-        code_id: String,
-        instantiate_msg: Binary,
-    },
     Stable(StablePool),
     Weighted(WeightedPool),
     Concentrated(ConcentratedPool),
 }
 
 impl Pool {
-    pub fn get_id(&self) -> u64 {
+    pub fn get_id(&self) -> Result<u64, ParseIntError> {
         match self {
-            Pool::CW { pool_id, .. } => pool_id.parse().unwrap(),
-            Pool::Stable(p) => p.id.parse().unwrap(),
-            Pool::Weighted(p) => p.id.parse().unwrap(),
-            Pool::Concentrated(p) => p.id.parse().unwrap(),
+            Pool::Stable(p) => p.id.parse(),
+            Pool::Weighted(p) => p.id.parse(),
+            Pool::Concentrated(p) => p.id.parse(),
         }
     }
 }
 
-pub fn query_pools(
-    deps: &Deps,
-    pool_ids: Vec<u64>,
-) -> Result<Vec<Box<dyn OsmosisPool>>, PoolError> {
-    #[cw_serde]
-    pub struct PoolResponse {
-        pub pool: Pool,
-    }
-
-    let pool_resps = pool_ids
-        .into_iter()
-        .map(|v| deps.querier.query(&PoolRequest { pool_id: v }.into()))
-        .collect::<StdResult<Vec<PoolResponse>>>()?;
-
-    let pools = pool_resps
-        .into_iter()
-        .map(|v| -> Result<Box<dyn OsmosisPool>, PoolError> {
-            match v.pool {
-                Pool::Stable(p) => Ok(Box::new(p)),
-                Pool::Weighted(p) => Ok(Box::new(p)),
-                Pool::Concentrated(p) => Ok(Box::new(p)),
-                _ => Err(PoolError::UnsupportedPoolType),
-            }
-        })
-        .collect::<Result<_, _>>()?;
-
-    Ok(pools)
-}
-
 #[cfg(test)]
-mod test {
-    use std::{collections::BTreeMap, fs, path::PathBuf};
-
-    use cosmwasm_schema::cw_serde;
-
-    use super::*;
-
-    #[cw_serde]
-    pub struct PoolsResponse {
-        pub pools: Vec<Pool>,
-    }
-
-    pub fn load_pools(path: PathBuf) -> anyhow::Result<BTreeMap<u64, Pool>> {
-        let read = fs::read_to_string(path)?;
-        let PoolsResponse { pools } = serde_json::from_str(&read)?;
-
-        Ok(pools
-            .into_iter()
-            .flat_map(|v| match v.clone() {
-                Pool::Stable(p) => Some((p.get_id(), v)),
-                Pool::Weighted(p) => Some((p.get_id(), v)),
-                _ => None,
-            })
-            .collect())
-    }
-}
+mod test;
