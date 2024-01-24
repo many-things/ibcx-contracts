@@ -150,12 +150,7 @@ impl<'a> Simulator<'a> {
             }
         };
 
-        let mut loop_count = 0;
-        loop {
-            if loop_count >= MAX_LOOP {
-                return Err(PoolError::MaxLoopExceeded);
-            }
-
+        for _ in 0..MAX_LOOP {
             acc_res = self.search_efficient_amount_for_input_f(
                 desired_input.clone(),
                 acc_res.est_min_token_out,
@@ -178,7 +173,8 @@ impl<'a> Simulator<'a> {
             {
                 return Ok(acc_res);
             }
-            loop_count += 1;
         }
+
+        Err(PoolError::MaxLoopExceeded)
     }
 }
