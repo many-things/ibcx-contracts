@@ -1,9 +1,5 @@
 [package]
-<<<<<<<< HEAD:contracts/cw-pool/Cargo.toml
 name = "ibcx-cw-pool"
-========
-name = "ibcx-test-querier"
->>>>>>>> 60791e16a4b4c33e3108353a8ffc1e5213ae10c1:contracts/test-querier/Cargo.toml
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
