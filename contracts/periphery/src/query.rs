@@ -145,16 +145,3 @@ pub fn simulate_burn_exact_amount_out(
         swap_result_amount: coin(sim_res.max_token_out.u128(), output_asset.denom),
     })
 }
-
-#[cfg(test)]
-mod tests {
-    use cosmwasm_std::Decimal;
-
-    #[test]
-    fn test_sad() {
-        let invert = Decimal::one()
-            .checked_div(Decimal::from_ratio(5u64, 1000u64))
-            .unwrap();
-        assert_eq!(invert, Decimal::from_ratio(200u64, 1u64));
-    }
-}

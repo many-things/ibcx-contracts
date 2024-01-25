@@ -27,10 +27,10 @@ pub enum ContractError {
     #[error("{0}")]
     CheckedFromRatioError(#[from] cosmwasm_std::CheckedFromRatioError),
 
-    #[error("{0}")]
+    #[error("ibcx-math: {0}")]
     IBCXMath(#[from] ibcx_math::MathError),
 
-    #[error("{0}")]
+    #[error("ibcx-pool: {0}")]
     IBCXPool(#[from] ibcx_pool::PoolError),
 
     #[error("Paused")]
