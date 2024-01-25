@@ -1,0 +1,23 @@
+[package]
+name = "ibcx-test-utils"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
+# use library feature to disable all instantiate/execute/query exports
+library = []
+
+
+[dependencies]
+osmosis-std.workspace = true
+osmosis-test-tube.workspace = true
+cosmwasm-std.workspace = true
+
+serde_json.workspace = true
+anyhow.workspace = true

@@ -1,0 +1,38 @@
+[package]
+name = "ibcx-cw-pool"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
+# use library feature to disable all instantiate/execute/query exports
+library = []
+
+[dependencies]
+cosmwasm-std.workspace = true
+cosmwasm-storage.workspace = true
+cosmwasm-schema.workspace = true
+cw-storage-plus.workspace = true
+cw-utils.workspace = true
+cw2.workspace = true
+thiserror.workspace = true
+
+osmosis-std.workspace = true
+
+ibcx-utils.workspace = true
+ibcx-math.workspace = true
+ibcx-pool.workspace = true
+ibcx-interface.workspace = true
+
+[dev-dependencies]
+serde.workspace = true
+serde_json.workspace = true
+
+anyhow.workspace = true
+
+cw-multi-test.workspace = true
